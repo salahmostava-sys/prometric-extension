@@ -1,9 +1,51 @@
-// background.js
+const START_URL = 'https://tcnet1.prometric.com/InvalidHostHeader.aspx';
 
-const START_URL = 'https://tcnet1.prometric.com/Candidates/Candidate/Candidate_Info.aspx?Program=IBTA';
-const LOGIN_URL = 'https://tcnet1.prometric.com/Candidates/Candidate/Main.aspx';
+async function buildCredentials(item) {
+  const parts = (item.name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 1) return null;
+  if (parts.length === 1) parts.push(parts[0]); // handle single word names
+  const username  = (parts[0] + parts[1]).toUpperCase();
+  
+  const { passPattern = '{F}@{f}#$1970' } = await chrome.storage.local.get(['passPattern']);
+  
+  const F = parts[0][0].toUpperCase();
+  const f = F.toLowerCase();
+  const L = parts[parts.length-1][0].toUpperCase();
+  const l = L.toLowerCase();
 
-// ── State Management ──────────────────────────────────────────────────────────
+  const password = passPattern
+    .replace(/{F}/g, F)
+    .replace(/{f}/g, f)
+    .replace(/{L}/g, L)
+    .replace(/{l}/g, l);
+  
+  let firstName = parts[0];
+  let idx = 1;
+  // Fill first name greedily up to 20 chars, ensuring at least 1 word is left for last name
+  while (idx < parts.length - 1 && (firstName.length + 1 + parts[idx].length) <= 20) {
+    firstName += ' ' + parts[idx];
+    idx++;
+  }
+  
+  let lastName = parts.slice(idx).join(' ');
+  
+  // Enforce the hard 20-character limit just in case
+  if (firstName.length > 20) firstName = firstName.substring(0, 20).trim();
+  if (lastName.length > 20) lastName = lastName.substring(0, 20).trim();
+
+  return { username, password, firstName, lastName };
+}
+
+// Automatically stop the extension if the user closes the active registration tab
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  const { currentTabId, singleRunning, isRunning } = await chrome.storage.local.get(['currentTabId', 'singleRunning', 'isRunning']);
+  if (tabId === currentTabId) {
+    if (singleRunning || isRunning) {
+      await chrome.storage.local.set({ singleRunning: false, isRunning: false });
+    }
+  }
+});
+
 async function getState() {
   return chrome.storage.local.get(['queue','queueIndex','isRunning','currentTabId']);
 }
@@ -15,7 +57,7 @@ async function saveToHistory(entry) {
   await chrome.storage.local.set({ history: history.slice(0, 500) });
 }
 
-// ── Progress Badge ────────────────────────────────────────────────────────────
+// ΓöÇΓöÇ Progress Badge ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 async function updateBadge() {
   const { queue, queueIndex, isRunning } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning']);
   if (isRunning && queue && queue.length > 0) {
@@ -26,57 +68,16 @@ async function updateBadge() {
   }
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-function showNotify(title, message) {
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icon128.png',
-    title: title,
-    message: message,
-    priority: 2
-  });
-}
-
-async function buildCredentials(item) {
-  const { passPattern } = await chrome.storage.local.get(['passPattern']);
-  const pattern = passPattern || '{F}@{f}#$1970';
-  
-  const parts = item.name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 1) return null;
-  if (parts.length === 1) parts.push(parts[0]);
-  
-  const F = parts[0][0].toUpperCase();
-  const f = F.toLowerCase();
-  const L = parts[parts.length-1][0].toUpperCase();
-  const l = L.toLowerCase();
-  
-  const password = pattern
-    .replace(/{F}/g, F)
-    .replace(/{f}/g, f)
-    .replace(/{L}/g, L)
-    .replace(/{l}/g, l);
-    
-  const username = (parts[0] + parts[1]).toUpperCase();
-  
-  let firstName = parts[0];
-  let idx = 1;
-  while (idx < parts.length - 1 && (firstName.length + 1 + parts[idx].length) <= 20) {
-    firstName += ' ' + parts[idx];
-    idx++;
-  }
-  let lastName = parts.slice(idx).join(' ');
-  if (firstName.length > 20) firstName = firstName.substring(0, 20).trim();
-  if (lastName.length > 20) lastName = lastName.substring(0, 20).trim();
-  
-  return { username, password, firstName, lastName };
-}
-
-// ✅ FIX 2: replaced recursion with iterative loop to prevent stack overflow
+// Γ£à FIX 2: replaced recursion with iterative loop to prevent stack overflow
 async function openNextTab() {
-  const { queue, queueIndex, isRunning, currentTabId } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning', 'currentTabId']);
-  if (!isRunning) return;
+  const { queue, queueIndex, isRunning, currentTabId } = await getState();
+  if (!isRunning) {
+    await updateBadge();
+    return;
+  }
 
-  let newIdx = queueIndex !== undefined ? queueIndex : 0;
+  // We need to loop forward until we find a pending item or reach the end.
+  let newIdx = queueIndex;
   while (newIdx < queue.length && queue[newIdx].status !== 'pending') {
     newIdx++;
   }
@@ -105,11 +106,21 @@ async function openNextTab() {
     // End of queue
     await chrome.storage.local.set({ isRunning: false });
     await updateBadge();
-    showNotify('Batch Complete ✅', `Finished registering ${queue.length} users.`);
+    // V4: Desktop notification on batch complete
+    chrome.notifications.create({
+      type: 'basic', iconUrl: 'icon128.png',
+      title: 'Batch Complete ✅',
+      message: `Finished registering ${queue.length} users.`,
+      priority: 2
+    });
   }
 }
 
-// ── Message Routing ───────────────────────────────────────────────────────────
+// ΓöÇΓöÇ Message Routing ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// background.js handles:  startSingle | startQueue | stopQueue | resumeQueue | stepDone | stepFailed
+// bridge.js handles:      pauseBatch | resumeBatch | stopBatch | updateItem | saveCopied
+// (bridge.js runs in the ISOLATED world and writes directly to chrome.storage ΓÇö
+//  no round-trip through background.js is needed for those actions.)
 let isMsgProcessing = false;
 const backgroundMsgQueue = [];
 
@@ -135,54 +146,137 @@ async function processBackgroundQueue() {
 async function handleMessage(msg, sender) {
   const { queue, queueIndex } = await getState();
 
+  if (msg.action === 'stepDone') {
+    const entry = {
+      name:          msg.name          || '',
+      finalUsername: msg.finalUsername || '',
+      password:      msg.password      || '',
+      email:         msg.email         || '',
+      status:        'done'
+    };
+
+    if (queue && queueIndex < queue.length) {
+      // ≡ƒ¢í∩╕Å VERIFICATION: Only increment if the name matches the expected current person
+      // This prevents double-increments if messages are duplicated or arrive out of order
+      if (queue[queueIndex].name === msg.name || !msg.name) {
+        queue[queueIndex].status        = 'done';
+        queue[queueIndex].finalUsername = msg.finalUsername || '';
+        await chrome.storage.local.set({ queue, queueIndex: queueIndex + 1 });
+      }
+    }
+
+    await saveToHistory(entry);
+
+    // Γ£à FIX 5: update savedCreds with the REAL finalUsername after registration
+    await chrome.storage.local.set({
+      savedCreds: {
+        name:     msg.name          || '',
+        username: msg.finalUsername || '',
+        password: msg.password      || ''
+      }
+    });
+
+    // If batch mode, open next tab after delay
+    const { isRunning, userDelay = 5 } = await chrome.storage.local.get(['isRunning', 'userDelay']);
+    if (isRunning) {
+      await new Promise(r => setTimeout(r, userDelay * 1000));
+      await openNextTab();
+    } else {
+      // Must be single mode, turn it off
+      await chrome.storage.local.set({ singleRunning: false });
+    }
+  }
+
+  if (msg.action === 'stepFailed') {
+    const entry = {
+      name:   msg.name   || '',
+      status: 'failed',
+      reason: msg.reason || 'Unknown error'
+    };
+    if (queue && queueIndex < queue.length) {
+      if (queue[queueIndex].name === msg.name || !msg.name) {
+        queue[queueIndex].status = 'failed';
+        await chrome.storage.local.set({ queue, queueIndex: queueIndex + 1 });
+      }
+    }
+    await saveToHistory(entry);
+    const { isRunning } = await getState();
+    if (isRunning) {
+      await openNextTab();
+    } else {
+      // Single mode failure
+      await chrome.storage.local.set({ singleRunning: false });
+    }
+  }
+
+  if (msg.action === 'startSingle') {
+    const item  = { ...msg.item, status: 'pending' };
+    const creds = await buildCredentials(item);
+    if (!creds) return;
+    await chrome.storage.local.set({
+      queue: [item], queueIndex: 0, isRunning: false, singleRunning: true,
+      currentItem: { ...item, ...creds }
+    });
+    const tab = await chrome.tabs.create({ url: START_URL });
+    await chrome.storage.local.set({ currentTabId: tab.id });
+  }
+
+  if (msg.action === 'startQueue') {
+    // ≡ƒº╣ CLEANUP: Close existing registration tab if any
+    const { currentTabId } = await getState();
+    if (currentTabId) {
+      try { await chrome.tabs.remove(currentTabId); } catch(e) {}
+    }
+    
+    const items = msg.items.map(i => ({ ...i, status: 'pending' }));
+    await chrome.storage.local.set({ queue: items, queueIndex: 0, isRunning: true, currentTabId: null });
+    await openNextTab();
+  }
+
   if (msg.action === 'stopQueue') {
     await chrome.storage.local.set({ isRunning: false, singleRunning: false });
     await updateBadge();
   }
 
   if (msg.action === 'resumeQueue') {
+    const { queue, queueIndex } = await getState();
     if (!queue || queueIndex >= queue.length) return;
     await chrome.storage.local.set({ isRunning: true });
     await openNextTab();
   }
-
-  if (msg.action === 'stepDone') {
-    if (!queue || queueIndex === undefined) return;
-    const newQueue = [...queue];
-    newQueue[queueIndex].status = 'done';
-    newQueue[queueIndex].result = msg.data;
-    
-    await saveToHistory({ ...newQueue[queueIndex], ...msg.data });
-    await chrome.storage.local.set({ queue: newQueue, queueIndex: queueIndex + 1 });
-    
-    const { userDelay } = await chrome.storage.local.get(['userDelay']);
-    setTimeout(() => { openNextTab(); }, (userDelay || 5) * 1000);
-  }
-
-  if (msg.action === 'stepFailed') {
-    if (!queue || queueIndex === undefined) return;
-    const newQueue = [...queue];
-    newQueue[queueIndex].status = 'failed';
-    newQueue[queueIndex].error  = msg.error;
-    
-    await chrome.storage.local.set({ queue: newQueue, queueIndex: queueIndex + 1, isRunning: false });
-    await updateBadge();
-    showNotify('Error ❌', `Registration failed for ${queue[queueIndex].name}: ${msg.error}`);
-  }
 }
 
-// Context Menu (Right Click)
+// ΓöÇΓöÇ Context Menu (Icon Dropdown) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
-    id: "stopAll",
-    title: "Stop All Prometric Automations",
+    id: "pause_queue",
+    title: "ΓÅ╕ Pause Registration",
+    contexts: ["action"]
+  });
+  chrome.contextMenus.create({
+    id: "resume_queue",
+    title: "Γû╢ Resume Registration",
+    contexts: ["action"]
+  });
+  chrome.contextMenus.create({
+    id: "stop_clear",
+    title: "ΓÅ╣ Stop & Clear Queue",
     contexts: ["action"]
   });
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "stopAll") {
-    chrome.storage.local.set({ isRunning: false, singleRunning: false });
-    updateBadge();
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === "pause_queue") {
+    await chrome.storage.local.set({ isRunning: false, singleRunning: false });
+    await updateBadge();
+  } else if (info.menuItemId === "resume_queue") {
+    const { queue, queueIndex } = await getState();
+    if (queue && queueIndex < queue.length) {
+      await chrome.storage.local.set({ isRunning: true });
+      await openNextTab();
+    }
+  } else if (info.menuItemId === "stop_clear") {
+    await chrome.storage.local.set({ isRunning: false, singleRunning: false, queue: [], queueIndex: 0 });
+    await updateBadge();
   }
 });
