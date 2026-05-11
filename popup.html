@@ -151,6 +151,14 @@ body.rtl .lang-toggle { margin-left: 0; margin-right: auto; }
 }
 .clip-banner.show { transform: translateY(0); }
 
+/* ── Custom Scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(125,133,144,0.25); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(125,133,144,0.5); }
+::-webkit-scrollbar-corner { background: transparent; }
+* { scrollbar-width: thin; scrollbar-color: rgba(125,133,144,0.25) transparent; }
+
 /* Arabic Specific Helpers */
 [lang="ar"] { display: none; }
 body.rtl [lang="ar"] { display: inline; }
