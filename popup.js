@@ -294,17 +294,18 @@ function renderSheetPreview() {
   const nameIdx = parseInt(document.getElementById('sheetNameCol').value);
   const emailIdx = parseInt(document.getElementById('sheetEmailCol').value);
   const dayIdx = parseInt(document.getElementById('sheetDayCol').value);
-  
-  if (isNaN(nameIdx) || isNaN(emailIdx)) return;
 
-  // Extract Days if column selected
+  if (isNaN(nameIdx) || isNaN(emailIdx) || allSheetData.length < 2) return;
+
+  // Day filter badges
   const dayFilterContainer = document.getElementById('sheetDayFilter');
   const dayBadgeContainer = document.getElementById('sheetDayBadges');
-  if (dayIdx !== -1) {
+  if (!isNaN(dayIdx) && dayIdx !== -1) {
     dayFilterContainer.style.display = 'block';
     const days = [...new Set(allSheetData.slice(1).map(r => r[dayIdx]).filter(Boolean))].sort();
-    dayBadgeContainer.innerHTML = days.map(d => `<div class="day-badge ${selectedDays.has(d) ? 'active' : ''}" data-day="${d}">${d}</div>`).join('');
-    
+    dayBadgeContainer.innerHTML = days.map(d =>
+      `<div class="day-badge ${selectedDays.has(d) ? 'active' : ''}" data-day="${d}">${d}</div>`
+    ).join('');
     document.querySelectorAll('.day-badge').forEach(b => {
       b.onclick = () => {
         const d = b.dataset.day;
@@ -318,27 +319,28 @@ function renderSheetPreview() {
     selectedDays.clear();
   }
 
+  // Build filtered items list
   const items = allSheetData.slice(1).map(r => {
-    const creds = genCreds(r[nameIdx]);
+    const creds = genCreds(r[nameIdx] || '');
     return {
-      name: r[nameIdx],
-      email: r[emailIdx],
+      name: r[nameIdx] || '',
+      email: r[emailIdx] || '',
       username: creds.username,
       password: creds.password,
-      day: dayIdx !== -1 ? r[dayIdx] : null,
+      day: (!isNaN(dayIdx) && dayIdx !== -1) ? r[dayIdx] : null,
       status: 'pending'
     };
   }).filter(i => {
-    const basicValid = i.name && i.email.includes('@');
-    if (!basicValid) return false;
+    if (!i.name || !i.email.includes('@')) return false;
     if (selectedDays.size > 0 && !selectedDays.has(i.day)) return false;
     return true;
   });
 
-  const list = document.getElementById('sheetPreviewList');
+  // Show preview
   const wrap = document.getElementById('sheetPreviewWrap');
+  const list = document.getElementById('sheetPreviewList');
   const count = document.getElementById('sheetPreviewCount');
-  
+
   wrap.style.display = 'block';
   count.textContent = items.length;
   document.getElementById('sheetStart').disabled = items.length === 0;
@@ -350,8 +352,8 @@ function renderSheetPreview() {
       <div style="font-family:monospace;color:var(--blue)">${item.username}</div>
       <div style="font-family:monospace;color:var(--yellow)">${item.password}</div>
     </div>
-  `).join('');
-  
+  `).join('') || `<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">No matching rows</div>`;
+
   chrome.storage.local.set({ queue: items, queueIndex: 0 });
 }
 

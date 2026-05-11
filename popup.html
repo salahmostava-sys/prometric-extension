@@ -114,13 +114,13 @@ body.rtl .lang-toggle { margin-left: 0; margin-right: auto; }
 
 /* Grid List for Detailed View */
 .grid-header {
-  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 10px;
-  padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
-  font-size: 11px; color: var(--muted); text-transform: uppercase;
+  display: grid; grid-template-columns: 1.4fr 1.2fr 0.9fr 0.9fr; gap: 6px;
+  padding: 6px 10px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
 }
 .grid-item {
-  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 10px;
-  padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; align-items: center;
+  display: grid; grid-template-columns: 1.4fr 1.2fr 0.9fr 0.9fr; gap: 6px;
+  padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 11px; align-items: center;
 }
 .grid-item div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -285,10 +285,10 @@ body.rtl [lang="en"] { display: none; }
     </div>
   </div>
 
-  <div id="sheetPreviewWrap" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:12px;color:var(--muted);text-transform:uppercase"><span lang="en">Preview & Filter</span><span lang="ar">المعاينة والتصفية</span></div>
-      <div id="sheetPreviewCount" style="background:var(--blue);color:#0d1117;padding:4px 12px;border-radius:15px;font-size:12px;font-weight:600 !important">0</div>
+  <div id="sheetPreviewWrap" style="display:none;margin-top:4px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase"><span lang="en">Preview</span><span lang="ar">المعاينة</span></div>
+      <div id="sheetPreviewCount" style="background:var(--blue);color:#0d1117;padding:2px 10px;border-radius:12px;font-size:11px">0</div>
     </div>
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
       <div class="grid-header">
@@ -297,7 +297,7 @@ body.rtl [lang="en"] { display: none; }
         <div>User</div>
         <div>Pass</div>
       </div>
-      <div id="sheetPreviewList" style="max-height:220px;overflow-y:auto"></div>
+      <div id="sheetPreviewList" style="max-height:180px;overflow-y:auto"></div>
     </div>
   </div>
 
