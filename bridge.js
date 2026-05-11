@@ -1,4 +1,4 @@
-﻿// bridge.js ΓÇö runs in ISOLATED world
+// bridge.js — runs in ISOLATED world
 // Handles chrome APIs and passes data to/from MAIN world content.js
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -35,7 +35,7 @@ window.addEventListener('__prom_msg', async (e) => {
   }
 
   if (action === 'stepFailed') {
-    // Γ£à FIX 1: pass name so history records it correctly
+    // ✅ FIX 1: pass name so history records it correctly
     chrome.runtime.sendMessage({
       action: 'stepFailed',
       name:   payload?.name   || '',

@@ -57,7 +57,7 @@ async function saveToHistory(entry) {
   await chrome.storage.local.set({ history: history.slice(0, 500) });
 }
 
-// ΓöÇΓöÇ Progress Badge ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Progress Badge ────────────────────────────────────────────────────────────
 async function updateBadge() {
   const { queue, queueIndex, isRunning } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning']);
   if (isRunning && queue && queue.length > 0) {
@@ -68,7 +68,7 @@ async function updateBadge() {
   }
 }
 
-// Γ£à FIX 2: replaced recursion with iterative loop to prevent stack overflow
+// ✅ FIX 2: replaced recursion with iterative loop to prevent stack overflow
 async function openNextTab() {
   const { queue, queueIndex, isRunning, currentTabId } = await getState();
   if (!isRunning) {
@@ -106,20 +106,13 @@ async function openNextTab() {
     // End of queue
     await chrome.storage.local.set({ isRunning: false });
     await updateBadge();
-    // V4: Desktop notification on batch complete
-    chrome.notifications.create({
-      type: 'basic', iconUrl: 'icon128.png',
-      title: 'Batch Complete ✅',
-      message: `Finished registering ${queue.length} users.`,
-      priority: 2
-    });
   }
 }
 
-// ΓöÇΓöÇ Message Routing ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Message Routing ───────────────────────────────────────────────────────────
 // background.js handles:  startSingle | startQueue | stopQueue | resumeQueue | stepDone | stepFailed
 // bridge.js handles:      pauseBatch | resumeBatch | stopBatch | updateItem | saveCopied
-// (bridge.js runs in the ISOLATED world and writes directly to chrome.storage ΓÇö
+// (bridge.js runs in the ISOLATED world and writes directly to chrome.storage —
 //  no round-trip through background.js is needed for those actions.)
 let isMsgProcessing = false;
 const backgroundMsgQueue = [];
@@ -156,7 +149,7 @@ async function handleMessage(msg, sender) {
     };
 
     if (queue && queueIndex < queue.length) {
-      // ≡ƒ¢í∩╕Å VERIFICATION: Only increment if the name matches the expected current person
+      // 🛡️ VERIFICATION: Only increment if the name matches the expected current person
       // This prevents double-increments if messages are duplicated or arrive out of order
       if (queue[queueIndex].name === msg.name || !msg.name) {
         queue[queueIndex].status        = 'done';
@@ -167,7 +160,7 @@ async function handleMessage(msg, sender) {
 
     await saveToHistory(entry);
 
-    // Γ£à FIX 5: update savedCreds with the REAL finalUsername after registration
+    // ✅ FIX 5: update savedCreds with the REAL finalUsername after registration
     await chrome.storage.local.set({
       savedCreds: {
         name:     msg.name          || '',
@@ -200,15 +193,6 @@ async function handleMessage(msg, sender) {
       }
     }
     await saveToHistory(entry);
-    
-    // Notify user of failure
-    chrome.notifications.create({
-      type: 'basic', iconUrl: 'icon128.png',
-      title: 'Registration Failed ❌',
-      message: `${msg.name || 'User'} failed: ${msg.reason || 'Unknown error'}`,
-      priority: 2
-    });
-
     const { isRunning } = await getState();
     if (isRunning) {
       await openNextTab();
@@ -231,7 +215,7 @@ async function handleMessage(msg, sender) {
   }
 
   if (msg.action === 'startQueue') {
-    // ≡ƒº╣ CLEANUP: Close existing registration tab if any
+    // 🧹 CLEANUP: Close existing registration tab if any
     const { currentTabId } = await getState();
     if (currentTabId) {
       try { await chrome.tabs.remove(currentTabId); } catch(e) {}
@@ -255,21 +239,21 @@ async function handleMessage(msg, sender) {
   }
 }
 
-// ΓöÇΓöÇ Context Menu (Icon Dropdown) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Context Menu (Icon Dropdown) ─────────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "pause_queue",
-    title: "ΓÅ╕ Pause Registration",
+    title: "⏸ Pause Registration",
     contexts: ["action"]
   });
   chrome.contextMenus.create({
     id: "resume_queue",
-    title: "Γû╢ Resume Registration",
+    title: "▶ Resume Registration",
     contexts: ["action"]
   });
   chrome.contextMenus.create({
     id: "stop_clear",
-    title: "ΓÅ╣ Stop & Clear Queue",
+    title: "⏹ Stop & Clear Queue",
     contexts: ["action"]
   });
 });

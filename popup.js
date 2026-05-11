@@ -3,28 +3,7 @@ const { version } = chrome.runtime.getManifest();
 const versionBadge = document.getElementById('versionBadge');
 if (versionBadge) versionBadge.textContent = 'v' + version;
 
-// ── Language Toggle (V4) ──────────────────────────────────────────────────────
-let currentLang = 'en';
-async function setLang(lang) {
-  currentLang = lang;
-  if (lang === 'ar') {
-    document.body.classList.add('rtl');
-    document.getElementById('langAR')?.classList.add('active');
-    document.getElementById('langEN')?.classList.remove('active');
-  } else {
-    document.body.classList.remove('rtl');
-    document.getElementById('langEN')?.classList.add('active');
-    document.getElementById('langAR')?.classList.remove('active');
-  }
-  await chrome.storage.local.set({ lang });
-}
-document.getElementById('langToggle')?.addEventListener('click', async () => {
-  await setLang(currentLang === 'en' ? 'ar' : 'en');
-});
-chrome.storage.local.get(['lang'], ({ lang }) => { if (lang) setLang(lang); });
-
-
-// ΓöÇΓöÇ Copy helper: works even when popup is closing ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Copy helper: works even when popup is closing ─────────────────────────────
 function fallbackCopyPopup(text) {
   const ta = document.createElement('textarea');
   ta.value = text;
@@ -39,7 +18,7 @@ function fallbackCopyPopup(text) {
   }
 }
 
-// ΓöÇΓöÇ Utilities ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Utilities ─────────────────────────────────────────────────────────────────
 function genCreds(name) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
@@ -78,7 +57,7 @@ function genCreds(name) {
   return { username, password, firstName, lastName };
 }
 
-// ΓöÇΓöÇ Tabs ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Tabs ──────────────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -88,7 +67,7 @@ document.querySelectorAll('.tab').forEach(tab => {
   });
 });
 
-// ΓöÇΓöÇ Settings ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Settings ──────────────────────────────────────────────────────────────────
 const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'defCity', 'defState', 'defPostal', 'defCountry', 'defAnswer', 'passPattern', 'sheetUrl'];
 
 async function loadSettings() {
@@ -106,7 +85,7 @@ async function loadSettings() {
   if (settings.sheetUrl) document.getElementById('sheetUrl').value = settings.sheetUrl;
 }
 
-// ΓöÇΓöÇ Settings Actions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Settings Actions ──────────────────────────────────────────────────────────
 document.getElementById('saveSettings')?.addEventListener('click', async () => {
   const btn = document.getElementById('saveSettings');
   const data = {};
@@ -119,7 +98,7 @@ document.getElementById('saveSettings')?.addEventListener('click', async () => {
   updateSinglePreview();
   
   const oldText = btn.textContent;
-  btn.textContent = 'Γ£à Saved!';
+  btn.textContent = '✅ Saved!';
   btn.style.background = 'var(--green2)';
   setTimeout(() => { btn.textContent = oldText; btn.style.background = ''; }, 2000);
 });
@@ -152,19 +131,19 @@ document.getElementById('resetSettings')?.addEventListener('click', async () => 
 });
 
 document.getElementById('clearAllData')?.addEventListener('click', async () => {
-  if (!confirm('ΓÜá∩╕Å Are you sure? This will delete History and Active Queues, but KEEP your Settings.')) return;
+  if (!confirm('⚠️ Are you sure? This will delete History and Active Queues, but KEEP your Settings.')) return;
   const toClear = ['history', 'queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'savedCreds'];
   await chrome.storage.local.remove(toClear);
   location.reload();
 });
 
-// ΓöÇΓöÇ SINGLE MODE ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── SINGLE MODE ───────────────────────────────────────────────────────────────
 const sName        = document.getElementById('sName');
 const sEmail       = document.getElementById('sEmail');
 const sStart       = document.getElementById('sStart');
 const sMsg         = document.getElementById('sMsg');
 const singleBanner = document.getElementById('singleBanner');
-const stopSingle   = document.getElementById('stopSingle'); // ΓåÉ explicit ref (used in pollStatus)
+const stopSingle   = document.getElementById('stopSingle'); // ← explicit ref (used in pollStatus)
 
 const scNamePanel = document.getElementById('scName');
 const scUserPanel = document.getElementById('scUser');
@@ -211,7 +190,7 @@ sStart.addEventListener('click', async () => {
   });
   
   sMsg.className = 'msg ok';
-  sMsg.textContent = 'Γ£à Opened! Filling in progressΓÇª';
+  sMsg.textContent = '✅ Opened! Filling in progress…';
   sMsg.style.display = 'block';
   singleBanner.classList.add('show');
   
@@ -225,11 +204,11 @@ document.getElementById('stopSingle').addEventListener('click', async () => {
   sStart.style.display = 'block';
   
   sMsg.className = 'msg err';
-  sMsg.textContent = 'ΓÅ╣ Registration stopped by user.';
+  sMsg.textContent = '⏹ Registration stopped by user.';
   sMsg.style.display = 'block';
 });
 
-// ΓöÇΓöÇ BATCH MODE ΓÇö CSV/Excel parser ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── BATCH MODE — CSV/Excel parser ─────────────────────────────────────────────
 let batchItems = [];
 
 function parseCSV(text) {
@@ -349,10 +328,10 @@ async function handleFile(file) {
     rows = parseCSV(text);
   } else if (fname.endsWith('.xlsx') || fname.endsWith('.xls')) {
     // Note: parseXLSX handles the OOXML (.xlsx) ZIP/DEFLATE format.
-    // Legacy .xls (BIFF binary) is NOT supported ΓÇö user will get an empty result.
+    // Legacy .xls (BIFF binary) is NOT supported — user will get an empty result.
     if (fname.endsWith('.xls') && !fname.endsWith('.xlsx')) {
       bMsg.className = 'msg err';
-      bMsg.textContent = 'Γ¥î Legacy .xls format is not supported. Please save your file as .xlsx or .csv and try again.';
+      bMsg.textContent = '❌ Legacy .xls format is not supported. Please save your file as .xlsx or .csv and try again.';
       bMsg.style.display = 'block';
       return;
     }
@@ -360,14 +339,14 @@ async function handleFile(file) {
     rows = await parseXLSX(buf);
   } else {
     bMsg.className = 'msg err';
-    bMsg.textContent = 'Γ¥î Unsupported file type. Use .csv, .xlsx or .xls';
+    bMsg.textContent = '❌ Unsupported file type. Use .csv, .xlsx or .xls';
     bMsg.style.display = 'block';
     return;
   }
 
   if (!rows.length) {
     bMsg.className = 'msg err';
-    bMsg.textContent = 'Γ¥î No data found. Check your file format.';
+    bMsg.textContent = '❌ No data found. Check your file format.';
     bMsg.style.display = 'block';
     return;
   }
@@ -408,7 +387,7 @@ function renderQueue() {
 }
 
 function statusLabel(s) {
-  return { pending: 'Waiting', running: 'Γû╢ Running', done: 'Γ£ô Done', failed: 'Γ£ù Failed' }[s] || s;
+  return { pending: 'Waiting', running: '▶ Running', done: '✓ Done', failed: '✗ Failed' }[s] || s;
 }
 
 document.getElementById('clearQueue').addEventListener('click', () => {
@@ -444,7 +423,7 @@ bStart.addEventListener('click', async () => {
   batchSpinner.style.display = 'block';
   
   bMsg.className = 'msg ok';
-  bMsg.textContent = `Γ£à Started ${batchItems.length} registrations!`;
+  bMsg.textContent = `✅ Started ${batchItems.length} registrations!`;
   bMsg.style.display = 'block';
 });
 
@@ -456,7 +435,7 @@ stopBatch.addEventListener('click', async () => {
   batchSpinner.style.display = 'none';
   
   bMsg.className = 'msg err';
-  bMsg.textContent = 'ΓÅ╣ Execution stopped by user.';
+  bMsg.textContent = '⏹ Execution stopped by user.';
   bMsg.style.display = 'block';
 });
 
@@ -471,12 +450,12 @@ if (resumeBtn) {
     batchSpinner.style.display = 'block';
     
     bMsg.className = 'msg ok';
-    bMsg.textContent = 'Γû╢ Resuming batch registrationΓÇª';
+    bMsg.textContent = '▶ Resuming batch registration…';
     bMsg.style.display = 'block';
   });
 }
 
-// ΓöÇΓöÇ Poll status ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Poll status ───────────────────────────────────────────────────────────────
 let userStopped = false;
 
 async function pollStatus() {
@@ -521,7 +500,7 @@ async function pollStatus() {
       batchBanner.style.background = 'rgba(210,153,34,.1)';
       batchBanner.style.borderColor = 'rgba(210,153,34,.3)';
       batchProgress.style.color = 'var(--yellow)';
-      batchProgress.textContent = `Processing ${Math.min(queueIndex + 1, queue.length)} of ${queue.length}ΓÇª`;
+      batchProgress.textContent = `Processing ${Math.min(queueIndex + 1, queue.length)} of ${queue.length}…`;
       
       bStart.style.display = 'none';
       resumeBtn.style.display = 'none';
@@ -541,7 +520,7 @@ async function pollStatus() {
         batchBanner.style.background = 'rgba(56,139,253,.08)';
         batchBanner.style.borderColor = 'rgba(56,139,253,.3)';
         batchProgress.style.color = 'var(--blue)';
-        batchProgress.textContent = `ΓÅ╕ Queue paused ΓÇö ${pendingItems.length} remaining`;
+        batchProgress.textContent = `⏸ Queue paused — ${pendingItems.length} remaining`;
         resumeBtn.style.display = 'block';
       } else {
         batchBanner.classList.remove('show');
@@ -555,7 +534,7 @@ async function pollStatus() {
 setInterval(pollStatus, 1500);
 pollStatus();
 
-// ΓöÇΓöÇ HISTORY TAB ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── HISTORY TAB ───────────────────────────────────────────────────────────────
 async function loadHistory() {
   const { history = [] } = await chrome.storage.local.get(['history']);
   const list    = document.getElementById('histList');
@@ -571,11 +550,11 @@ async function loadHistory() {
 
   list.innerHTML = history.map((h, i) => `
     <div class="hist-item">
-      <div class="hist-name" title="${h.name || ''}">${h.name || 'ΓÇö'}</div>
-      <div class="hist-user" title="${h.finalUsername || ''}">${h.finalUsername || 'ΓÇö'}</div>
-      <div class="hist-pass" title="${h.password || ''}">${h.password || 'ΓÇö'}</div>
+      <div class="hist-name" title="${h.name || ''}">${h.name || '—'}</div>
+      <div class="hist-user" title="${h.finalUsername || ''}">${h.finalUsername || '—'}</div>
+      <div class="hist-pass" title="${h.password || ''}">${h.password || '—'}</div>
       <div style="text-align:right;white-space:nowrap">
-        <span class="hist-badge ${h.status}" title="${h.date ? new Date(h.date).toLocaleString('en-GB') : ''}">${h.status === 'done' ? 'Γ£ô' : 'Γ£ù'}</span>
+        <span class="hist-badge ${h.status}" title="${h.date ? new Date(h.date).toLocaleString('en-GB') : ''}">${h.status === 'done' ? '✓' : '✗'}</span>
         ${h.status === 'done' ? `<button class="hist-copy" data-index="${i}">Copy</button>` : ''}
       </div>
     </div>`).join('');
@@ -612,7 +591,7 @@ setInterval(async () => {
 
 loadHistory();
 
-// ΓöÇΓöÇ Saved Credentials Panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Saved Credentials Panel ───────────────────────────────────────────────────
 async function loadSavedCreds() {
   const { savedCreds, isRunning, singleRunning } = await chrome.storage.local.get(['savedCreds', 'isRunning', 'singleRunning']);
   // Don't overwrite the live preview if user is typing in single mode (unless it's actively running)
@@ -628,7 +607,7 @@ async function loadSavedCreds() {
   }
 }
 
-// ΓöÇΓöÇ Global Event Delegation ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Global Event Delegation ────────────────────────────────────────────────────
 document.addEventListener('click', async (e) => {
   // Handle history copy
   if (e.target.classList.contains('hist-copy')) {
@@ -637,7 +616,7 @@ document.addEventListener('click', async (e) => {
     const h = history[i];
     if (h) fallbackCopyPopup(`${h.finalUsername}\t${h.password}`);
     const btn = e.target;
-    btn.textContent = 'Γ£ô';
+    btn.textContent = '✓';
     setTimeout(() => btn.textContent = 'Copy', 5000);
   }
   
@@ -647,7 +626,7 @@ document.addEventListener('click', async (e) => {
     const text = document.getElementById(id)?.textContent || '';
     fallbackCopyPopup(text);
     const btn = e.target;
-    btn.textContent = 'Γ£ô';
+    btn.textContent = '✓';
     setTimeout(() => btn.textContent = 'Copy', 5000);
   }
 });
@@ -655,14 +634,14 @@ document.addEventListener('click', async (e) => {
 loadSavedCreds();
 setInterval(loadSavedCreds, 3000);
 
-// ΓöÇΓöÇ History Export ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── History Export ────────────────────────────────────────────────────────────
 document.getElementById('exportCSV')?.addEventListener('click', async () => {
   const btn = document.getElementById('exportCSV');
   const { history = [] } = await chrome.storage.local.get(['history']);
   if (!history.length) return;
 
   const oldText = btn.textContent;
-  btn.textContent = 'ΓÅ│ Generating...';
+  btn.textContent = '⏳ Generating...';
   btn.disabled = true;
 
   try {
@@ -692,7 +671,7 @@ document.getElementById('exportCSV')?.addEventListener('click', async () => {
   }
 });
 
-// ΓöÇΓöÇ Template Download ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Template Download ─────────────────────────────────────────────────────────
 document.getElementById('downloadTemplate')?.addEventListener('click', () => {
   const csv  = 'Name,Email\nJOHN SMITH,john.smith@example.com\nSARAH JONES,sarah.jones@example.com';
   chrome.downloads.download({
@@ -702,7 +681,7 @@ document.getElementById('downloadTemplate')?.addEventListener('click', () => {
   });
 });
 
-// ΓöÇΓöÇ Google Sheet Integration ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Google Sheet Integration ──────────────────────────────────────────────────
 let sheetData = [];
 let excludedSheetRows = new Set();
 
@@ -732,7 +711,7 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
   const url = document.getElementById('sheetUrl').value.trim();
   await chrome.storage.local.set({ sheetUrl: url });
   
-  const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  const m = url.match(/\/d\/(.*?)\//);
   if (!m) return showSheetError('Invalid Google Sheet URL. Make sure you copy the full link.');
   const id = m[1];
   
@@ -742,7 +721,7 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
 
   const exportUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
   
-  btn.textContent = 'ΓÅ│';
+  btn.textContent = '⏳';
   btn.disabled = true;
   showSheetError('');
   
@@ -765,7 +744,7 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
     if (emailSel) emailSel.innerHTML = '';
 
     const daySel = document.getElementById('sheetDayCol');
-    if (daySel) daySel.innerHTML = '<option value="-1">ΓÇö No filter ΓÇö</option>';
+    if (daySel) daySel.innerHTML = '<option value="-1">— No filter —</option>';
 
     headers.forEach((h, i) => {
       const opt = `<option value="${i}">[Col ${String.fromCharCode(65+i)}] ${h || 'Unnamed'}</option>`;
@@ -775,9 +754,9 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
     });
 
     const hl = headers.map(h => (h||'').toLowerCase());
-    const nIdx = hl.findIndex(h => h.includes('╪º╪│┘à') || h.includes('name') || h.includes('┘ç┘ê┘è╪⌐'));
-    const eIdx = hl.findIndex(h => h.includes('email') || h.includes('╪¿╪▒┘è╪»'));
-    const dIdx = hl.findIndex(h => h.includes('day') || h.includes('┘è┘ê┘à'));
+    const nIdx = hl.findIndex(h => h.includes('اسم') || h.includes('name') || h.includes('هوية'));
+    const eIdx = hl.findIndex(h => h.includes('email') || h.includes('بريد'));
+    const dIdx = hl.findIndex(h => h.includes('day') || h.includes('يوم'));
     
     if (nIdx >= 0) nameSel.value = nIdx;
     if (eIdx >= 0) emailSel.value = eIdx;
@@ -846,7 +825,7 @@ function renderSheetPreview() {
       <div style="font-family:monospace;color:var(--blue);font-size:11px">${c ? c.username : ''}</div>
       <div style="font-family:monospace;color:var(--yellow);font-size:11px">${c ? c.password : ''}</div>
       <div style="text-align:right">
-        <button class="delete-row-btn" data-idx="${item.origIndex}" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:bold;padding:0 5px" title="Exclude from batch">Γ£ò</button>
+        <button class="delete-row-btn" data-idx="${item.origIndex}" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:bold;padding:0 5px" title="Exclude from batch">✕</button>
       </div>
     </div>`;
   }).join('') + (items.length > 100 ? `<div style="text-align:center;padding:8px;color:var(--muted);font-size:11px">...and ${items.length - 100} more</div>` : '');
@@ -936,7 +915,7 @@ function buildDayFilter(dIdx) {
   renderSheetPreview();
 }
 
-// ΓöÇΓöÇ Clipboard Banner ΓÇö shows last copied creds for 30 seconds ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Clipboard Banner — shows last copied creds for 30 seconds ─────────────────
 let clipInterval = null;
 
 async function checkClipboard() {
@@ -957,25 +936,25 @@ async function checkClipboard() {
   // Show banner
   banner.classList.add('show');
   const remaining = Math.max(0, copiedCreds.expiresAt - Date.now());
-  const pct = remaining / 30000; // 0ΓåÆ1
-  const circumference = 72; // 2╧Çr Γëê 72 for r=11.5
+  const pct = remaining / 30000; // 0→1
+  const circumference = 72; // 2πr ≈ 72 for r=11.5
   if (circle) circle.style.strokeDashoffset = circumference * (1 - pct);
 
   const secs = Math.ceil(remaining / 1000);
-  if (textEl) textEl.textContent = `≡ƒôï ${copiedCreds.label || 'Credentials copied'} (${secs}s)`;
+  if (textEl) textEl.textContent = `📋 ${copiedCreds.label || 'Credentials copied'} (${secs}s)`;
 
   // Copy Again button
   if (copyBtn && !copyBtn._bound) {
     copyBtn._bound = true;
     copyBtn.addEventListener('click', () => {
       fallbackCopyPopup(copiedCreds.text);
-      copyBtn.textContent = 'Γ£ô Copied!';
+      copyBtn.textContent = '✓ Copied!';
       setTimeout(() => copyBtn.textContent = 'Copy Again', 3000);
     });
   }
 }
 
-// ΓöÇΓöÇ Batch Status Banner ΓÇö shows global progress when running ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+// ── Batch Status Banner — shows global progress when running ──────────────────
 async function checkBatchStatus() {
   const { isRunning, queue, queueIndex } = await chrome.storage.local.get(['isRunning', 'queue', 'queueIndex']);
   const banner = document.getElementById('globalBatchBanner');
