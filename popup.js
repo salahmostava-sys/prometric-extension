@@ -192,6 +192,16 @@ sStart?.addEventListener('click', async () => {
   chrome.runtime.sendMessage({ action: 'resumeQueue' });
 });
 
+document.getElementById('dlTemplate')?.addEventListener('click', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  const csv = "name,email\nABDULLAH MOHAMMED,abdullah@example.com\nAHMED ALI,ahmed@example.com";
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'prometric_template.csv';
+  a.click();
+});
+
 // ── Batch Upload ─────────────────────────────────────────────────────────────
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
