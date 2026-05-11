@@ -106,6 +106,14 @@ async function openNextTab() {
     // End of queue
     await chrome.storage.local.set({ isRunning: false });
     await updateBadge();
+    
+    // Play sound / Show notification when batch completes
+    chrome.notifications.create({
+      type: 'basic', iconUrl: 'icon128.png',
+      title: 'Batch Complete ✅',
+      message: 'All registrations have been processed successfully.',
+      priority: 1
+    });
   }
 }
 

@@ -24,6 +24,45 @@ chrome.storage.local.get(['lightMode'], ({ lightMode }) => {
   if (lightMode !== undefined) applyTheme(lightMode);
 });
 
+// ── Speed Toggle ──────────────────────────────────────────────────────────────
+async function applySpeedMode(isTurbo) {
+  const btn = document.getElementById('speedToggle');
+  if (!btn) return;
+  if (isTurbo) {
+    btn.textContent = '⚡ Turbo';
+    btn.style.color = 'var(--yellow)';
+    btn.style.borderColor = 'var(--yellow)';
+    const pD = document.getElementById('pageDelay');
+    const uD = document.getElementById('userDelay');
+    if (pD) pD.value = 0.5;
+    if (uD) uD.value = 2;
+  } else {
+    btn.textContent = '🐢 Safe';
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'var(--green)';
+    const pD = document.getElementById('pageDelay');
+    const uD = document.getElementById('userDelay');
+    if (pD) pD.value = 2.5;
+    if (uD) uD.value = 6;
+  }
+}
+
+document.getElementById('speedToggle')?.addEventListener('click', async () => {
+  const { speedMode } = await chrome.storage.local.get(['speedMode']);
+  const newTurbo = speedMode === 'safe'; // if it was safe, make it turbo (default is turbo)
+  
+  applySpeedMode(newTurbo);
+  await chrome.storage.local.set({ 
+    speedMode: newTurbo ? 'turbo' : 'safe',
+    pageDelay: newTurbo ? 0.5 : 2.5,
+    userDelay: newTurbo ? 2 : 6
+  });
+});
+
+chrome.storage.local.get(['speedMode'], ({ speedMode }) => {
+  applySpeedMode(speedMode !== 'safe'); // default to turbo
+});
+
 // ── Copy helper: works even when popup is closing ─────────────────────────────
 function fallbackCopyPopup(text) {
   const ta = document.createElement('textarea');
