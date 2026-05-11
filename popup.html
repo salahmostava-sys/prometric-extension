@@ -356,6 +356,19 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
       <button class="export-btn" id="clearHist">🗑 Clear</button>
     </div>
   </div>
+  <div id="histAnalytics" style="display:none; padding:12px 16px; border-bottom:1px solid var(--border); background:var(--surface2)">
+    <div style="font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px">Today's Summary</div>
+    <div style="display:flex; gap:10px">
+      <div style="flex:1; background:var(--bg); border:1px solid var(--green); border-radius:6px; padding:8px; text-align:center">
+        <div style="font-size:16px; font-weight:700; color:var(--green)" id="statSuccess">0</div>
+        <div style="font-size:10px; color:var(--muted)">Successful</div>
+      </div>
+      <div style="flex:1; background:var(--bg); border:1px solid var(--red); border-radius:6px; padding:8px; text-align:center">
+        <div style="font-size:16px; font-weight:700; color:var(--red)" id="statFail">0</div>
+        <div style="font-size:10px; color:var(--muted)">Failed</div>
+      </div>
+    </div>
+  </div>
   <div class="hist-list" id="histList"><div class="hist-empty">No registrations yet</div></div>
 </div>
 

@@ -560,13 +560,33 @@ async function loadHistory() {
   const { history = [] } = await chrome.storage.local.get(['history']);
   const list    = document.getElementById('histList');
   const countEl = document.getElementById('histCount');
+  const analyticsWrap = document.getElementById('histAnalytics');
   if (!list) return;
 
   countEl.textContent = `${history.length} record${history.length !== 1 ? 's' : ''}`;
 
   if (history.length === 0) {
+    if (analyticsWrap) analyticsWrap.style.display = 'none';
     list.innerHTML = '<div class="hist-empty">No registrations yet</div>';
     return;
+  }
+
+  // Calculate Today's Stats
+  const today = new Date().toDateString();
+  let todaySuccess = 0;
+  let todayFail = 0;
+  
+  history.forEach(h => {
+    if (h.date && new Date(h.date).toDateString() === today) {
+      if (h.status === 'done') todaySuccess++;
+      else if (h.status === 'failed') todayFail++;
+    }
+  });
+
+  if (analyticsWrap) {
+    analyticsWrap.style.display = 'block';
+    document.getElementById('statSuccess').textContent = todaySuccess;
+    document.getElementById('statFail').textContent = todayFail;
   }
 
   list.innerHTML = history.map((h, i) => `
