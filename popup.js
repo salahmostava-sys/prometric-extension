@@ -3,6 +3,27 @@ const { version } = chrome.runtime.getManifest();
 const versionBadge = document.getElementById('versionBadge');
 if (versionBadge) versionBadge.textContent = 'v' + version;
 
+// ── Theme Toggle ──────────────────────────────────────────────────────────────
+async function applyTheme(isLight) {
+  if (isLight) {
+    document.body.classList.add('light-mode');
+    document.getElementById('themeToggle').textContent = '🌙';
+  } else {
+    document.body.classList.remove('light-mode');
+    document.getElementById('themeToggle').textContent = '☀️';
+  }
+}
+
+document.getElementById('themeToggle')?.addEventListener('click', async () => {
+  const isLight = !document.body.classList.contains('light-mode');
+  applyTheme(isLight);
+  await chrome.storage.local.set({ lightMode: isLight });
+});
+
+chrome.storage.local.get(['lightMode'], ({ lightMode }) => {
+  if (lightMode !== undefined) applyTheme(lightMode);
+});
+
 // ── Copy helper: works even when popup is closing ─────────────────────────────
 function fallbackCopyPopup(text) {
   const ta = document.createElement('textarea');

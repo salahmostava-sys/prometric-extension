@@ -12,6 +12,12 @@
   --blue:#388bfd;
   --radius:8px;
 }
+body.light-mode {
+  --bg:#ffffff;--surface:#f6f8fa;--surface2:#eaeef2;
+  --border:#d0d7de;--green:#1a7f37;--green2:#2da44e;
+  --text:#1f2328;--muted:#656d76;--red:#cf222e;--yellow:#9a6700;
+  --blue:#0969da;
+}
 body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;overflow-x:hidden;display:flex;flex-direction:column}
 
 /* ── Header ── */
@@ -19,7 +25,9 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 .hdr-icon{width:32px;height:32px;background:#fff url('icon.png') center/contain no-repeat;border-radius:6px;flex-shrink:0}
 .hdr-title{font-weight:700;font-size:14px;color:var(--text)}
 .hdr-sub{font-size:11px;color:var(--muted)}
-.badge{margin-left:auto;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 8px;border-radius:20px}
+.theme-toggle{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;padding:4px 6px;border-radius:6px;cursor:pointer;margin-left:auto;transition:.2s}
+.theme-toggle:hover{background:var(--border)}
+.badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 8px;border-radius:20px}
 
 /* ── Tabs ── */
 .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface)}
@@ -158,6 +166,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
     <div class="hdr-title">Prometric Auto Register</div>
     <div class="hdr-sub">IBTA MEA · Auto Fill</div>
   </div>
+  <button class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode">☀️</button>
   <div class="badge" id="versionBadge">v3.0</div>
 </div>
 
