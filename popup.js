@@ -1,4 +1,4 @@
-// popup.js — V4.0 Pro Edition
+// popup.js — V4.0 Pro Edition (Revised)
 
 // ── Init & State ─────────────────────────────────────────────────────────────
 const { version } = chrome.runtime.getManifest();
@@ -6,8 +6,9 @@ const versionBadge = document.getElementById('versionBadge');
 if (versionBadge) versionBadge.textContent = 'v' + version;
 
 let currentLang = 'en';
-let allSheetData = []; // Cached full sheet data
-let sheetColumns = []; // Cached column names
+let allSheetData = []; 
+let sheetColumns = []; 
+let selectedDays = new Set();
 
 // ── Language Toggle ───────────────────────────────────────────────────────────
 const langToggle = document.getElementById('langToggle');
@@ -67,20 +68,9 @@ function getTxt(key, arg) {
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
-function fallbackCopyPopup(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;pointer-events:none';
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  try { document.execCommand('copy'); } catch(_) {}
-  document.body.removeChild(ta);
-}
-
 function genCreds(name) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 1) return null;
+  if (parts.length < 1) return { username: '-', password: '-' };
   if (parts.length === 1) parts.push(parts[0]);
   const username = (parts[0] + parts[1]).toUpperCase();
   const pattern = document.getElementById('passPattern').value || '{F}@{f}#$1970';
@@ -98,8 +88,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
-    const paneId = 'pane-' + tab.dataset.tab;
-    const pane = document.getElementById(paneId);
+    const pane = document.getElementById('pane-' + tab.dataset.tab);
     if (pane) pane.classList.add('active');
   });
 });
@@ -140,16 +129,7 @@ document.getElementById('saveSettings')?.addEventListener('click', async () => {
 document.getElementById('resetSettings')?.addEventListener('click', async () => {
   if (!confirm(getTxt('confirmDefault'))) return;
   const defaults = {
-    pageDelay: 1,
-    userDelay: 2,
-    autoSubmit: false,
-    defAddress: 'Al-Alameya',
-    defCity: 'JEDDAH',
-    defState: 'JEDDAH',
-    defPostal: '00000',
-    defCountry: 'Saudi Arabia',
-    defAnswer: 'a',
-    passPattern: '{F}@{f}#$1970'
+    pageDelay: 1, userDelay: 2, autoSubmit: false, defAddress: 'Al-Alameya', defCity: 'JEDDAH', defState: 'JEDDAH', defPostal: '00000', defCountry: 'Saudi Arabia', defAnswer: 'a', passPattern: '{F}@{f}#$1970'
   };
   await chrome.storage.local.set(defaults);
   await loadSettings();
@@ -166,9 +146,7 @@ async function validateQueue(items) {
   const { history = [] } = await chrome.storage.local.get(['history']);
   const histNames = new Set(history.map(h => (h.name || '').toLowerCase().trim()));
   const seenInQueue = new Set();
-  
-  let hasDup = false;
-  let hasEmpty = false;
+  let hasDup = false; let hasEmpty = false;
 
   for (const item of items) {
     const name = (item.name || '').toLowerCase().trim();
@@ -217,26 +195,19 @@ sStart?.addEventListener('click', async () => {
 // ── Batch Upload ─────────────────────────────────────────────────────────────
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
-
 uploadArea?.addEventListener('click', () => fileInput.click());
 
 fileInput?.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  
   const reader = new FileReader();
   reader.onload = async (ev) => {
     const content = ev.target.result;
     let items = [];
-    
     if (file.name.endsWith('.csv')) {
       const rows = content.split('\n').map(r => r.split(',')).filter(r => r.length >= 2);
       items = rows.slice(1).map(r => ({ name: r[0].trim(), email: r[1].trim(), status: 'pending' }));
-    } else {
-      // Excel handling (requires library which we assume is in the head via script tag if possible, or we use simpler parsing)
-      // For now, let's assume CSV or simpler text for the demo, but keep the UI hooks.
     }
-    
     if (items.length > 0) {
       document.getElementById('queueWrap').style.display = 'block';
       document.getElementById('qCount').textContent = items.length;
@@ -262,16 +233,15 @@ function renderQueue(items) {
   `).join('');
 }
 
-// ── Google Sheet ─────────────────────────────────────────────────────────────
+// ── Google Sheet Fetch & Filter ──────────────────────────────────────────────
 const sheetFetch = document.getElementById('sheetFetch');
 sheetFetch?.addEventListener('click', async () => {
   const url = document.getElementById('sheetUrl').value.trim();
   if (!url) return;
-  
   const sheetIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
   if (!sheetIdMatch) return;
   const sheetId = sheetIdMatch[1];
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&timestamp=${Date.now()}`;
 
   sheetFetch.disabled = true;
   sheetFetch.textContent = '...';
@@ -313,13 +283,47 @@ sheetFetch?.addEventListener('click', async () => {
 function renderSheetPreview() {
   const nameIdx = parseInt(document.getElementById('sheetNameCol').value);
   const emailIdx = parseInt(document.getElementById('sheetEmailCol').value);
+  const dayIdx = parseInt(document.getElementById('sheetDayCol').value);
+  
   if (isNaN(nameIdx) || isNaN(emailIdx)) return;
 
-  const items = allSheetData.slice(1).map(r => ({
-    name: r[nameIdx],
-    email: r[emailIdx],
-    status: 'pending'
-  })).filter(i => i.name && i.email.includes('@'));
+  // Extract Days if column selected
+  const dayFilterContainer = document.getElementById('sheetDayFilter');
+  const dayBadgeContainer = document.getElementById('sheetDayBadges');
+  if (dayIdx !== -1) {
+    dayFilterContainer.style.display = 'block';
+    const days = [...new Set(allSheetData.slice(1).map(r => r[dayIdx]).filter(Boolean))].sort();
+    dayBadgeContainer.innerHTML = days.map(d => `<div class="day-badge ${selectedDays.has(d) ? 'active' : ''}" data-day="${d}">${d}</div>`).join('');
+    
+    document.querySelectorAll('.day-badge').forEach(b => {
+      b.onclick = () => {
+        const d = b.dataset.day;
+        if (selectedDays.has(d)) selectedDays.delete(d);
+        else selectedDays.add(d);
+        renderSheetPreview();
+      };
+    });
+  } else {
+    dayFilterContainer.style.display = 'none';
+    selectedDays.clear();
+  }
+
+  const items = allSheetData.slice(1).map(r => {
+    const creds = genCreds(r[nameIdx]);
+    return {
+      name: r[nameIdx],
+      email: r[emailIdx],
+      username: creds.username,
+      password: creds.password,
+      day: dayIdx !== -1 ? r[dayIdx] : null,
+      status: 'pending'
+    };
+  }).filter(i => {
+    const basicValid = i.name && i.email.includes('@');
+    if (!basicValid) return false;
+    if (selectedDays.size > 0 && !selectedDays.has(i.day)) return false;
+    return true;
+  });
 
   const list = document.getElementById('sheetPreviewList');
   const wrap = document.getElementById('sheetPreviewWrap');
@@ -329,13 +333,12 @@ function renderSheetPreview() {
   count.textContent = items.length;
   document.getElementById('sheetStart').disabled = items.length === 0;
 
-  list.innerHTML = items.slice(0, 50).map(item => `
-    <div class="list-item">
-      <div>
-        <div class="item-name">${item.name}</div>
-        <div class="item-sub">${item.email}</div>
-      </div>
-      <div class="badge-status status-pending">Pending</div>
+  list.innerHTML = items.map(item => `
+    <div class="grid-item">
+      <div title="${item.name}">${item.name}</div>
+      <div title="${item.email}">${item.email}</div>
+      <div style="font-family:monospace;color:var(--blue)">${item.username}</div>
+      <div style="font-family:monospace;color:var(--yellow)">${item.password}</div>
     </div>
   `).join('');
   
@@ -344,6 +347,7 @@ function renderSheetPreview() {
 
 document.getElementById('sheetNameCol')?.addEventListener('change', renderSheetPreview);
 document.getElementById('sheetEmailCol')?.addEventListener('change', renderSheetPreview);
+document.getElementById('sheetDayCol')?.addEventListener('change', () => { selectedDays.clear(); renderSheetPreview(); });
 
 document.getElementById('sheetStart')?.addEventListener('click', async () => {
   const { queue } = await chrome.storage.local.get(['queue']);
@@ -353,47 +357,39 @@ document.getElementById('sheetStart')?.addEventListener('click', async () => {
   chrome.runtime.sendMessage({ action: 'resumeQueue' });
 });
 
-// ── History & Status ─────────────────────────────────────────────────────────
+// ── History & Status Polling ──────────────────────────────────────────────────
 async function renderHistory() {
   const { history = [] } = await chrome.storage.local.get(['history']);
   const list = document.getElementById('histList');
   if (!list) return;
   if (history.length === 0) {
-    list.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-style:italic">No registrations yet</div>`;
+    list.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-style:italic">No records</div>`;
     return;
   }
-  list.innerHTML = history.slice(0, 100).map(h => `
+  list.innerHTML = history.slice(0, 50).map(h => `
     <div class="list-item">
       <div>
         <div class="item-name">${h.name}</div>
         <div class="item-sub">${h.finalUsername || h.username} · ${h.email}</div>
       </div>
-      <div class="badge-status status-done">Done</div>
+      <div class="status-done">Done</div>
     </div>
   `).join('');
 }
 
-async function checkStatus() {
+setInterval(async () => {
   const { isRunning, queue, queueIndex, copiedCreds } = await chrome.storage.local.get(['isRunning', 'queue', 'queueIndex', 'copiedCreds']);
-  
-  const globalBanner = document.getElementById('globalBatchBanner');
-  const progText = document.getElementById('globalBatchProgress');
+  const banner = document.getElementById('globalBatchBanner');
   if (isRunning && queue && queue.length > 0) {
-    globalBanner.style.display = 'flex';
-    progText.textContent = `${queueIndex} / ${queue.length} completed`;
+    banner.style.display = 'flex';
+    document.getElementById('globalBatchProgress').textContent = `${queueIndex} / ${queue.length} completed`;
   } else {
-    globalBanner.style.display = 'none';
+    banner.style.display = 'none';
   }
-
   const clip = document.getElementById('clipBanner');
-  if (copiedCreds && Date.now() < copiedCreds.expiresAt) {
-    clip.classList.add('show');
-    document.getElementById('clipText').textContent = `📋 ${copiedCreds.label || 'Copied'}`;
-  } else {
-    clip.classList.remove('show');
-  }
-}
+  if (copiedCreds && Date.now() < copiedCreds.expiresAt) clip.classList.add('show');
+  else clip.classList.remove('show');
+}, 1000);
 
-setInterval(checkStatus, 1000);
 loadSettings();
 renderHistory();

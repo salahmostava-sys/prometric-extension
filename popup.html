@@ -9,9 +9,9 @@
   --surface: #161b22;
   --surface2: #21262d;
   --text: #e6edf3;
-  --muted: #7d8590;
+  --muted: #8b949e;
   --border: #30363d;
-  --blue: #2f81f7;
+  --blue: #58a6ff;
   --green: #238636;
   --green-hover: #2ea043;
   --red: #f85149;
@@ -23,13 +23,18 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  background: var(--bg); color: var(--text); font-size: 13px; width: 420px; 
+  background: var(--bg); color: var(--text); font-size: 14px; width: 480px; /* Increased width */
   min-height: 580px; overflow-x: hidden; transition: all 0.2s;
 }
 
 /* RTL Support */
 body.rtl { direction: rtl; }
 body.rtl .tab { font-family: "Segoe UI", Tahoma, sans-serif; }
+
+/* Font Weight Reduction as requested */
+h1, h2, h3, .hdr-title, .tab, .btn, .card-title, label, .item-name { 
+  font-weight: 500 !important; 
+}
 
 .hdr { 
   padding: 18px 20px; background: var(--surface); border-bottom: 1px solid var(--border); 
@@ -38,34 +43,33 @@ body.rtl .tab { font-family: "Segoe UI", Tahoma, sans-serif; }
 .hdr-icon { 
   width: 32px; height: 32px; background: var(--green); border-radius: 8px; 
   display: flex; align-items: center; justify-content: center; font-size: 18px;
-  box-shadow: 0 0 15px rgba(35,134,54,0.3);
 }
 .hdr-icon::after { content: "⚡"; }
-.hdr-title { font-weight: 800; font-size: 15px; letter-spacing: -0.3px; }
-.hdr-sub { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.hdr-title { font-size: 16px; }
+.hdr-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
 .lang-toggle {
   margin-left: auto; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 20px; padding: 4px 10px; display: flex; gap: 8px; cursor: pointer;
+  border-radius: 20px; padding: 4px 12px; display: flex; gap: 10px; cursor: pointer;
 }
 body.rtl .lang-toggle { margin-left: 0; margin-right: auto; }
-.lang-toggle span { font-size: 10px; font-weight: 700; color: var(--muted); }
-.lang-toggle span.active { color: var(--blue); }
+.lang-toggle span { font-size: 11px; color: var(--muted); }
+.lang-toggle span.active { color: var(--blue); font-weight: 600 !important; }
 
 .tabs { 
   display: flex; background: var(--bg); padding: 4px 10px; gap: 4px;
   position: sticky; top: 69px; z-index: 90; border-bottom: 1px solid var(--border);
 }
 .tab { 
-  flex: 1; padding: 10px 4px; text-align: center; cursor: pointer; font-weight: 600; 
-  font-size: 11px; color: var(--muted); border-radius: var(--radius); transition: 0.2s;
+  flex: 1; padding: 12px 4px; text-align: center; cursor: pointer; 
+  font-size: 12px; color: var(--muted); border-radius: var(--radius); transition: 0.2s;
 }
 .tab:hover { background: var(--surface); color: var(--text); }
-.tab.active { color: var(--blue); background: var(--surface2); }
+.tab.active { color: var(--blue); background: var(--surface2); border-bottom: 2px solid var(--blue); border-radius: 0; }
 
-.pane { display: none; padding: 20px; animation: fadeIn 0.2s ease-out; }
+.pane { display: none; padding: 20px; animation: fadeIn 0.1s ease-out; }
 .pane.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* Cards & Fields */
 .card {
@@ -73,76 +77,80 @@ body.rtl .lang-toggle { margin-left: 0; margin-right: auto; }
   padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow);
 }
 .card-title {
-  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+  font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
   margin-bottom: 15px; display: flex; align-items: center; gap: 8px;
 }
 
 .field { margin-bottom: 15px; }
-.field label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
 .field input, .field select { 
-  width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); 
-  border-radius: 6px; color: var(--text); outline: none; transition: 0.2s; font-size: 13px;
+  width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--border); 
+  border-radius: 6px; color: var(--text); outline: none; transition: 0.2s; font-size: 14px;
 }
-.field input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,129,247,0.15); }
+.field input:focus { border-color: var(--blue); }
 
 /* Buttons */
 .btn { 
-  width: 100%; padding: 12px; border-radius: var(--radius); border: 1px solid transparent;
-  font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.15s; display: flex;
+  width: 100%; padding: 14px; border-radius: var(--radius); border: 1px solid transparent;
+  font-size: 14px; cursor: pointer; transition: 0.15s; display: flex;
   align-items: center; justify-content: center; gap: 8px;
 }
 .btn-green { background: var(--green); color: #fff; }
-.btn-green:hover { background: var(--green-hover); transform: translateY(-1px); }
-.btn-green:active { transform: translateY(0); }
-.btn-green:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
-
-.btn-blue { background: rgba(47,129,247,0.1); color: var(--blue); border-color: rgba(47,129,247,0.3); }
-.btn-blue:hover { background: rgba(47,129,247,0.2); }
-
+.btn-green:hover { background: var(--green-hover); }
+.btn-blue { background: rgba(88,166,255,0.1); color: var(--blue); border-color: rgba(88,166,255,0.3); }
 .btn-red { background: rgba(248,81,73,0.1); color: var(--red); border-color: rgba(248,81,73,0.3); }
-.btn-red:hover { background: rgba(248,81,73,0.2); }
 
 /* Banners */
 .running-banner { 
   background: rgba(35,134,54,0.1); border: 1px solid rgba(35,134,54,0.3); 
-  border-radius: var(--radius); padding: 12px 15px; margin-bottom: 16px;
+  border-radius: var(--radius); padding: 14px; margin-bottom: 16px;
   display: flex; align-items: center; gap: 12px;
 }
 .spinner { 
-  width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.1); 
+  width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.1); 
   border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; 
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Grid List for Detailed View */
+.grid-header {
+  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 10px;
+  padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  font-size: 11px; color: var(--muted); text-transform: uppercase;
+}
+.grid-item {
+  display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 10px;
+  padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; align-items: center;
+}
+.grid-item div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Day Badges */
+.day-badge {
+  padding: 4px 10px; border: 1px solid var(--border); border-radius: 12px;
+  font-size: 11px; cursor: pointer; transition: 0.2s; background: var(--surface2);
+}
+.day-badge.active { background: var(--blue); color: #0d1117; border-color: var(--blue); }
+
 /* History & Queue Lists */
 .list-item {
-  padding: 10px 12px; border-bottom: 1px solid var(--border); display: grid;
-  grid-template-columns: 1fr auto; align-items: center; gap: 8px;
+  padding: 12px; border-bottom: 1px solid var(--border); display: grid;
+  grid-template-columns: 1fr auto; align-items: center; gap: 10px;
 }
-.list-item:last-child { border-bottom: none; }
-.item-name { font-weight: 700; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.item-sub { font-size: 10px; color: var(--muted); }
-.badge-status { padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 800; text-transform: uppercase; }
-.status-done { background: rgba(35,134,54,0.2); color: #3fb950; }
-.status-failed { background: rgba(248,81,73,0.2); color: #f85149; }
+.status-done { color: #3fb950; }
+.status-failed { color: #f85149; }
 
 /* Clipboard Banner */
 .clip-banner {
   position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface);
-  border-top: 1px solid var(--border); padding: 12px 20px; z-index: 1000;
-  display: flex; align-items: center; gap: 12px; transform: translateY(100%); transition: 0.3s;
+  border-top: 1px solid var(--border); padding: 15px 20px; z-index: 1000;
+  display: flex; align-items: center; gap: 15px; transform: translateY(100%); transition: 0.3s;
 }
 .clip-banner.show { transform: translateY(0); }
-.clip-timer { width: 24px; height: 24px; position: relative; }
-.clip-timer circle { fill: none; stroke: var(--border); stroke-width: 2.5; }
-.clip-timer circle.prog { stroke: var(--blue); stroke-dasharray: 72; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear; }
 
 /* Arabic Specific Helpers */
 [lang="ar"] { display: none; }
 body.rtl [lang="ar"] { display: inline; }
 body.rtl [lang="en"] { display: none; }
-body:not(.rtl) [lang="ar"] { display: none; }
-body:not(.rtl) [lang="en"] { display: inline; }
 
 </style>
 </head>
@@ -172,10 +180,10 @@ body:not(.rtl) [lang="en"] { display: inline; }
 <div class="running-banner" id="globalBatchBanner" style="display:none; margin: 15px 20px 0;">
   <div class="spinner"></div>
   <div style="flex:1">
-    <div style="font-weight:700;font-size:12px;color:var(--green)"><span lang="en">Batch Running...</span><span lang="ar">جاري التشغيل...</span></div>
-    <div style="font-size:10px;color:var(--muted)" id="globalBatchProgress">0 / 0 completed</div>
+    <div style="color:var(--green)"><span lang="en">Batch Running...</span><span lang="ar">جاري التشغيل...</span></div>
+    <div style="font-size:12px;color:var(--muted)" id="globalBatchProgress">0 / 0 completed</div>
   </div>
-  <button class="btn btn-red" style="width:auto;padding:6px 12px;margin:0;font-size:11px" id="globalStopBatch"><span lang="en">Stop</span><span lang="ar">إيقاف</span></button>
+  <button class="btn btn-red" style="width:auto;padding:8px 15px;margin:0;font-size:12px" id="globalStopBatch"><span lang="en">Stop</span><span lang="ar">إيقاف</span></button>
 </div>
 
 <!-- ── SINGLE PANE ── -->
@@ -183,7 +191,7 @@ body:not(.rtl) [lang="en"] { display: inline; }
   <div class="running-banner" id="singleBanner" style="display:none">
     <div class="spinner"></div>
     <span style="flex:1"><span lang="en">Registration in progress…</span><span lang="ar">جاري التسجيل...</span></span>
-    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopSingle"><span lang="en">Stop</span><span lang="ar">إيقاف</span></button>
+    <button class="btn btn-red" style="width:auto;padding:6px 15px;margin:0" id="stopSingle"><span lang="en">Stop</span><span lang="ar">إيقاف</span></button>
   </div>
 
   <div class="card">
@@ -202,12 +210,12 @@ body:not(.rtl) [lang="en"] { display: inline; }
     <div class="card-title" style="color:var(--green)">⚡ <span lang="en">Generated Credentials</span><span lang="ar">البيانات التي سيتم إنشاؤها</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Username</div>
-        <div id="sPrevUser" style="font-family:monospace;font-weight:700;color:var(--blue)">-</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Username</div>
+        <div id="sPrevUser" style="font-family:monospace;color:var(--blue)">-</div>
       </div>
       <div>
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Password</div>
-        <div id="sPrevPass" style="font-family:monospace;font-weight:700;color:var(--yellow)">-</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Password</div>
+        <div id="sPrevPass" style="font-family:monospace;color:var(--yellow)">-</div>
       </div>
     </div>
   </div>
@@ -217,23 +225,22 @@ body:not(.rtl) [lang="en"] { display: inline; }
 
 <!-- ── BATCH PANE ── -->
 <div class="pane" id="pane-batch">
-  <div class="card" style="text-align:center; padding: 30px 20px; border: 2px dashed var(--border); cursor: pointer;" id="uploadArea">
+  <div class="card" style="text-align:center; padding: 40px 20px; border: 2px dashed var(--border); cursor: pointer;" id="uploadArea">
     <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none"/>
-    <div style="font-size:32px;margin-bottom:10px">📁</div>
-    <div style="font-weight:700;font-size:14px;margin-bottom:4px"><span lang="en">Upload Data File</span><span lang="ar">رفع ملف البيانات</span></div>
-    <div style="font-size:11px;color:var(--muted)"><span lang="en">Excel (.xlsx) or CSV</span><span lang="ar">إكسيل أو CSV</span></div>
+    <div style="font-size:40px;margin-bottom:15px">📁</div>
+    <div style="font-size:16px;margin-bottom:6px"><span lang="en">Upload Data File</span><span lang="ar">رفع ملف البيانات</span></div>
+    <div style="font-size:12px;color:var(--muted)"><span lang="en">Excel (.xlsx) or CSV</span><span lang="ar">إكسيل أو CSV</span></div>
   </div>
 
   <div id="queueWrap" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-weight:800;font-size:11px;color:var(--muted);text-transform:uppercase"><span lang="en">Queue</span><span lang="ar">قائمة الانتظار</span> (<span id="qCount">0</span>)</div>
-      <button class="btn btn-blue" id="clearQueue" style="width:auto;padding:4px 10px;font-size:10px"><span lang="en">Clear</span><span lang="ar">تصفير</span></button>
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase"><span lang="en">Queue</span><span lang="ar">قائمة الانتظار</span> (<span id="qCount">0</span>)</div>
+      <button class="btn btn-blue" id="clearQueue" style="width:auto;padding:6px 12px;font-size:11px"><span lang="en">Clear</span><span lang="ar">تصفير</span></button>
     </div>
-    <div id="queueList" style="max-height:200px;overflow-y:auto;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)"></div>
+    <div id="queueList" style="max-height:250px;overflow-y:auto;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)"></div>
   </div>
 
   <button class="btn btn-green" id="bStart" disabled style="margin-top:16px">🚀 <span lang="en">Start Batch Registration</span><span lang="ar">بدء تسجيل المجموعة</span></button>
-  <div class="msg err" id="bMsg" style="color:var(--red);font-size:11px;margin-top:10px;text-align:center"></div>
 </div>
 
 <!-- ── SHEET PANE ── -->
@@ -241,15 +248,15 @@ body:not(.rtl) [lang="en"] { display: inline; }
   <div class="card">
     <div class="field" style="margin:0">
       <label><span lang="en">Google Sheet URL</span><span lang="ar">رابط جوجل شيت</span></label>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:10px">
         <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..."/>
-        <button class="btn btn-blue" id="sheetFetch" style="width:auto;white-space:nowrap;padding:0 15px"><span lang="en">Fetch</span><span lang="ar">سحب</span></button>
+        <button class="btn btn-blue" id="sheetFetch" style="width:auto;white-space:nowrap;padding:0 20px"><span lang="en">Fetch</span><span lang="ar">سحب</span></button>
       </div>
     </div>
   </div>
 
   <div id="sheetCols" style="display:none" class="card">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
       <div class="field" style="margin:0">
         <label><span lang="en">Name Col</span><span lang="ar">عمود الاسم</span></label>
         <select id="sheetNameCol"></select>
@@ -264,16 +271,25 @@ body:not(.rtl) [lang="en"] { display: inline; }
       </div>
     </div>
     <div id="sheetDayFilter" style="display:none;margin-top:15px;padding-top:15px;border-top:1px solid var(--border)">
-      <div id="sheetDayBadges" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px"><span lang="en">Filter by Day:</span><span lang="ar">تصفية حسب اليوم:</span></div>
+      <div id="sheetDayBadges" style="display:flex;flex-wrap:wrap;gap:8px"></div>
     </div>
   </div>
 
   <div id="sheetPreviewWrap" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-weight:800;font-size:11px;color:var(--muted);text-transform:uppercase"><span lang="en">Preview</span><span lang="ar">معاينة</span></div>
-      <div id="sheetPreviewCount" style="background:var(--blue);color:#fff;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800">0</div>
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase"><span lang="en">Preview & Filter</span><span lang="ar">المعاينة والتصفية</span></div>
+      <div id="sheetPreviewCount" style="background:var(--blue);color:#0d1117;padding:4px 12px;border-radius:15px;font-size:12px;font-weight:600 !important">0</div>
     </div>
-    <div id="sheetPreviewList" style="max-height:180px;overflow-y:auto;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)"></div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <div class="grid-header">
+        <div>Name</div>
+        <div>Email</div>
+        <div>User</div>
+        <div>Pass</div>
+      </div>
+      <div id="sheetPreviewList" style="max-height:220px;overflow-y:auto"></div>
+    </div>
   </div>
 
   <button class="btn btn-green" id="sheetStart" disabled style="margin-top:16px">🚀 <span lang="en">Start Sheet Batch</span><span lang="ar">بدء تسجيل الشيت</span></button>
@@ -281,9 +297,9 @@ body:not(.rtl) [lang="en"] { display: inline; }
 
 <!-- ── HISTORY PANE ── -->
 <div class="pane" id="pane-history">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
-    <div style="font-weight:800;font-size:11px;color:var(--muted);text-transform:uppercase"><span lang="en">Recent Registrations</span><span lang="ar">آخر التسجيلات</span></div>
-    <button class="btn btn-blue" id="downloadHist" style="width:auto;padding:5px 12px;font-size:10px">📥 <span lang="en">Download CSV</span><span lang="ar">تحميل إكسيل</span></button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase"><span lang="en">Recent Registrations</span><span lang="ar">آخر التسجيلات</span></div>
+    <button class="btn btn-blue" id="downloadHist" style="width:auto;padding:8px 15px;font-size:11px">📥 <span lang="en">Download CSV</span><span lang="ar">تحميل إكسيل</span></button>
   </div>
   <div id="histList" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden"></div>
 </div>
@@ -300,12 +316,12 @@ body:not(.rtl) [lang="en"] { display: inline; }
       <label><span lang="en">Next User Delay (Seconds)</span><span lang="ar">التأخير بين المستخدمين (ثانية)</span></label>
       <input type="number" id="userDelay" value="2" min="0.5" max="60" step="0.5"/>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:12px;padding-top:15px;border-top:1px solid var(--border)">
       <div style="flex:1">
-        <div style="font-weight:700;font-size:12px"><span lang="en">Auto-Submit Mode</span><span lang="ar">وضع الإرسال التلقائي</span></div>
-        <div style="font-size:10px;color:var(--muted)"><span lang="en">No manual clicks needed.</span><span lang="ar">لن تحتاج للضغط على أي أزرار.</span></div>
+        <div style="font-size:13px"><span lang="en">Auto-Submit Mode</span><span lang="ar">وضع الإرسال التلقائي</span></div>
+        <div style="font-size:11px;color:var(--muted)"><span lang="en">No manual clicks needed.</span><span lang="ar">لن تحتاج للضغط على أي أزرار.</span></div>
       </div>
-      <input type="checkbox" id="autoSubmit" style="width:18px;height:18px"/>
+      <input type="checkbox" id="autoSubmit" style="width:20px;height:20px"/>
     </div>
   </div>
 
@@ -337,24 +353,18 @@ body:not(.rtl) [lang="en"] { display: inline; }
     </div>
   </div>
 
-  <div style="display:flex;gap:10px">
+  <div style="display:flex;gap:12px">
     <button class="btn btn-green" id="saveSettings" style="flex:2">💾 <span lang="en">Save</span><span lang="ar">حفظ</span></button>
     <button class="btn btn-blue" id="resetSettings" style="flex:1">🔄 <span lang="en">Default</span><span lang="ar">الافتراضي</span></button>
   </div>
 
-  <button class="btn btn-red" id="clearAllData" style="margin-top:20px;font-size:11px">🗑 <span lang="en">Reset Everything</span><span lang="ar">مسح جميع البيانات</span></button>
+  <button class="btn btn-red" id="clearAllData" style="margin-top:25px;font-size:12px">🗑 <span lang="en">Reset Everything</span><span lang="ar">مسح جميع البيانات</span></button>
 </div>
 
 <!-- ── CLIPBOARD BANNER ── -->
 <div class="clip-banner" id="clipBanner">
-  <div class="clip-timer">
-    <svg viewBox="0 0 28 28" width="24" height="24">
-      <circle cx="14" cy="14" r="11.5"/>
-      <circle class="prog" id="clipTimerCircle" cx="14" cy="14" r="11.5"/>
-    </svg>
-  </div>
-  <span style="flex:1;font-weight:700" id="clipText">📋 Copied!</span>
-  <button class="btn btn-blue" id="clipCopyBtn" style="width:auto;padding:6px 12px;font-size:10px">Copy Again</button>
+  <span style="flex:1;font-size:14px" id="clipText">📋 Copied!</span>
+  <button class="btn btn-blue" id="clipCopyBtn" style="width:auto;padding:8px 15px;font-size:12px">Copy Again</button>
 </div>
 
 <script src="popup.js"></script>
