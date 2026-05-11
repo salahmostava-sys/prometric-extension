@@ -200,6 +200,15 @@ async function handleMessage(msg, sender) {
       }
     }
     await saveToHistory(entry);
+    
+    // Notify user of failure
+    chrome.notifications.create({
+      type: 'basic', iconUrl: 'icon128.png',
+      title: 'Registration Failed ❌',
+      message: `${msg.name || 'User'} failed: ${msg.reason || 'Unknown error'}`,
+      priority: 2
+    });
+
     const { isRunning } = await getState();
     if (isRunning) {
       await openNextTab();
