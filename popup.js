@@ -732,7 +732,7 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
   const url = document.getElementById('sheetUrl').value.trim();
   await chrome.storage.local.set({ sheetUrl: url });
   
-  const m = url.match(/\/d\/(.*?)\//);
+  const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
   if (!m) return showSheetError('Invalid Google Sheet URL. Make sure you copy the full link.');
   const id = m[1];
   
