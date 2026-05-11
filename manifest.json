@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Prometric Auto Register",
+  "version": "3.0",
+  "description": "Auto-fill Prometric registration — Single & Batch mode",
+  "permissions": ["tabs", "scripting", "storage", "downloads", "contextMenus", "unlimitedStorage"],
+  "host_permissions": ["https://tcnet1.prometric.com/*", "https://docs.google.com/spreadsheets/*"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" }
+  },
+  "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" },
+  "content_scripts": [
+    {
+      "matches": ["https://tcnet1.prometric.com/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://tcnet1.prometric.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ]
+}
