@@ -1,28 +1,7 @@
-// ── Init ──────────────────────────────────────────────────────────────────────
+﻿// ΓöÇΓöÇ Init ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const { version } = chrome.runtime.getManifest();
 const versionBadge = document.getElementById('versionBadge');
 if (versionBadge) versionBadge.textContent = 'v' + version;
-
-// ── Language Toggle (V4) ──────────────────────────────────────────────────────
-let currentLang = 'en';
-async function setLang(lang) {
-  currentLang = lang;
-  if (lang === 'ar') {
-    document.body.classList.add('rtl');
-    document.getElementById('langAR')?.classList.add('active');
-    document.getElementById('langEN')?.classList.remove('active');
-  } else {
-    document.body.classList.remove('rtl');
-    document.getElementById('langEN')?.classList.add('active');
-    document.getElementById('langAR')?.classList.remove('active');
-  }
-  await chrome.storage.local.set({ lang });
-}
-document.getElementById('langToggle')?.addEventListener('click', async () => {
-  await setLang(currentLang === 'en' ? 'ar' : 'en');
-});
-chrome.storage.local.get(['lang'], ({ lang }) => { if (lang) setLang(lang); });
-
 
 // ΓöÇΓöÇ Copy helper: works even when popup is closing ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function fallbackCopyPopup(text) {
