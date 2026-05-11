@@ -768,7 +768,7 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
     if (daySel) daySel.innerHTML = '<option value="-1">— No filter —</option>';
 
     headers.forEach((h, i) => {
-      const opt = `<option value="${i}">[Col ${String.fromCharCode(65+i)}] ${h || 'Unnamed'}</option>`;
+      const opt = `<option value="${i}">${h || 'Unnamed Column'}</option>`;
       nameSel.innerHTML += opt;
       emailSel.innerHTML += opt;
       if (daySel) daySel.innerHTML += opt;
