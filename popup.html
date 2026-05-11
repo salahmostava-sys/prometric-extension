@@ -88,6 +88,9 @@ body.rtl .lang-toggle { margin-left: 0; margin-right: auto; }
   border-radius: 6px; color: var(--text); outline: none; transition: 0.2s; font-size: 16px;
 }
 .field input:focus { border-color: var(--blue); }
+/* Compact selects for column pickers */
+.field-sm label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.field-sm select { width: 100%; padding: 5px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text); outline: none; font-size: 12px; }
 
 /* Buttons */
 .btn { 
@@ -263,16 +266,16 @@ body.rtl [lang="en"] { display: none; }
   </div>
 
   <div id="sheetCols" style="display:none" class="card">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-      <div class="field" style="margin:0">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div class="field-sm" style="margin:0">
         <label><span lang="en">Name Col</span><span lang="ar">عمود الاسم</span></label>
         <select id="sheetNameCol"></select>
       </div>
-      <div class="field" style="margin:0">
+      <div class="field-sm" style="margin:0">
         <label><span lang="en">Email Col</span><span lang="ar">عمود الإيميل</span></label>
         <select id="sheetEmailCol"></select>
       </div>
-      <div class="field" style="margin:0">
+      <div class="field-sm" style="margin:0">
         <label><span lang="en">Day Col</span><span lang="ar">عمود اليوم</span></label>
         <select id="sheetDayCol"><option value="-1">—</option></select>
       </div>
