@@ -1,153 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<title>Prometric Auto Register</title>
+<meta charset="UTF-8">
+<title>Prometric Auto Register V4.0</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0d1117;--surface:#161b22;--surface2:#21262d;
-  --border:#30363d;--green:#3fb950;--green2:#2ea043;
-  --text:#e6edf3;--muted:#7d8590;--red:#f85149;--yellow:#d29922;
-  --blue:#388bfd;
-  --radius:8px;
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --text: #e6edf3;
+  --muted: #7d8590;
+  --border: #30363d;
+  --blue: #2f81f7;
+  --green: #238636;
+  --green-hover: #2ea043;
+  --red: #f85149;
+  --yellow: #d29922;
+  --radius: 8px;
+  --shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
-body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;overflow-x:hidden;display:flex;flex-direction:column}
 
-/* ── Header ── */
-.hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
-.hdr-icon{width:32px;height:32px;background:#fff url('icon.png') center/contain no-repeat;border-radius:6px;flex-shrink:0}
-.hdr-title{font-weight:700;font-size:14px;color:var(--text)}
-.hdr-sub{font-size:11px;color:var(--muted)}
-.badge{margin-left:auto;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 8px;border-radius:20px}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--text); font-size: 13px; width: 420px; 
+  min-height: 580px; overflow-x: hidden; transition: all 0.2s;
+}
 
-/* ── Tabs ── */
-.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface)}
-.tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;transition:.2s}
-.tab.active{color:var(--green);border-bottom-color:var(--green)}
+/* RTL Support */
+body.rtl { direction: rtl; }
+body.rtl .tab { font-family: "Segoe UI", Tahoma, sans-serif; }
 
-/* ── Content ── */
-.pane{padding:16px;display:none}
-.pane.active{display:block}
+.hdr { 
+  padding: 18px 20px; background: var(--surface); border-bottom: 1px solid var(--border); 
+  display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100;
+}
+.hdr-icon { 
+  width: 32px; height: 32px; background: var(--green); border-radius: 8px; 
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  box-shadow: 0 0 15px rgba(35,134,54,0.3);
+}
+.hdr-icon::after { content: "⚡"; }
+.hdr-title { font-weight: 800; font-size: 15px; letter-spacing: -0.3px; }
+.hdr-sub { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
-/* ── Form ── */
-.field{margin-bottom:12px}
-.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px}
-.field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;outline:none;transition:.2s}
-.field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(63,185,80,.15)}
-.field input::placeholder{color:var(--muted)}
+.lang-toggle {
+  margin-left: auto; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 10px; display: flex; gap: 8px; cursor: pointer;
+}
+body.rtl .lang-toggle { margin-left: 0; margin-right: auto; }
+.lang-toggle span { font-size: 10px; font-weight: 700; color: var(--muted); }
+.lang-toggle span.active { color: var(--blue); }
 
-/* ── Preview chip ── */
-.preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin:10px 0;display:none}
-.preview.show{display:block}
-.prev-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.prev-row:last-child{margin-bottom:0}
-.prev-k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-.prev-v{font-family:'Courier New',monospace;font-size:12px;color:var(--green);display:flex;align-items:center;gap:6px}
-.copy{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:1px 6px;border-radius:4px;cursor:pointer;transition:.2s}
-.copy:hover{border-color:var(--green);color:var(--green)}
+.tabs { 
+  display: flex; background: var(--bg); padding: 4px 10px; gap: 4px;
+  position: sticky; top: 69px; z-index: 90; border-bottom: 1px solid var(--border);
+}
+.tab { 
+  flex: 1; padding: 10px 4px; text-align: center; cursor: pointer; font-weight: 600; 
+  font-size: 11px; color: var(--muted); border-radius: var(--radius); transition: 0.2s;
+}
+.tab:hover { background: var(--surface); color: var(--text); }
+.tab.active { color: var(--blue); background: var(--surface2); }
 
-/* ── Upload area ── */
-.upload-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:11px}
-.upload-header span{font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-.dl-template{background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;font-weight:600;transition:.2s}
-.dl-template:hover{text-decoration:underline;color:#58a6ff}
+.pane { display: none; padding: 20px; animation: fadeIn 0.2s ease-out; }
+.pane.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-.upload-area{display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;cursor:pointer;transition:.2s}
-.upload-area:hover,.upload-area.drag{border-color:var(--blue);background:rgba(56,139,253,.05)}
-.upload-area input[type=file]{display:none}
-.upload-btn{background:rgba(56,139,253,.15);color:var(--blue);border:1px solid rgba(56,139,253,.3);padding:6px 12px;border-radius:6px;font-weight:700;font-size:12px}
-.upload-text{flex:1}
-.upload-title{font-weight:600;color:var(--text);font-size:12px;margin-bottom:2px}
-.upload-sub{font-size:10px;color:var(--muted)}
+/* Cards & Fields */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 15px; display: flex; align-items: center; gap: 8px;
+}
 
-/* ── Queue ── */
-.queue-wrap{margin-top:12px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius)}
-.queue-hdr{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2)}
-.queue-hdr span{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-.queue-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border)}
-.queue-item:last-child{border-bottom:none}
-.sheet-grid{display:grid;grid-template-columns:1fr 1.2fr 90px 90px 30px;gap:8px;align-items:center}
-.q-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.q-dot.pending{background:var(--border)}
-.q-dot.running{background:var(--yellow);animation:pulse 1s infinite}
-.q-dot.done{background:var(--green)}
-.q-dot.failed{background:var(--red)}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.q-name{flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.q-email{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
-.q-status{font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;flex-shrink:0}
-.q-status.pending{color:var(--muted)}
-.q-status.running{color:var(--yellow)}
-.q-status.done{color:var(--green)}
-.q-status.failed{color:var(--red)}
+.field { margin-bottom: 15px; }
+.field label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+.field input, .field select { 
+  width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); 
+  border-radius: 6px; color: var(--text); outline: none; transition: 0.2s; font-size: 13px;
+}
+.field input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,129,247,0.15); }
 
-/* ── Buttons ── */
-.btn{width:100%;padding:10px;border:none;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;transition:.2s;margin-top:6px}
-.btn-green{background:var(--green2);color:#fff}
-.btn-green:hover{background:#3fb950}
-.btn-green:disabled{opacity:.4;cursor:not-allowed}
-.btn-red{background:rgba(248,81,73,.15);color:var(--red);border:1px solid rgba(248,81,73,.3)}
-.btn-red:hover{background:rgba(248,81,73,.25)}
-.btn-blue{background:rgba(56,139,253,.15);color:var(--blue);border:1px solid rgba(56,139,253,.3)}
-.btn-blue:hover{background:rgba(56,139,253,.25)}
+/* Buttons */
+.btn { 
+  width: 100%; padding: 12px; border-radius: var(--radius); border: 1px solid transparent;
+  font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.15s; display: flex;
+  align-items: center; justify-content: center; gap: 8px;
+}
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: var(--green-hover); transform: translateY(-1px); }
+.btn-green:active { transform: translateY(0); }
+.btn-green:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
 
-.controls-row{display:flex;gap:10px;margin-top:12px}
-.controls-row .btn{margin-top:0;flex:1}
+.btn-blue { background: rgba(47,129,247,0.1); color: var(--blue); border-color: rgba(47,129,247,0.3); }
+.btn-blue:hover { background: rgba(47,129,247,0.2); }
 
-.divider{height:1px;background:var(--border);margin:12px 0}
-.msg{margin-top:10px;padding:8px 12px;border-radius:var(--radius);font-size:12px;text-align:center;display:none}
-.msg.ok{display:block;background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);color:var(--green)}
-.msg.err{display:block;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:var(--red)}
+.btn-red { background: rgba(248,81,73,0.1); color: var(--red); border-color: rgba(248,81,73,0.3); }
+.btn-red:hover { background: rgba(248,81,73,0.2); }
 
-/* ── Running Banner ── */
-.running-banner,.banner{display:none;align-items:center;gap:8px;padding:10px 12px;background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.3);border-radius:var(--radius);margin-bottom:12px;font-size:12px;color:var(--yellow)}
-.running-banner.show,.banner.show{display:flex}
-.spinner{width:14px;height:14px;border:2px solid rgba(210,153,34,.3);border-top-color:var(--yellow);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* Banners */
+.running-banner { 
+  background: rgba(35,134,54,0.1); border: 1px solid rgba(35,134,54,0.3); 
+  border-radius: var(--radius); padding: 12px 15px; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.spinner { 
+  width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.1); 
+  border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; 
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Resume Banner ── */
-.resume-banner{display:none;align-items:center;gap:8px;padding:10px 12px;background:rgba(56,139,253,.08);border:1px solid rgba(56,139,253,.3);border-radius:var(--radius);margin-bottom:12px;font-size:12px;color:var(--blue)}
-.resume-banner.show{display:flex}
+/* History & Queue Lists */
+.list-item {
+  padding: 10px 12px; border-bottom: 1px solid var(--border); display: grid;
+  grid-template-columns: 1fr auto; align-items: center; gap: 8px;
+}
+.list-item:last-child { border-bottom: none; }
+.item-name { font-weight: 700; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item-sub { font-size: 10px; color: var(--muted); }
+.badge-status { padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.status-done { background: rgba(35,134,54,0.2); color: #3fb950; }
+.status-failed { background: rgba(248,81,73,0.2); color: #f85149; }
 
-/* ── Saved Credentials Panel ── */
-.saved-creds{display:none;background:var(--bg);border-top:1px solid var(--border);padding:12px 16px;font-size:12px;margin-top:auto}
-.saved-creds-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;background:#0d1117;padding:8px 12px;border-radius:8px;border:1px solid #21262d}
-.saved-creds-row:last-child{margin-bottom:0}
-.saved-creds-label{color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:.5px;min-width:70px}
-.saved-creds-val{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);font-weight:600;flex:1;margin:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.sc-copy{background:transparent;border:1px solid #30363d;color:#7d8590;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;transition:.2s}
-.sc-copy:hover{border-color:#8b949e;color:#c9d1d9;background:#21262d}
+/* Clipboard Banner */
+.clip-banner {
+  position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface);
+  border-top: 1px solid var(--border); padding: 12px 20px; z-index: 1000;
+  display: flex; align-items: center; gap: 12px; transform: translateY(100%); transition: 0.3s;
+}
+.clip-banner.show { transform: translateY(0); }
+.clip-timer { width: 24px; height: 24px; position: relative; }
+.clip-timer circle { fill: none; stroke: var(--border); stroke-width: 2.5; }
+.clip-timer circle.prog { stroke: var(--blue); stroke-dasharray: 72; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear; }
 
-/* ── History Tab ── */
-.tabs{display:flex}
-#pane-history{padding:0}
-.hist-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
-.hist-toolbar span{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-.hist-list{max-height:420px;overflow-y:auto}
-.hist-item{padding:10px 14px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1.5fr 1.2fr 0.9fr auto;gap:8px;align-items:center}
-.hist-item:last-child{border-bottom:none}
-.hist-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hist-user{font-family:-apple-system,BlinkMacSystemFont,monospace;font-size:11px;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hist-pass{font-family:-apple-system,BlinkMacSystemFont,monospace;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hist-badge{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;display:inline-block;text-align:center}
-.hist-badge.done{background:rgba(63,185,80,.15);color:var(--green)}
-.hist-badge.failed{background:rgba(248,81,73,.15);color:var(--red)}
-.hist-copy{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;margin-left:4px;transition:.2s}
-.hist-copy:hover{border-color:var(--green);color:var(--green)}
-.hist-empty{padding:32px;text-align:center;color:var(--muted);font-size:13px}
-.export-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;transition:.2s}
-.export-btn:hover{border-color:var(--green);color:var(--green)}
+/* Arabic Specific Helpers */
+[lang="ar"] { display: none; }
+body.rtl [lang="ar"] { display: inline; }
+body.rtl [lang="en"] { display: none; }
+body:not(.rtl) [lang="ar"] { display: none; }
+body:not(.rtl) [lang="en"] { display: inline; }
 
-/* ── Clipboard Banner ── */
-.clip-banner{display:none;align-items:center;gap:10px;padding:10px 14px;background:rgba(56,139,253,.1);border-bottom:1px solid rgba(56,139,253,.3);font-size:12px;color:var(--blue)}
-.clip-banner.show{display:flex}
-.clip-timer{flex-shrink:0;width:28px;height:28px}
-.clip-timer circle{fill:none;stroke:rgba(56,139,253,.25);stroke-width:2.5}
-.clip-timer circle.prog{stroke:var(--blue);stroke-width:2.5;stroke-dasharray:72;stroke-dashoffset:0;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .9s linear}
-.clip-text{flex:1;font-weight:600}
-.clip-copy{background:none;border:1px solid rgba(56,139,253,.4);color:var(--blue);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer;font-weight:600;transition:.2s;white-space:nowrap}
-.clip-copy:hover{background:rgba(56,139,253,.15)}
 </style>
 </head>
 <body>
@@ -156,278 +152,209 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
   <div class="hdr-icon"></div>
   <div>
     <div class="hdr-title">Prometric Auto Register</div>
-    <div class="hdr-sub">IBTA MEA · Auto Fill</div>
+    <div class="hdr-sub">V4.0 Professional Edition</div>
   </div>
-  <div class="badge" id="versionBadge">v3.0</div>
+  <div class="lang-toggle" id="langToggle">
+    <span class="active" id="langEN">EN</span>
+    <span id="langAR">AR</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="single"><span lang="en">Single</span><span lang="ar">تسجيل فردي</span></div>
+  <div class="tab" data-tab="batch"><span lang="en">Excel/CSV</span><span lang="ar">إكسيل / CSV</span></div>
+  <div class="tab" data-tab="sheet"><span lang="en">Google Sheet</span><span lang="ar">جوجل شيت</span></div>
+  <div class="tab" data-tab="history"><span lang="en">History</span><span lang="ar">السجل</span></div>
+  <div class="tab" data-tab="settings"><span lang="en">Settings</span><span lang="ar">الإعدادات</span></div>
+</div>
+
+<!-- ── GLOBAL BATCH BANNER ── -->
+<div class="running-banner" id="globalBatchBanner" style="display:none; margin: 15px 20px 0;">
+  <div class="spinner"></div>
+  <div style="flex:1">
+    <div style="font-weight:700;font-size:12px;color:var(--green)"><span lang="en">Batch Running...</span><span lang="ar">جاري التشغيل...</span></div>
+    <div style="font-size:10px;color:var(--muted)" id="globalBatchProgress">0 / 0 completed</div>
+  </div>
+  <button class="btn btn-red" style="width:auto;padding:6px 12px;margin:0;font-size:11px" id="globalStopBatch"><span lang="en">Stop</span><span lang="ar">إيقاف</span></button>
+</div>
+
+<!-- ── SINGLE PANE ── -->
+<div class="pane active" id="pane-single">
+  <div class="running-banner" id="singleBanner" style="display:none">
+    <div class="spinner"></div>
+    <span style="flex:1"><span lang="en">Registration in progress…</span><span lang="ar">جاري التسجيل...</span></span>
+    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopSingle"><span lang="en">Stop</span><span lang="ar">إيقاف</span></button>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="color:var(--blue)">👤 <span lang="en">New Registration</span><span lang="ar">تسجيل جديد</span></div>
+    <div class="field">
+      <label><span lang="en">Full Name</span><span lang="ar">الاسم بالكامل</span></label>
+      <input type="text" id="sName" placeholder="e.g. ABDULLAH MOHAMMED..."/>
+    </div>
+    <div class="field">
+      <label><span lang="en">Email Address</span><span lang="ar">البريد الإلكتروني</span></label>
+      <input type="email" id="sEmail" placeholder="example@email.com"/>
+    </div>
+  </div>
+
+  <div class="card" id="sPreviewCard" style="display:none">
+    <div class="card-title" style="color:var(--green)">⚡ <span lang="en">Generated Credentials</span><span lang="ar">البيانات التي سيتم إنشاؤها</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Username</div>
+        <div id="sPrevUser" style="font-family:monospace;font-weight:700;color:var(--blue)">-</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Password</div>
+        <div id="sPrevPass" style="font-family:monospace;font-weight:700;color:var(--yellow)">-</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-green" id="sStart" disabled>🚀 <span lang="en">Start Registration</span><span lang="ar">بدء التسجيل</span></button>
+</div>
+
+<!-- ── BATCH PANE ── -->
+<div class="pane" id="pane-batch">
+  <div class="card" style="text-align:center; padding: 30px 20px; border: 2px dashed var(--border); cursor: pointer;" id="uploadArea">
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none"/>
+    <div style="font-size:32px;margin-bottom:10px">📁</div>
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px"><span lang="en">Upload Data File</span><span lang="ar">رفع ملف البيانات</span></div>
+    <div style="font-size:11px;color:var(--muted)"><span lang="en">Excel (.xlsx) or CSV</span><span lang="ar">إكسيل أو CSV</span></div>
+  </div>
+
+  <div id="queueWrap" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-weight:800;font-size:11px;color:var(--muted);text-transform:uppercase"><span lang="en">Queue</span><span lang="ar">قائمة الانتظار</span> (<span id="qCount">0</span>)</div>
+      <button class="btn btn-blue" id="clearQueue" style="width:auto;padding:4px 10px;font-size:10px"><span lang="en">Clear</span><span lang="ar">تصفير</span></button>
+    </div>
+    <div id="queueList" style="max-height:200px;overflow-y:auto;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)"></div>
+  </div>
+
+  <button class="btn btn-green" id="bStart" disabled style="margin-top:16px">🚀 <span lang="en">Start Batch Registration</span><span lang="ar">بدء تسجيل المجموعة</span></button>
+  <div class="msg err" id="bMsg" style="color:var(--red);font-size:11px;margin-top:10px;text-align:center"></div>
+</div>
+
+<!-- ── SHEET PANE ── -->
+<div class="pane" id="pane-sheet">
+  <div class="card">
+    <div class="field" style="margin:0">
+      <label><span lang="en">Google Sheet URL</span><span lang="ar">رابط جوجل شيت</span></label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..."/>
+        <button class="btn btn-blue" id="sheetFetch" style="width:auto;white-space:nowrap;padding:0 15px"><span lang="en">Fetch</span><span lang="ar">سحب</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sheetCols" style="display:none" class="card">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="field" style="margin:0">
+        <label><span lang="en">Name Col</span><span lang="ar">عمود الاسم</span></label>
+        <select id="sheetNameCol"></select>
+      </div>
+      <div class="field" style="margin:0">
+        <label><span lang="en">Email Col</span><span lang="ar">عمود الإيميل</span></label>
+        <select id="sheetEmailCol"></select>
+      </div>
+      <div class="field" style="margin:0">
+        <label><span lang="en">Day Col</span><span lang="ar">اليوم</span></label>
+        <select id="sheetDayCol"><option value="-1">—</option></select>
+      </div>
+    </div>
+    <div id="sheetDayFilter" style="display:none;margin-top:15px;padding-top:15px;border-top:1px solid var(--border)">
+      <div id="sheetDayBadges" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+  </div>
+
+  <div id="sheetPreviewWrap" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-weight:800;font-size:11px;color:var(--muted);text-transform:uppercase"><span lang="en">Preview</span><span lang="ar">معاينة</span></div>
+      <div id="sheetPreviewCount" style="background:var(--blue);color:#fff;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:800">0</div>
+    </div>
+    <div id="sheetPreviewList" style="max-height:180px;overflow-y:auto;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)"></div>
+  </div>
+
+  <button class="btn btn-green" id="sheetStart" disabled style="margin-top:16px">🚀 <span lang="en">Start Sheet Batch</span><span lang="ar">بدء تسجيل الشيت</span></button>
+</div>
+
+<!-- ── HISTORY PANE ── -->
+<div class="pane" id="pane-history">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+    <div style="font-weight:800;font-size:11px;color:var(--muted);text-transform:uppercase"><span lang="en">Recent Registrations</span><span lang="ar">آخر التسجيلات</span></div>
+    <button class="btn btn-blue" id="downloadHist" style="width:auto;padding:5px 12px;font-size:10px">📥 <span lang="en">Download CSV</span><span lang="ar">تحميل إكسيل</span></button>
+  </div>
+  <div id="histList" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden"></div>
+</div>
+
+<!-- ── SETTINGS PANE ── -->
+<div class="pane" id="pane-settings">
+  <div class="card">
+    <div class="card-title" style="color:var(--blue)">⚙️ <span lang="en">Automation Control</span><span lang="ar">التحكم في الأتمتة</span></div>
+    <div class="field">
+      <label><span lang="en">Page Delay (Seconds)</span><span lang="ar">تأخير الصفحات (ثانية)</span></label>
+      <input type="number" id="pageDelay" value="1" min="0.5" max="15" step="0.5"/>
+    </div>
+    <div class="field">
+      <label><span lang="en">Next User Delay (Seconds)</span><span lang="ar">التأخير بين المستخدمين (ثانية)</span></label>
+      <input type="number" id="userDelay" value="2" min="0.5" max="60" step="0.5"/>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--border)">
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:12px"><span lang="en">Auto-Submit Mode</span><span lang="ar">وضع الإرسال التلقائي</span></div>
+        <div style="font-size:10px;color:var(--muted)"><span lang="en">No manual clicks needed.</span><span lang="ar">لن تحتاج للضغط على أي أزرار.</span></div>
+      </div>
+      <input type="checkbox" id="autoSubmit" style="width:18px;height:18px"/>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="color:var(--green)">📍 <span lang="en">Default Personal Data</span><span lang="ar">البيانات الشخصية الافتراضية</span></div>
+    <div class="field">
+      <label><span lang="en">Mailing Address</span><span lang="ar">عنوان المراسلة</span></label>
+      <input type="text" id="defAddress" value="Al-Alameya"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label><span lang="en">City</span><span lang="ar">المدينة</span></label><input type="text" id="defCity" value="JEDDAH"/></div>
+      <div class="field"><label><span lang="en">State</span><span lang="ar">المنطقة</span></label><input type="text" id="defState" value="JEDDAH"/></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:12px">
+      <div class="field"><label><span lang="en">Postal</span><span lang="ar">الرمز البريدي</span></label><input type="text" id="defPostal" value="00000"/></div>
+      <div class="field"><label><span lang="en">Country</span><span lang="ar">الدولة</span></label><input type="text" id="defCountry" value="Saudi Arabia"/></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="color:var(--yellow)">🔐 <span lang="en">Account & Security</span><span lang="ar">الحساب والأمان</span></div>
+    <div class="field">
+      <label><span lang="en">Security Answer</span><span lang="ar">الإجابة الأمنية</span></label>
+      <input type="text" id="defAnswer" value="a"/>
+    </div>
+    <div class="field">
+      <label><span lang="en">Password Pattern</span><span lang="ar">نمط كلمة المرور</span></label>
+      <input type="text" id="passPattern" value="{F}@{f}#$1970"/>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-green" id="saveSettings" style="flex:2">💾 <span lang="en">Save</span><span lang="ar">حفظ</span></button>
+    <button class="btn btn-blue" id="resetSettings" style="flex:1">🔄 <span lang="en">Default</span><span lang="ar">الافتراضي</span></button>
+  </div>
+
+  <button class="btn btn-red" id="clearAllData" style="margin-top:20px;font-size:11px">🗑 <span lang="en">Reset Everything</span><span lang="ar">مسح جميع البيانات</span></button>
 </div>
 
 <!-- ── CLIPBOARD BANNER ── -->
 <div class="clip-banner" id="clipBanner">
   <div class="clip-timer">
-    <svg viewBox="0 0 28 28" width="28" height="28">
+    <svg viewBox="0 0 28 28" width="24" height="24">
       <circle cx="14" cy="14" r="11.5"/>
       <circle class="prog" id="clipTimerCircle" cx="14" cy="14" r="11.5"/>
     </svg>
   </div>
-  <span class="clip-text" id="clipText">📋 Copied!</span>
-  <button class="clip-copy" id="clipCopyBtn">Copy Again</button>
-</div>
-
-<div class="tabs">
-  <div class="tab active" data-tab="single">Single</div>
-  <div class="tab" data-tab="batch">Excel / CSV</div>
-  <div class="tab" data-tab="sheet">Google Sheet</div>
-  <div class="tab" data-tab="history">History</div>
-  <div class="tab" data-tab="settings">Settings ⚙️</div>
-</div>
-
-<!-- ── GLOBAL BATCH BANNER ── -->
-<div class="running-banner" id="globalBatchBanner" style="display:none;margin-top:-10px;margin-bottom:15px;background:var(--surface2);border:1px solid var(--border)">
-  <div class="spinner"></div>
-  <div style="flex:1">
-    <div style="font-weight:700;font-size:12px;color:var(--green)">Batch Running...</div>
-    <div style="font-size:10px;color:var(--muted)" id="globalBatchProgress">0 / 0 completed</div>
-  </div>
-  <button class="btn btn-red" style="width:auto;padding:6px 12px;margin:0;font-size:11px" id="globalStopBatch">⏹ Stop</button>
-</div>
-
-
-
-<!-- ── SINGLE PANE ── -->
-<div class="pane active" id="pane-single">
-  <div class="running-banner" id="singleBanner">
-    <div class="spinner"></div>
-    <span style="flex:1">Registration in progress…</span>
-    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopSingle">⏹ Stop</button>
-  </div>
-
-  <div class="field">
-    <label>Full Name</label>
-    <input type="text" id="sName" placeholder="e.g. ABDULLAH MOHAMMED S AL OTHAYMIN"/>
-  </div>
-  <div class="field">
-    <label>Email Address</label>
-    <input type="email" id="sEmail" placeholder="example@email.com"/>
-  </div>
-
-  <button class="btn btn-green" id="sStart" disabled>🚀 Start Registration</button>
-  <div class="msg" id="sMsg"></div>
-
-  <!-- ── SAVED CREDENTIALS PANEL (Single mode only) ── -->
-  <div class="saved-creds" id="savedCredsPanel" style="margin-top:20px; border-radius:8px; border:1px solid var(--border); border-top:none; padding:0; background:transparent">
-    <div class="saved-creds-row">
-      <span class="saved-creds-label">NAME</span>
-      <span class="saved-creds-val" id="scName" style="font-family:inherit;font-weight:400">—</span>
-    </div>
-    <div class="saved-creds-row">
-      <span class="saved-creds-label">USER</span>
-      <span class="saved-creds-val" id="scUser" style="font-family:'Courier New',monospace">—</span>
-      <button class="sc-copy" data-copy="scUser">Copy</button>
-    </div>
-    <div class="saved-creds-row">
-      <span class="saved-creds-label">PASS</span>
-      <span class="saved-creds-val" id="scPass" style="font-family:'Courier New',monospace">—</span>
-      <button class="sc-copy" data-copy="scPass">Copy</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── BATCH PANE ── -->
-<div class="pane" id="pane-batch">
-
-  <!-- Status banner (Running / Paused) -->
-  <div class="banner running-banner" id="batchBanner">
-    <div class="spinner" id="batchSpinner"></div>
-    <span id="batchProgress" style="flex:1">Batch registration in progress...</span>
-    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopBatch">⏹ Stop</button>
-    <button class="btn btn-blue" style="width:auto;padding:4px 12px;margin:0;display:none" id="resumeBatch">▶ Resume</button>
-  </div>
-
-  <div class="upload-header">
-    <span>Data File</span>
-    <button class="dl-template" id="downloadTemplate">⬇ Download Template (CSV)</button>
-  </div>
-
-  <label class="upload-area" id="uploadArea" for="fileInput">
-    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls"/>
-    <div class="upload-btn">📁 Choose File</div>
-    <div class="upload-text">
-      <div class="upload-title">Upload Data File</div>
-      <div class="upload-sub">Excel (.xlsx) or CSV</div>
-    </div>
-  </label>
-
-  <div class="queue-wrap" id="queueWrap" style="display:none">
-    <div class="queue-hdr">
-      <span id="qCount">0 people</span>
-      <button class="copy" id="clearQueue">Clear</button>
-    </div>
-    <div id="queueList"></div>
-  </div>
-
-  <button class="btn btn-green" id="bStart" disabled style="margin-top:12px">🚀 Start Batch Registration</button>
-  <div class="msg err" id="bMsg"></div>
-</div>
-
-<!-- ── PANE 3: Google Sheet ── -->
-<div class="pane" id="pane-sheet">
-  <div class="running-banner" id="sheetBanner">
-    <div class="spinner"></div>
-    <div style="flex:1">
-      <div style="font-weight:700;color:var(--text);margin-bottom:2px">Fetching & Starting...</div>
-      <div style="color:var(--muted)">Downloading data from Google Sheets</div>
-    </div>
-  </div>
-
-
-
-  <div class="field">
-    <label>Google Sheet URL</label>
-    <div style="display:flex;gap:8px">
-      <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..."/>
-      <button class="btn" id="sheetFetch" style="width:auto;white-space:nowrap;padding:8px 12px">Load Columns</button>
-    </div>
-  </div>
-
-  <div id="sheetCols" style="display:none;background:var(--surface2);padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-      <div class="field" style="margin-bottom:0">
-        <label style="font-size:10px;margin-bottom:2px">Name Column</label>
-        <select id="sheetNameCol" style="width:100%;padding:5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;outline:none"></select>
-      </div>
-      <div class="field" style="margin-bottom:0">
-        <label style="font-size:10px;margin-bottom:2px">Email Column</label>
-        <select id="sheetEmailCol" style="width:100%;padding:5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;outline:none"></select>
-      </div>
-      <div class="field" style="margin-bottom:0">
-        <label style="font-size:10px;margin-bottom:2px">Day <span style="font-weight:400;color:var(--muted)">(opt)</span></label>
-        <select id="sheetDayCol" style="width:100%;padding:5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;outline:none">
-          <option value="-1">— None —</option>
-        </select>
-      </div>
-    </div>
-    <div id="sheetDayFilter" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Select days to include:</div>
-      <div id="sheetDayBadges" style="display:flex;flex-wrap:wrap;gap:4px"></div>
-    </div>
-  </div>
-
-  <div id="sheetPreviewWrap" style="display:none;margin-top:20px;border-top:1px solid var(--border);padding-top:15px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-weight:700;font-size:12px;color:var(--text)">Preview & Filter Results</div>
-      <div id="sheetPreviewCount" style="background:var(--blue);color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;box-shadow:0 2px 4px rgba(0,0,0,0.1)">0 people</div>
-    </div>
-    
-    <div class="queue-wrap" style="margin-bottom:12px">
-      <div class="sheet-grid hist-hdr" style="padding:8px 12px;font-size:10px;border-bottom:1px solid var(--border);background:var(--surface2);margin:0">
-        <div>Name</div>
-        <div>Email</div>
-        <div>Username</div>
-        <div>Password</div>
-        <div style="text-align:right"></div>
-      </div>
-      <div id="sheetPreviewList" style="max-height:180px;overflow-y:auto;background:var(--bg)"></div>
-    </div>
-  </div>
-
-  <button class="btn btn-green" id="sheetStart" disabled>🚀 Start Batch Registration</button>
-  <div class="msg err" id="sheetMsg"></div>
-</div>
-
-<!-- ── PANE 4: History ── -->
-<div class="pane" id="pane-history">
-  <div class="hist-toolbar">
-    <span id="histCount">0 records</span>
-    <div style="display:flex;gap:6px">
-      <button class="export-btn" id="exportCSV">⬇ Export CSV</button>
-      <button class="export-btn" id="clearHist">🗑 Clear</button>
-    </div>
-  </div>
-  <div class="hist-list" id="histList"><div class="hist-empty">No registrations yet</div></div>
-</div>
-
-<!-- ── PANE 5: Settings ── -->
-<div class="pane" id="pane-settings">
-  <!-- Automation Section -->
-  <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">⚙️ Automation Control</div>
-    <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
-      <div class="field" style="margin:0">
-        <label>Page Delay (Seconds)</label>
-        <input type="number" id="pageDelay" value="2" min="0.5" max="15" step="0.5"/>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Wait time between pages/steps.</div>
-      </div>
-      <div class="field" style="margin:0">
-        <label>Next User Delay (Seconds)</label>
-        <input type="number" id="userDelay" value="5" min="0.5" max="60" step="0.5"/>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Wait time between users in batch.</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--border)">
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:12px">Fully Automated Mode</div>
-          <div style="font-size:10px;color:var(--muted)">Auto-submit without stopping.</div>
-        </div>
-        <input type="checkbox" id="autoSubmit" style="width:18px;height:18px"/>
-      </div>
-    </div>
-  </div>
-
-  <!-- Registration Data Section -->
-  <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">📍 Default Personal Data</div>
-    <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
-      <div class="field" style="margin:0">
-        <label>Mailing Address</label>
-        <input type="text" id="defAddress" value="Al-Alameya"/>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="field" style="margin:0">
-          <label>City</label>
-          <input type="text" id="defCity" value="JEDDAH"/>
-        </div>
-        <div class="field" style="margin:0">
-          <label>State</label>
-          <input type="text" id="defState" value="JEDDAH"/>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:12px">
-        <div class="field" style="margin:0">
-          <label>Postal Code</label>
-          <input type="text" id="defPostal" value="00000"/>
-        </div>
-        <div class="field" style="margin:0">
-          <label>Country</label>
-          <input type="text" id="defCountry" value="Saudi Arabia"/>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Account & Security Section -->
-  <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">🔐 Account & Security</div>
-    <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
-      <div class="field" style="margin:0">
-        <label>Security Answer</label>
-        <input type="text" id="defAnswer" value="a"/>
-      </div>
-      <div class="field" style="margin:0">
-        <label>Password Pattern</label>
-        <input type="text" id="passPattern" value="{F}@{f}#$1970"/>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Tags: {F}, {f}, {L}, {l}</div>
-      </div>
-    </div>
-  </div>
-
-  <div style="margin-top:24px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:20px">
-    <button class="btn btn-green" id="saveSettings" style="flex:2">💾 Save Settings</button>
-    <button class="btn btn-blue" id="resetSettings" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text)">🔄 Default</button>
-    <button class="btn" id="cancelSettings" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted)">✕ Cancel</button>
-  </div>
-
-  <div style="margin-top:40px;border-top:1px dashed var(--border);padding-top:20px;opacity:0.8">
-    <button class="btn" id="clearAllData" style="width:100%;background:rgba(248,81,73,0.1);color:var(--red);border:1px solid rgba(248,81,73,0.3);font-size:11px">🗑 Reset System (Clear History/Queue)</button>
-  </div>
+  <span style="flex:1;font-weight:700" id="clipText">📋 Copied!</span>
+  <button class="btn btn-blue" id="clipCopyBtn" style="width:auto;padding:6px 12px;font-size:10px">Copy Again</button>
 </div>
 
 <script src="popup.js"></script>

@@ -20,73 +20,42 @@ async function sendDataToPage() {
   }));
 }
 
-// Listen for messages FROM MAIN world content.js
-window.addEventListener('__prom_msg', async (e) => {
-  const { action, payload } = e.detail || {};
+// ── Messages from MAIN world ──────────────────────────────────────────────────
+window.addEventListener('__prom_msg', (e) => {
+  if (e.detail.action === 'stepDone') {
+    chrome.runtime.sendMessage({ action: 'stepDone', data: e.detail.data });
+  }
+  if (e.detail.action === 'stepFailed') {
+    chrome.runtime.sendMessage({ action: 'stepFailed', error: e.detail.error });
+  }
+  if (e.detail.action === 'resumeBatch') {
+    chrome.runtime.sendMessage({ action: 'resumeBatch' });
+  }
+  if (e.detail.action === 'saveCopied') {
+    chrome.storage.local.set({ copiedCreds: e.detail.data });
+  }
+});
 
-  if (action === 'stepDone') {
-    chrome.runtime.sendMessage({
-      action:        'stepDone',
-      finalUsername: payload?.finalUsername || '',
-      password:      payload?.password      || '',
-      name:          payload?.name          || '',
-      email:         payload?.email         || ''
-    });
-  }
+// ── Retry State (Persists across reloads) ────────────────────────────────────
+window.addEventListener('__prom_get_retry', async (e) => {
+  const { retryCount = 0 } = await chrome.storage.local.get(['retryCount']);
+  if (e.detail.callback) e.detail.callback({ retryCount });
+});
 
-  if (action === 'stepFailed') {
-    // ✅ FIX 1: pass name so history records it correctly
-    chrome.runtime.sendMessage({
-      action: 'stepFailed',
-      name:   payload?.name   || '',
-      reason: payload?.reason || ''
-    });
-  }
+window.addEventListener('__prom_set_retry', async (e) => {
+  await chrome.storage.local.set({ retryCount: e.detail.count });
+});
 
-  if (action === 'updateItem') {
-    await chrome.storage.local.set({ currentItem: payload });
-  }
-
-  if (action === 'pauseBatch') {
-    await chrome.storage.local.set({ isRunning: false });
-  }
-  if (action === 'resumeBatch') {
-    await chrome.storage.local.set({ isRunning: true });
-  }
-  if (action === 'stopBatch') {
-    await chrome.storage.local.set({ isRunning: false, singleRunning: false });
-  }
-
-  // Save copied credentials with expiry for cross-tab access
-  if (action === 'saveCopied') {
-    await chrome.storage.local.set({ copiedCreds: payload });
-    // Auto-clear after 30 seconds
-    setTimeout(async () => {
-      const { copiedCreds } = await chrome.storage.local.get(['copiedCreds']);
-      if (copiedCreds && Date.now() >= copiedCreds.expiresAt) {
-        await chrome.storage.local.remove('copiedCreds');
-      }
-    }, 30000);
-  }
+window.addEventListener('__prom_reset_retry', async () => {
+  await chrome.storage.local.set({ retryCount: 0 });
 });
 
 // Send data when page loads
 sendDataToPage();
 
-// Also re-send if storage changes (for future items in batch)
+// Also re-send if storage changes
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.currentItem || changes.isRunning || changes.singleRunning || changes.pageDelay || changes.autoSubmit || changes.defAnswer) {
-    chrome.storage.local.get(['isRunning', 'singleRunning', 'currentItem', 'pageDelay', 'autoSubmit', 'defAnswer']).then(state => {
-      window.dispatchEvent(new CustomEvent('__prom_init', {
-        detail: { 
-          currentItem: state.currentItem || null, 
-          isRunning: state.isRunning, 
-          singleRunning: state.singleRunning,
-          pageDelay: state.pageDelay || 2,
-          autoSubmit: state.autoSubmit || false,
-          defAnswer: state.defAnswer || 'a'
-        }
-      }));
-    });
+    sendDataToPage();
   }
 });

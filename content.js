@@ -1,9 +1,11 @@
-// content.js — MAIN world
-const LOGIN_URL = 'https://tcnet1.prometric.com/Login.aspx?ibt=785937226&ClientNameSingleSite=ibtamea';
-const REGISTER_URL = 'https://tcnet1.prometric.com/Registration.aspx';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+// content.js — runs in MAIN world
+// Handles DOM automation
 
-let PAGE_DELAY = 2000;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const LOGIN_URL = 'https://tcnet1.prometric.com/Candidates/Candidate/Main.aspx';
+
+let currentItem = null;
+let PAGE_DELAY = 1000;
 let AUTO_SUBMIT = false;
 let DEFAULT_ANSWER = 'a';
 let GLOBAL_RUNNING = false;
@@ -11,627 +13,280 @@ let GLOBAL_SINGLE = false;
 
 // ── Status indicator ──────────────────────────────────────────────────────────
 function status(msg, color = '#2ea043') {
-  let el = document.getElementById('__prom__');
-  let txtEl = document.getElementById('__prom_txt__');
-
+  let el = document.getElementById('__prom_status');
   if (!el) {
     el = document.createElement('div');
-    el.id = '__prom__';
-    el.style.cssText = 'position:fixed;top:10px;right:10px;z-index:2147483647;background:#2ea043;color:#fff;padding:8px 14px;border-radius:8px;font:bold 13px/1.4 sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35);max-width:320px;display:flex;align-items:center;gap:12px';
-    
-    txtEl = document.createElement('div');
-    txtEl.id = '__prom_txt__';
-    txtEl.style.flex = '1';
-    el.appendChild(txtEl);
-
-    // Add inline Pause for Batch mode
-    if (window.__isBatch) {
-      const pauseBtn = document.createElement('button');
-      pauseBtn.textContent = '⏸ Pause';
-      pauseBtn.style.cssText = 'background:rgba(0,0,0,0.2);border:none;color:#fff;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:11px;font-weight:bold';
-      pauseBtn.onclick = () => {
-        if (pauseBtn.textContent.includes('Pause')) {
-          send('pauseBatch'); pauseBtn.textContent = '▶ Resume'; pauseBtn.style.background = 'rgba(0,0,0,0.4)';
-        } else {
-          send('resumeBatch'); pauseBtn.textContent = '⏸ Pause'; pauseBtn.style.background = 'rgba(0,0,0,0.2)';
-        }
-      };
-      el.appendChild(pauseBtn);
-    }
-    
-    // Stop button always available if active
-    const stopBtn = document.createElement('button');
-    stopBtn.textContent = '⏹ Stop';
-    stopBtn.style.cssText = 'background:rgba(255,0,0,0.5);border:none;color:#fff;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:11px;font-weight:bold';
-    stopBtn.onclick = () => { send('stopBatch'); el.remove(); };
-    el.appendChild(stopBtn);
-
-    document.body?.appendChild(el);
-  } else {
-    el.style.background = color;
+    el.id = '__prom_status';
+    el.style.cssText = 'position:fixed;top:10px;right:10px;z-index:999999;padding:12px 20px;background:#161b22;color:#fff;border-radius:8px;font-weight:700;font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,0.5);border:1px solid #30363d;transition:all 0.3s';
+    document.body.appendChild(el);
   }
-  txtEl.textContent = '⚡ ' + msg;
+  el.textContent = '⚡ ' + msg;
+  el.style.borderColor = color;
 }
 
-function send(action, payload) {
-  window.dispatchEvent(new CustomEvent('__prom_msg', { detail: { action, payload } }));
+function send(action, data) {
+  window.dispatchEvent(new CustomEvent('__prom_msg', { detail: { action, data } }));
 }
 
-// ── Copy helper: reliable copy + saves to storage for 30s cross-tab access ──
-function copyText(text, label) {
-  // 1. Try modern clipboard API
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
-  } else {
-    fallbackCopy(text);
-  }
-  // 2. Save to chrome storage with 30-second expiry so popup can show it
-  window.dispatchEvent(new CustomEvent('__prom_msg', {
-    detail: {
-      action: 'saveCopied',
-      payload: { text, label: label || '', expiresAt: Date.now() + 30000 }
-    }
-  }));
-}
-function fallbackCopy(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  // Not opacity:0 — some browsers reject invisible elements for clipboard
-  ta.style.cssText = 'position:fixed;top:50%;left:50%;width:2px;height:2px;opacity:0.01;border:none;outline:none;resize:none';
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  try { document.execCommand('copy'); } catch(_) {}
-  document.body.removeChild(ta);
-}
-
-// ── Fill field (native setter + events) ──────────────────────────────────────
-function setVal(el, value) {
+// ── Form Helpers ──────────────────────────────────────────────────────────────
+function setVal(el, val) {
   if (!el) return;
-  try {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-    setter.call(el, String(value));
-  } catch (_) { el.value = String(value); }
+  el.value = val;
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
+  el.dispatchEvent(new Event('blur', { bubbles: true }));
+}
+
+function clickContinue() {
+  const btn = [...document.querySelectorAll('input[type="submit"], button')].find(b => {
+    const t = (b.value || b.textContent || '').toLowerCase();
+    return t.includes('continue') || t.includes('submit') || t.includes('save') || t.includes('next');
+  });
+  if (btn) btn.click();
+}
+
+function fillSelect(sel, value) {
+  if (!sel) return;
+  const opt = [...sel.options].find(o => o.text.includes(value) || o.value === value);
+  if (opt) {
+    sel.value = opt.value;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 }
 
 function blurEl(el) {
   if (!el) return;
-  el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+  el.dispatchEvent(new Event('blur', { bubbles: true }));
 }
 
-function fillSelect(sel, text) {
-  if (!sel) return;
-  for (let i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].text.toLowerCase().includes(text.toLowerCase())) {
-      sel.selectedIndex = i;
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      return;
-    }
-  }
-}
-
-function q(...sels) {
-  for (const s of sels) { try { const e = document.querySelector(s); if (e) return e; } catch (_) { } }
-  return null;
-}
-
-async function waitFor(sels, timeout = 10000) {
-  const arr = Array.isArray(sels) ? sels : [sels];
-  const t0 = Date.now();
-  while (Date.now() - t0 < timeout) {
-    for (const s of arr) { try { const e = document.querySelector(s); if (e) return e; } catch (_) { } }
-    await sleep(150);
-  }
-  return null;
-}
-
-function clickContinue() {
-  const btn = [...document.querySelectorAll('input[type=submit],button')]
-    .find(e => (e.value || e.textContent || '').trim() === 'Continue');
-  if (btn) btn.click();
-}
-
-function nextSuffix(s) {
-  if (s === '') return '1';
-  const n = parseInt(s, 10);
-  if (!isNaN(n) && n < 9) return String(n + 1);
-  if (!isNaN(n)) return 'a';
-  const c = s.charCodeAt(0);
-  return c < 122 ? String.fromCharCode(c + 1) : null;
-}
-
+// ── Detection Logic ───────────────────────────────────────────────────────────
 function detectStep() {
-  const text = document.body.textContent || '';
-  if (text.includes('Sign Out') && text.includes('Update Information')) return 'dashboard';
-
-  // Policy page: has "I AGREE" checkbox or "I Consent" radio
-  if (document.querySelector('input[type="checkbox"]') &&
-    [...document.querySelectorAll('*')].some(el =>
-      el.childElementCount === 0 &&
-      (el.textContent || '').trim() === 'I AGREE'
-    )) return 'policy';
-  if ([...document.querySelectorAll('h2,h3,h4,b,strong,div')].some(el =>
-    el.childElementCount === 0 &&
-    (el.textContent || '').includes('PERSONAL DATA PRIVACY')
-  )) return 'policy';
-
-  if (q('input[placeholder="First Name"]', 'input[id*="FirstName" i]')) return 'profile';
-  if (q('input[id*="Username" i]', 'input[placeholder*="Username" i]')) return 'signin';
-  if (document.querySelector('select')) return 'prometric';
+  const url = window.location.href.toLowerCase();
+  const text = document.body.innerText.toLowerCase();
+  
+  if (url.includes('candidate_info.aspx') && document.querySelector('select')) return 'STEP_1_PROGRAM';
+  if (text.includes('account information') || document.querySelector('input[id*="Username"]')) return 'STEP_2_ACCOUNT';
+  if (text.includes('profile information') || document.querySelector('input[id*="Address"]')) return 'STEP_3_PROFILE';
+  if (text.includes('data privacy notice') || text.includes('privacy policy')) return 'STEP_4_POLICY';
+  if (url.includes('main.aspx') || text.includes('candidate dashboard')) return 'DASHBOARD';
   return null;
 }
 
-// ── STEP 1 — Prometric Info ───────────────────────────────────────────────────
-async function fillStep1() {
+// ── Automation Steps ──────────────────────────────────────────────────────────
+async function handleStep1() {
   status('Step 1: Selecting IBTA MEA…');
   const sel = await waitFor(['select']);
   if (!sel) return;
   await sleep(100);
   fillSelect(sel, 'IBTA MEA');
-  await sleep(300); // Turbo: reduced from 2000
+  await sleep(300);
   clickContinue();
 }
 
-// ── STEP 2 — Sign In Info ─────────────────────────────────────────────────────
-async function fillStep2(creds) {
-  status('Step 2: Username…');
-  const userEl = await waitFor([
-    'input[id*="Username" i]',
-    'input[placeholder*="Username" i]',
-    'input[name*="Username" i]'
-  ]);
-  if (!userEl) { status('❌ Username field not found', '#d73a49'); return; }
-
-  // Username + retry if taken
-  // Dynamic wait: polls up to 4s for server validation response
-  async function waitForUsernameValidation(maxMs = 4000) {
-    const t0 = Date.now();
-    while (Date.now() - t0 < maxMs) {
-      await sleep(150); // Turbo: reduced from 300
-      const taken = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
-        if (!el.offsetParent || el.childElementCount > 0) return false;
-        const t = (el.textContent || '').toLowerCase().trim();
-        return (
-          t.includes('username already found') ||
-          t.includes('already found, please') ||
-          t.includes('username already exists') ||
-          t.includes('already in use')
-        );
-      });
-      if (taken) return true;
-      // Also check if the field border turned red (CSS validation)
-      const style = window.getComputedStyle(userEl);
-      const borderColor = style.borderColor || style.border || '';
-      if (borderColor.includes('255, 0') || borderColor.includes('rgb(255,0') || borderColor.includes('f85149')) return true;
-    }
-    return false; // no error found → name is available
+async function waitForUsernameValidation(maxMs = 3000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < maxMs) {
+    await sleep(150);
+    const taken = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
+      if (!el.offsetParent || el.childElementCount > 0) return false;
+      const t = (el.textContent || '').toLowerCase().trim();
+      return (
+        t.includes('username already found') ||
+        t.includes('already found, please') ||
+        t.includes('username already exists') ||
+        t.includes('already in use')
+      );
+    });
+    if (taken) return true;
+    const style = window.getComputedStyle(document.querySelector('input[id*="Username"]'));
+    const borderColor = style.borderColor || style.border || '';
+    if (borderColor.includes('255, 0') || borderColor.includes('rgb(255,0')) return true;
   }
+  return false;
+}
+
+async function handleStep2(creds) {
+  status('Step 2: Filling Account Details…');
+  const userEl = await waitFor(['input[id*="Username"]']);
+  if (!userEl) return;
 
   let suffix = '';
   while (true) {
     const tryName = creds.username + suffix;
-    status(`Trying username: ${tryName}`);
-
-    // ── Step 1: Query the field fresh every iteration ──────────────────────────
-    function getField() {
-      return document.querySelector('input[id*="Username" i]') ||
-             document.querySelector('input[placeholder*="Username" i]') ||
-             document.querySelector('input[name*="Username" i]') ||
-             userEl;
-    }
-
-    // ── Step 2: Clear the field ────────────────────────────────────────────────
-    let el = getField();
-    el.focus();
-    el.select();
-    setVal(el, '');
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(400);
-
-    // ── Step 3: Wait until error disappears (UpdatePanel will refresh DOM) ─────
-    const t_clear = Date.now();
-    while (Date.now() - t_clear < 2500) {
-      const stillOld = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
-        if (!el.offsetParent || el.childElementCount > 0) return false;
-        const t = (el.textContent || '').toLowerCase().trim();
-        return t.includes('username already found') || t.includes('already found, please');
-      });
-      if (!stillOld) break;
-      await sleep(150);
-    }
-
-    // ── Step 4: Re-query AFTER UpdatePanel may have replaced the element ───────
-    el = getField();
-    el.focus();
-
-    // Clear any leftover value first
-    el.select();
-    setVal(el, '');
+    status(`Trying: ${tryName}…`);
+    setVal(userEl, tryName);
     await sleep(100);
-
-    // Write the new username using native setter
-    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-    if (nativeSetter) nativeSetter.call(el, tryName);
-    else el.value = tryName;
-    el.dispatchEvent(new InputEvent('input', { bubbles: true, data: tryName, inputType: 'insertText' }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(100);
-
-    // ── Step 5: Verify value actually appears in the field ────────────────────
-    const checkEl = getField();
-    if (checkEl.value !== tryName) {
-      // DOM was replaced again — write one more time
-      checkEl.focus();
-      checkEl.select();
-      if (nativeSetter) nativeSetter.call(checkEl, tryName);
-      else checkEl.value = tryName;
-      checkEl.dispatchEvent(new InputEvent('input', { bubbles: true, data: tryName, inputType: 'insertText' }));
-      checkEl.dispatchEvent(new Event('change', { bubbles: true }));
-      await sleep(100);
-    }
-
-    blurEl(getField());
-
-    // ── Step 6: Wait for server validation (dynamic, up to 4s) ───────────────
+    blurEl(userEl);
+    
     const taken = await waitForUsernameValidation(3000);
-
     if (!taken) {
       creds.finalUsername = tryName;
-      send('updateItem', creds);
-      status('Username OK ✓');
       break;
     }
-    status(`⚠️ "${tryName}" taken, trying next…`, '#d29922');
-    const next = nextSuffix(suffix);
-    if (!next) { send('stepFailed', { name: creds.firstName + ' ' + creds.lastName }); return; }
-    suffix = next;
+    suffix = suffix === '' ? '1' : String(parseInt(suffix) + 1);
+    if (suffix === '10') break; 
   }
 
-  // Password (first 2 password inputs)
-  status('Step 2: Password…');
-  const pwAll = [...document.querySelectorAll('input[type="password"]')];
+  const pwAll = document.querySelectorAll('input[type="password"]');
   for (let i = 0; i < Math.min(pwAll.length, 2); i++) {
-    pwAll[i].focus();
     setVal(pwAll[i], creds.password);
-    await sleep(10); // Turbo: reduced from 80
+    await sleep(10);
   }
 
-  // Security questions: trigger dropdown then fill text inputs
-  status('Step 2: Security questions…');
-  const qDropdown = q('select[id*="Question" i]', 'select[name*="Question" i]');
-  if (qDropdown) {
-    qDropdown.focus();
-    qDropdown.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(400);
-  }
-
-  // Fill all visible text inputs (not username)
-  const textInputs = [...document.querySelectorAll('input')].filter(inp => {
-    if (!inp.offsetParent) return false;
-    const t = (inp.type || 'text').toLowerCase();
-    if (['submit', 'button', 'checkbox', 'radio', 'hidden', 'file', 'password'].includes(t)) return false;
-    const combo = [(inp.id || ''), (inp.name || ''), (inp.placeholder || '')].join(' ').toLowerCase();
-    return !combo.includes('username');
-  });
+  const textInputs = document.querySelectorAll('input[type="text"]:not([id*="Username"])');
   for (const inp of textInputs) {
-    inp.focus();
     setVal(inp, DEFAULT_ANSWER);
-    await sleep(10); // Turbo: reduced from 60
+    await sleep(10);
   }
 
-  // Also target Question Answered fields directly
-  document.querySelectorAll('input[placeholder*="Question Answered" i],input[id*="Answer" i],input[name*="Answer" i]')
-    .forEach(inp => { if (inp.offsetParent) { inp.focus(); setVal(inp, DEFAULT_ANSWER); } });
-
-  await sleep(200);
-
-  // Blur all to trigger validators
-  [...document.querySelectorAll('input,select')].forEach(el => { if (el.offsetParent) blurEl(el); });
-
-  // Re-verify passwords not cleared
-  await sleep(150);
-  for (let i = 0; i < Math.min(pwAll.length, 2); i++) {
-    if (!pwAll[i].value) {
-      pwAll[i].focus();
-      setVal(pwAll[i], creds.password);
-      blurEl(pwAll[i]);
-    }
-  }
-
-  await sleep(300); // Turbo: reduced from 2000
-  status('Step 2: Submitting…');
+  await sleep(300);
   clickContinue();
-  // No second click here — MutationObserver handles next step
 }
 
-// ── STEP 3 — Profile Info ─────────────────────────────────────────────────────
-async function fillStep3(creds) {
-  status('Step 3: Profile Info…');
-  const fnEl = await waitFor([
-    'input[placeholder="First Name"]',
-    'input[id*="FirstName" i]',
-    'input[name*="FirstName" i]'
-  ]);
-  if (!fnEl) { status('❌ First Name not found', '#d73a49'); return; }
+async function handleStep3(creds) {
+  status('Step 3: Profile Information…');
+  const addr = await waitFor(['input[id*="Address"]']);
+  if (!addr) return;
 
-  await sleep(200);
-  setVal(fnEl, creds.firstName);
-  setVal(q('input[placeholder="Last Name"]', 'input[id*="LastName" i]'), creds.lastName);
-  setVal(q('input[placeholder="Mailing Address"]', 'input[id*="Address1" i]'), creds.mailingAddress || 'Al-Alameya');
-  setVal(q('input[placeholder="City"]', 'input[id*="City" i]'), creds.city || 'JEDDAH');
-  setVal(q('input[placeholder="State/Province"]', 'input[id*="State" i]'), creds.state || 'JEDDAH');
-  setVal(q('input[placeholder="Postal Code"]', 'input[id*="Postal" i]', 'input[id*="Zip" i]'), creds.postalCode || '00000');
-  fillSelect(q('select[id*="Country" i]', 'select[name*="Country" i]'), creds.country || 'Saudi Arabia');
-  await sleep(100);
-  setVal(q('input[type="email"]', 'input[placeholder="Email Address"]', 'input[id*="Email" i]', 'input[name*="Email" i]'), creds.email);
-
-  // Blur all to trigger validators
-  [...document.querySelectorAll('input,select')].forEach(el => { if (el.offsetParent) blurEl(el); });
-
-  await sleep(300); // Turbo: reduced from 2000
-  status('Step 3: Submitting…');
-  clickContinue();
-  // BUG FIX: only ONE clickContinue here — MutationObserver picks up Step 4
-}
-
-// ── STEP 4 — Confirm Policy ───────────────────────────────────────────────────
-async function fillStep4(creds) {
-  status('Step 4: Confirm Policy…');
-  await sleep(600);
-
-  // Check "I AGREE" checkbox
-  const agreeChk = q(
-    'input[type="checkbox"][id*="Agree" i]',
-    'input[type="checkbox"][id*="agree" i]',
-    'input[type="checkbox"]'
-  );
-  if (agreeChk && !agreeChk.checked) {
-    agreeChk.click();
-    agreeChk.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(200);
-  }
-
-  // BUG FIX: find "I Consent" by checking the label/closest text ONLY for that radio
-  const allRadios = [...document.querySelectorAll('input[type="radio"]')];
-  const consentRadio = allRadios.find(r => {
-    // Check label element associated with this radio only
-    const labelText = (
-      r.closest('label')?.textContent ||
-      (r.id ? document.querySelector(`label[for="${r.id}"]`)?.textContent : '') ||
-      r.labels?.[0]?.textContent ||
-      r.nextElementSibling?.textContent ||
-      r.nextSibling?.textContent ||
-      ''
-    ).trim().toLowerCase();
-    return labelText === 'i consent' || labelText.startsWith('i consent');
+  const { defAddress, defCity, defState, defPostal, defCountry } = await new Promise(r => {
+    chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry'], r);
   });
-  if (consentRadio && !consentRadio.checked) {
+
+  setVal(addr, defAddress || 'Al-Alameya');
+  setVal(document.querySelector('input[id*="City"]'), defCity || 'JEDDAH');
+  setVal(document.querySelector('input[id*="State"]'), defState || 'JEDDAH');
+  setVal(document.querySelector('input[id*="Zip"]'), defPostal || '00000');
+  
+  const countrySel = document.querySelector('select[id*="Country"]');
+  if (countrySel) fillSelect(countrySel, defCountry || 'Saudi Arabia');
+  
+  const emailInps = document.querySelectorAll('input[type="email"], input[id*="Email"]');
+  for (const e of emailInps) setVal(e, creds.email);
+
+  await sleep(300);
+  clickContinue();
+}
+
+async function handleStep4() {
+  status('Step 4: Privacy Policy…');
+  const consentRadio = [...document.querySelectorAll('input[type="radio"]')].find(r => r.id.toLowerCase().includes('consent') || r.value === 'Y');
+  if (consentRadio) {
     consentRadio.click();
-    consentRadio.dispatchEvent(new Event('change', { bubbles: true }));
     await sleep(50);
   }
-
-  await sleep(300); // Turbo: reduced from 2000
-  status('Step 4: Submitting…');
+  await sleep(300);
   clickContinue();
-  // Do NOT send stepDone here. Wait for page reload to the Dashboard.
 }
 
-// ── FINAL STEP — Dashboard ────────────────────────────────────────────────────
 async function handleDashboard(creds) {
-  // If we already showed it, don't do it again
-  if (document.getElementById('__prom_card')) return;
+  status('Success! Finalizing…');
+  const isBatch = GLOBAL_RUNNING;
+  const user = creds.finalUsername || creds.username;
 
-  status('✅ Registration Complete!');
-
-  const user    = creds.finalUsername || creds.username;
-  const isBatch = window.__isBatch;
-
-  // ── Overlay ──────────────────────────────────────────────────────────────────
   const card = document.createElement('div');
-  card.id = '__prom_card';
-  card.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2147483646;display:flex;align-items:center;justify-content:center';
-
-  // ── Box — wider & taller ────────────────────────────────────────────────────
-  const box = document.createElement('div');
-  box.style.cssText = [
-    'background:#0d1117',
-    'border:2px solid #3fb950',
-    'border-radius:16px',
-    'padding:32px 36px',
-    'min-width:440px',
-    'max-width:540px',
-    'width:92vw',
-    'font-family:sans-serif',
-    'color:#e6edf3',
-    'box-shadow:0 12px 48px rgba(0,0,0,.65)'
-  ].join(';');
-
-  const btnLabel = isBatch ? '📋 Copy & Continue' : '📋 Copy & Sign Out';
-
-  box.innerHTML = `
-    <div style="color:#3fb950;font-size:26px;font-weight:800;margin-bottom:22px;text-align:center;letter-spacing:-.3px">
-      ✅ Registration Complete!
+  card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#161b22;border:1px solid #30363d;padding:30px;border-radius:12px;z-index:1000001;width:340px;box-shadow:0 24px 64px rgba(0,0,0,0.8)';
+  card.innerHTML = `
+    <div style="text-align:center;margin-bottom:20px"><span style="font-size:40px">🎉</span></div>
+    <div style="font-weight:800;font-size:18px;text-align:center;margin-bottom:10px">Registration Complete</div>
+    <div style="background:#0d1117;padding:15px;border-radius:8px;margin-bottom:20px;border:1px solid #30363d">
+      <div style="font-size:11px;color:#7d8590">Username</div>
+      <div style="font-weight:700;color:#58a6ff;margin-bottom:8px">${user}</div>
+      <div style="font-size:11px;color:#7d8590">Password</div>
+      <div style="font-weight:700;color:#d29922">${creds.password}</div>
     </div>
-
-    <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:12px">
-      <div style="color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Name</div>
-      <div style="font-weight:700;font-size:15px">${creds.firstName} ${creds.lastName}</div>
-    </div>
-
-    <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:12px">
-      <div style="color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Username</div>
-      <div style="font-weight:700;color:#3fb950;font-family:monospace;font-size:16px;word-break:break-all">${user}</div>
-    </div>
-
-    <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:26px">
-      <div style="color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Password</div>
-      <div style="font-weight:700;font-family:monospace;font-size:16px">${creds.password}</div>
-    </div>
-
-    <button id="__prom_action"
-      style="width:100%;padding:15px;background:#2ea043;border:none;color:#fff;
-             border-radius:10px;cursor:pointer;font-weight:800;font-size:15px;
-             letter-spacing:.3px;transition:background .15s,transform .1s">
-      ${btnLabel}
-    </button>
-    <div id="__prom_done_msg"
-      style="margin-top:10px;text-align:center;font-size:12px;color:#7d8590;display:none">
-      ✓ Copied — signing out…
-    </div>
+    <button id="__prom_copy" style="width:100%;padding:12px;background:#238636;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">📋 Copy & Finish</button>
   `;
-
-  card.appendChild(box);
   document.body.appendChild(card);
 
-  // Hover / press micro-animations
-  const actionBtn = document.getElementById('__prom_action');
-  actionBtn.addEventListener('mouseenter', () => actionBtn.style.background = '#3fb950');
-  actionBtn.addEventListener('mouseleave', () => actionBtn.style.background = '#2ea043');
-  actionBtn.addEventListener('mousedown',  () => actionBtn.style.transform  = 'scale(.98)');
-  actionBtn.addEventListener('mouseup',    () => actionBtn.style.transform  = 'scale(1)');
-
-  function doSignOut() {
-    status('Signing out…');
-    const signOut = [...document.querySelectorAll('a,span,div,button')]
-      .find(e => (e.textContent||'').trim() === 'Sign Out' && e.tagName !== 'SCRIPT');
+  document.getElementById('__prom_copy').addEventListener('click', async () => {
+    const text = `${user}\t${creds.password}`;
+    send('saveCopied', { text, expiresAt: Date.now() + 30000, label: user });
+    
+    if (isBatch) send('resumeBatch');
+    send('stepDone', { finalUsername: user, password: creds.password, email: creds.email });
+    
+    await sleep(500);
+    card.remove();
+    const signOut = [...document.querySelectorAll('a')].find(a => a.textContent.includes('Sign Out'));
     if (signOut) signOut.click();
     else window.location.href = LOGIN_URL;
-  }
-
-  actionBtn.addEventListener('click', async () => {
-    // 1. Prevent double-click
-    actionBtn.disabled = true;
-    actionBtn.style.background = '#238636';
-    actionBtn.textContent = '✓ Copied!';
-    document.getElementById('__prom_done_msg').style.display = 'block';
-
-    // 2. Copy credentials to clipboard
-    copyText(`${user}\t${creds.password}`, `${user} / ${creds.password}`);
-
-    // 3. Notify background (resume batch if needed, log history)
-    if (isBatch) send('resumeBatch');
-    send('stepDone', {
-      finalUsername: user,
-      password:      creds.password,
-      name:          creds.firstName + ' ' + creds.lastName,
-      email:         creds.email
-    });
-
-    // 4. Brief visual pause, then close overlay + sign out
-    await sleep(900);
-    card.remove();
-    doSignOut();
   });
 
   if (AUTO_SUBMIT) {
-    status('Auto-continuing in 2s…');
-    setTimeout(() => actionBtn.click(), 2000);
+    setTimeout(() => document.getElementById('__prom_copy').click(), 2000);
   }
 }
 
-// ── Navigation ────────────────────────────────────────────────────────────────
-async function handleInvalidHostHeader() {
-  if (document.readyState !== 'complete') await new Promise(r => window.addEventListener('load', r, { once: true }));
-  await sleep(300);
-  window.location.href = LOGIN_URL;
+// ── Navigation & Resilience ───────────────────────────────────────────────────
+async function handleErrorAndRetry() {
+  const text = document.body.innerText.toLowerCase();
+  const isError = text.includes('server error') || text.includes('404') || text.includes('500') || text.includes('not found');
+  
+  if (isError || document.body.childElementCount < 2) {
+    const retryCount = await new Promise(r => {
+      window.dispatchEvent(new CustomEvent('__prom_get_retry', { detail: { callback: r } }));
+    });
+    
+    if (retryCount < 3) {
+      status(`Error detected. Retrying (${retryCount + 1}/3)…`, '#d29922');
+      window.dispatchEvent(new CustomEvent('__prom_set_retry', { detail: { count: retryCount + 1 } }));
+      await sleep(3000);
+      location.reload();
+      return true;
+    } else {
+      status('❌ Max retries reached.', '#f85149');
+      send('stepFailed', 'Server Error / Page Load Failed');
+      return true;
+    }
+  }
+  return false;
 }
 
-async function handleLoginPage() {
-  if (document.readyState !== 'complete') await new Promise(r => window.addEventListener('load', r, { once: true }));
-  await sleep(500);
-  const link = [...document.querySelectorAll('a,button,input[type=submit]')]
-    .find(el => { const t = (el.textContent || el.value || '').toLowerCase(); return t.includes('register') || t.includes('new user') || t.includes('first time'); });
-  if (link) link.click();
-  else window.location.href = REGISTER_URL;
+async function waitFor(selectors) {
+  for (let i = 0; i < 40; i++) {
+    for (const s of selectors) {
+      const el = document.querySelector(s);
+      if (el && el.offsetParent) return el;
+    }
+    await sleep(200);
+  }
+  return null;
 }
 
-// ── MAIN ──────────────────────────────────────────────────────────────────────
 let filledStep = null;
-let filling = false;
-let currentItem = null;
-let observer = null;
-
 async function handleStep(step) {
-  if (filling || step === filledStep) return;
-  if (!currentItem) { status('⚠️ No data', '#d73a49'); return; }
-  if (!GLOBAL_RUNNING && !GLOBAL_SINGLE) {
-    status('Paused/Stopped', '#6e7681');
-    return;
-  }
-  filling = true;
+  if (filledStep === step) return;
   filledStep = step;
-  await sleep(PAGE_DELAY);
-  if (!GLOBAL_RUNNING && !GLOBAL_SINGLE) { filling = false; return; }
-  try {
-    if (step === 'dashboard') await handleDashboard(currentItem);
-    else if (step === 'policy') await fillStep4(currentItem);
-    else if (step === 'profile') await fillStep3(currentItem);
-    else if (step === 'signin') await fillStep2(currentItem);
-    else if (step === 'prometric') await fillStep1();
-  } catch (e) {
-    status('❌ ' + e.message, '#d73a49');
-    console.error('[Prometric]', e);
-  }
-  filling = false;
+  window.dispatchEvent(new CustomEvent('__prom_reset_retry'));
 
-  // BUG FIX: disconnect observer after policy (last step)
-  if (step === 'policy' && observer) {
-    observer.disconnect();
-    observer = null;
-  }
+  if (step === 'STEP_1_PROGRAM') await handleStep1();
+  if (step === 'STEP_2_ACCOUNT') await handleStep2(currentItem);
+  if (step === 'STEP_3_PROFILE') await handleStep3(currentItem);
+  if (step === 'STEP_4_POLICY')  await handleStep4();
+  if (step === 'DASHBOARD')      await handleDashboard(currentItem);
 }
 
 async function run() {
-  const url = window.location.href;
-
-  // Wait for state from bridge.js
-  const state = await new Promise(resolve => {
-    window.addEventListener('__prom_init', e => resolve(e.detail), { once: true });
-    setTimeout(() => resolve(null), 1500);
-  });
-
-  // If extension is not explicitly running, do NOTHING.
-  if (!state || (!state.isRunning && !state.singleRunning)) {
-    return;
+  if (await handleErrorAndRetry()) return;
+  
+  const step = detectStep();
+  if (step && currentItem) {
+    await handleStep(step);
   }
-
-  window.__isBatch = state.isRunning;
-  GLOBAL_RUNNING = state.isRunning;
-  GLOBAL_SINGLE = state.singleRunning;
-  status('Active…', '#0969da');
-  currentItem = state.currentItem;
-
-  if (url.includes('InvalidHostHeader')) { await handleInvalidHostHeader(); return; }
-  if (url.includes('Login.aspx')) { await handleLoginPage(); return; }
-
-  if (document.readyState !== 'complete') await new Promise(r => window.addEventListener('load', r, { once: true }));
-  await sleep(800);
-
-  if (!currentItem) { status('⚠️ No active data', '#d73a49'); return; }
-
-  let step = null;
-  for (let i = 0; i < 20; i++) { step = detectStep(); if (step) break; await sleep(150); }
-  if (step) await handleStep(step);
-
-  // Watch for UpdatePanel (AJAX) step changes
-  observer = new MutationObserver(async () => {
-    if (filling) return;
+  
+  new MutationObserver(async () => {
     const s = detectStep();
     if (s && s !== filledStep && currentItem) await handleStep(s);
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+  }).observe(document.body, { childList: true, subtree: true });
 }
 
-window.addEventListener('__prom_init', e => { 
-  if (e.detail && e.detail.currentItem) currentItem = e.detail.currentItem; 
-  if (e.detail && e.detail.pageDelay) PAGE_DELAY = e.detail.pageDelay * 1000;
-  if (e.detail && e.detail.autoSubmit !== undefined) AUTO_SUBMIT = e.detail.autoSubmit;
-  if (e.detail && e.detail.defAnswer) DEFAULT_ANSWER = e.detail.defAnswer;
-  if (e.detail && e.detail.isRunning !== undefined) GLOBAL_RUNNING = e.detail.isRunning;
-  if (e.detail && e.detail.singleRunning !== undefined) GLOBAL_SINGLE = e.detail.singleRunning;
+window.addEventListener('__prom_init', e => {
+  const state = e.detail;
+  if (state.currentItem) currentItem = state.currentItem;
+  if (state.pageDelay) PAGE_DELAY = state.pageDelay * 1000;
+  if (state.autoSubmit !== undefined) AUTO_SUBMIT = state.autoSubmit;
+  if (state.isRunning !== undefined) GLOBAL_RUNNING = state.isRunning;
+  if (state.singleRunning !== undefined) GLOBAL_SINGLE = state.singleRunning;
 });
-run().catch(e => { status('❌ ' + e.message, '#d73a49'); });
+
+run().catch(e => { status('❌ ' + e.message, '#f85149'); });
