@@ -126,12 +126,11 @@ body.rtl .lang-toggle { margin-left: 0; margin-right: auto; }
 
 /* Day Badges */
 .day-badge {
-  padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px;
-  font-size: 11px; cursor: pointer; transition: 0.15s; background: var(--surface2);
-  width: 100%; text-align: left;
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; cursor: pointer; transition: 0.15s; background: var(--surface2);
+  white-space: nowrap; user-select: none;
 }
-body.rtl .day-badge { text-align: right; }
-.day-badge.active { background: var(--blue); color: #0d1117; border-color: var(--blue); }
+.day-badge.active { background: var(--blue); color: #0d1117; border-color: var(--blue); font-weight: 600 !important; }
 
 /* History & Queue Lists */
 .list-item {
@@ -264,25 +263,25 @@ body.rtl [lang="en"] { display: none; }
   </div>
 
   <div id="sheetCols" style="display:none" class="card">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1.2fr;gap:12px;align-items:start">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
       <div class="field" style="margin:0">
-        <label><span lang="en">Name Col</span><span lang="ar">الاسم</span></label>
+        <label><span lang="en">Name Col</span><span lang="ar">عمود الاسم</span></label>
         <select id="sheetNameCol"></select>
       </div>
       <div class="field" style="margin:0">
-        <label><span lang="en">Email Col</span><span lang="ar">الإيميل</span></label>
+        <label><span lang="en">Email Col</span><span lang="ar">عمود الإيميل</span></label>
         <select id="sheetEmailCol"></select>
       </div>
       <div class="field" style="margin:0">
-        <label><span lang="en">Day Col</span><span lang="ar">العمود</span></label>
+        <label><span lang="en">Day Col</span><span lang="ar">عمود اليوم</span></label>
         <select id="sheetDayCol"><option value="-1">—</option></select>
       </div>
-      
-      <!-- Multi-day Selection Column -->
-      <div id="sheetDayFilter" style="display:none">
-        <label><span lang="en">Available Days</span><span lang="ar">الأيام</span></label>
-        <div id="sheetDayBadges" style="display:flex;flex-direction:column;gap:5px;max-height:100px;overflow-y:auto;padding:5px;background:var(--bg);border:1px solid var(--border);border-radius:6px"></div>
-      </div>
+    </div>
+    
+    <!-- Multi-day Selection Row -->
+    <div id="sheetDayFilter" style="display:none;margin-top:15px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px"><span lang="en">Available Days (Select multiple):</span><span lang="ar">الأيام المتاحة (اختر أكثر من يوم):</span></div>
+      <div id="sheetDayBadges" style="display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;padding-bottom:6px"></div>
     </div>
   </div>
 
