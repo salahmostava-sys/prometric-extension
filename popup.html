@@ -227,12 +227,17 @@ body.rtl [lang="en"] { display: none; }
 
 <!-- ── BATCH PANE ── -->
 <div class="pane" id="pane-batch">
-  <div class="card" style="text-align:center; padding: 25px 20px; border: 2px dashed var(--border); cursor: pointer;" id="uploadArea">
+  <div class="card" style="display:flex; flex-direction:column; gap:10px;">
     <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none"/>
-    <div style="font-size:32px;margin-bottom:12px">📁</div>
-    <div style="font-size:15px;margin-bottom:4px"><span lang="en">Upload Data File</span><span lang="ar">رفع ملف البيانات</span></div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px"><span lang="en">Excel (.xlsx) or CSV</span><span lang="ar">إكسيل أو CSV</span></div>
-    <a href="#" id="dlTemplate" style="font-size:11px;color:var(--blue);text-decoration:none">📥 <span lang="en">Download Sample CSV</span><span lang="ar">تنزيل القالب</span></a>
+    <button class="btn btn-blue" id="uploadArea" style="font-size:15px; justify-content:center;">
+      📁 <span lang="en">Upload Data File</span><span lang="ar">رفع ملف البيانات</span>
+    </button>
+    <div style="text-align:center; font-size:11px; color:var(--muted); margin-bottom:5px;">
+      <span lang="en">Excel (.xlsx) or CSV</span><span lang="ar">إكسيل أو CSV</span>
+    </div>
+    <button class="btn" id="dlTemplate" style="background:var(--surface2); color:var(--text); border:1px solid var(--border); font-size:12px; padding:12px; justify-content:center;">
+      📥 <span lang="en">Download Sample CSV</span><span lang="ar">تنزيل القالب</span>
+    </button>
   </div>
 
   <div id="queueWrap" style="display:none">
