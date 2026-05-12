@@ -5,6 +5,7 @@ const sleep = ms => {
   const scaledMs = Math.round(ms * (PAGE_DELAY / 2000));
   return new Promise(r => setTimeout(r, Math.max(10, scaledMs)));
 };
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
 let PAGE_DELAY = 2000;
 let AUTO_SUBMIT = false;
@@ -178,8 +179,10 @@ function clickContinue() {
 function nextSuffix(s) {
   if (s === '') return '1';
   const n = parseInt(s, 10);
-  if (!isNaN(n) && n < 9) return String(n + 1);
-  if (!isNaN(n)) return 'a';
+  if (!isNaN(n)) {
+    if (n < 99) return String(n + 1);
+    return 'a';
+  }
   const c = s.charCodeAt(0);
   return c < 122 ? String.fromCharCode(c + 1) : null;
 }
@@ -425,7 +428,7 @@ async function fillStep3(creds) {
 // ── STEP 4 — Confirm Policy ───────────────────────────────────────────────────
 async function fillStep4(creds) {
   status('Step 4: Confirm Policy…');
-  await sleep(1000);
+  await wait(2000); // Fixed wait for page to settle
 
   async function ensureSelected() {
     const agreeChk = q(
@@ -437,7 +440,7 @@ async function fillStep4(creds) {
       agreeChk.click();
       agreeChk.dispatchEvent(new Event('change', { bubbles: true }));
       agreeChk.dispatchEvent(new Event('input', { bubbles: true }));
-      await sleep(300);
+      await wait(500);
     }
 
     const allRadios = [...document.querySelectorAll('input[type="radio"]')];
@@ -456,22 +459,22 @@ async function fillStep4(creds) {
       consentRadio.click();
       consentRadio.dispatchEvent(new Event('change', { bubbles: true }));
       consentRadio.dispatchEvent(new Event('input', { bubbles: true }));
-      await sleep(300);
+      await wait(500);
     }
   }
 
   await ensureSelected();
-  await sleep(1000);
+  await wait(1500); // Fixed wait for button to enable
 
   for (let i = 0; i < 4; i++) {
     status(`Step 4: Submitting (Attempt ${i+1}/4)…`);
     await ensureSelected();
     const success = clickContinue();
     if (success) {
-      await sleep(2500);
+      await wait(3000); // Fixed wait for navigation
       if (detectStep() !== 'policy') return; 
     }
-    await sleep(1500);
+    await wait(2000);
   }
   
   status('⚠️ Could not advance from Step 4', '#d73a49');
