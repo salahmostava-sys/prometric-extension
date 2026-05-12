@@ -92,11 +92,15 @@ function fallbackCopy(text) {
 function setVal(el, value) {
   if (!el) return;
   try {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-    setter.call(el, String(value));
+    const setter = (Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value') || 
+                   Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value'))?.set;
+    if (setter) setter.call(el, String(value));
+    else el.value = String(value);
   } catch (_) { el.value = String(value); }
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
+  el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+  el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
 }
 
 function blurEl(el) {
@@ -131,9 +135,44 @@ async function waitFor(sels, timeout = 10000) {
 }
 
 function clickContinue() {
-  const btn = [...document.querySelectorAll('input[type=submit],button')]
-    .find(e => (e.value || e.textContent || '').trim() === 'Continue');
-  if (btn) btn.click();
+  const selectors = [
+    'input[type="submit"]', 'button', 'input[type="button"]', 'a', 'input[type="image"]', 
+    '[role="button"]', '.btn', '.button'
+  ];
+  const candidates = [...document.querySelectorAll(selectors.join(','))];
+  
+  // Also check divs/spans that might be styled as buttons or contain the text
+  document.querySelectorAll('div, span, b, strong').forEach(el => {
+    if (el.childElementCount === 0 && (el.textContent || '').trim().toLowerCase().includes('continue')) {
+      candidates.push(el);
+    }
+  });
+
+  const btn = candidates.find(e => {
+    if (!e.offsetParent) return false;
+    const val = (e.value || e.textContent || '').trim().toLowerCase();
+    return val === 'continue' || val.startsWith('continue') || val === 'next' || val === 'submit' || val.includes('continue');
+  });
+
+  if (btn) {
+    btn.focus();
+    btn.click();
+    ['mousedown', 'mouseup', 'click'].forEach(type => {
+      try {
+        btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+      } catch(_) {}
+    });
+    return true;
+  }
+
+  // Fallback: search by ID
+  const aspBtn = document.querySelector('input[id*="Continue" i], button[id*="Continue" i], input[id*="Submit" i], button[id*="Submit" i], a[id*="Continue" i]');
+  if (aspBtn && aspBtn.offsetParent) {
+    aspBtn.focus();
+    aspBtn.click();
+    return true;
+  }
+  return false;
 }
 
 function nextSuffix(s) {
@@ -264,16 +303,19 @@ async function fillStep2(creds) {
     await sleep(100);
 
     // ── Step 5: Verify value actually appears in the field ────────────────────
-    const checkEl = getField();
-    if (checkEl.value !== tryName) {
-      // DOM was replaced again — write one more time
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const checkEl = getField();
+      if (checkEl.value === tryName) break;
+      
       checkEl.focus();
       checkEl.select();
       if (nativeSetter) nativeSetter.call(checkEl, tryName);
       else checkEl.value = tryName;
       checkEl.dispatchEvent(new InputEvent('input', { bubbles: true, data: tryName, inputType: 'insertText' }));
       checkEl.dispatchEvent(new Event('change', { bubbles: true }));
-      await sleep(100);
+      checkEl.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+      checkEl.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      await sleep(200);
     }
 
     blurEl(getField());
@@ -383,44 +425,56 @@ async function fillStep3(creds) {
 // ── STEP 4 — Confirm Policy ───────────────────────────────────────────────────
 async function fillStep4(creds) {
   status('Step 4: Confirm Policy…');
-  await sleep(600);
+  await sleep(1000);
 
-  // Check "I AGREE" checkbox
-  const agreeChk = q(
-    'input[type="checkbox"][id*="Agree" i]',
-    'input[type="checkbox"][id*="agree" i]',
-    'input[type="checkbox"]'
-  );
-  if (agreeChk && !agreeChk.checked) {
-    agreeChk.click();
-    agreeChk.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(200);
+  async function ensureSelected() {
+    const agreeChk = q(
+      'input[type="checkbox"][id*="Agree" i]',
+      'input[type="checkbox"][id*="agree" i]',
+      'input[type="checkbox"]'
+    );
+    if (agreeChk && !agreeChk.checked) {
+      agreeChk.click();
+      agreeChk.dispatchEvent(new Event('change', { bubbles: true }));
+      agreeChk.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(300);
+    }
+
+    const allRadios = [...document.querySelectorAll('input[type="radio"]')];
+    const consentRadio = allRadios.find(r => {
+      const text = (
+        r.closest('label')?.textContent ||
+        (r.id ? document.querySelector(`label[for="${r.id}"]`)?.textContent : '') ||
+        r.labels?.[0]?.textContent ||
+        r.nextElementSibling?.textContent ||
+        r.nextSibling?.textContent ||
+        ''
+      ).trim().toLowerCase();
+      return (text === 'i consent' || text.startsWith('i consent')) && !text.includes('do not');
+    });
+    if (consentRadio && !consentRadio.checked) {
+      consentRadio.click();
+      consentRadio.dispatchEvent(new Event('change', { bubbles: true }));
+      consentRadio.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(300);
+    }
   }
 
-  // BUG FIX: find "I Consent" by checking the label/closest text ONLY for that radio
-  const allRadios = [...document.querySelectorAll('input[type="radio"]')];
-  const consentRadio = allRadios.find(r => {
-    // Check label element associated with this radio only
-    const labelText = (
-      r.closest('label')?.textContent ||
-      (r.id ? document.querySelector(`label[for="${r.id}"]`)?.textContent : '') ||
-      r.labels?.[0]?.textContent ||
-      r.nextElementSibling?.textContent ||
-      r.nextSibling?.textContent ||
-      ''
-    ).trim().toLowerCase();
-    return labelText === 'i consent' || labelText.startsWith('i consent');
-  });
-  if (consentRadio && !consentRadio.checked) {
-    consentRadio.click();
-    consentRadio.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(50);
-  }
+  await ensureSelected();
+  await sleep(1000);
 
-  await sleep(300); // Turbo: reduced from 2000
-  status('Step 4: Submitting…');
-  clickContinue();
-  // Do NOT send stepDone here. Wait for page reload to the Dashboard.
+  for (let i = 0; i < 4; i++) {
+    status(`Step 4: Submitting (Attempt ${i+1}/4)…`);
+    await ensureSelected();
+    const success = clickContinue();
+    if (success) {
+      await sleep(2500);
+      if (detectStep() !== 'policy') return; 
+    }
+    await sleep(1500);
+  }
+  
+  status('⚠️ Could not advance from Step 4', '#d73a49');
 }
 
 // ── FINAL STEP — Dashboard ────────────────────────────────────────────────────
@@ -559,6 +613,15 @@ let currentItem = null;
 let observer = null;
 
 async function handleStep(step) {
+  const pageText = document.body.textContent || '';
+  const hasError = pageText.includes('information provided is not valid') || 
+                   pageText.includes('is required') ||
+                   !!document.querySelector('.error, .errorMessage, [id*="Error" i], [class*="Error" i]');
+  
+  if (hasError) {
+    if (filledStep === step) filledStep = null; // Allow retry
+  }
+
   if (filling || step === filledStep) return;
   if (!currentItem) { status('⚠️ No data', '#d73a49'); return; }
   if (!GLOBAL_RUNNING && !GLOBAL_SINGLE) {
@@ -581,10 +644,11 @@ async function handleStep(step) {
   }
   filling = false;
 
-  // BUG FIX: disconnect observer after policy (last step)
-  if (step === 'policy' && observer) {
-    observer.disconnect();
-    observer = null;
+  // If we are on policy step, allow retrying after a while if we're still here
+  if (step === 'policy') {
+    setTimeout(() => {
+      if (detectStep() === 'policy') filledStep = null;
+    }, 4000);
   }
 }
 
