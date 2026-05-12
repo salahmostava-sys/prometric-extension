@@ -428,7 +428,16 @@ async function fillStep3(creds) {
 // ── STEP 4 — Confirm Policy ───────────────────────────────────────────────────
 async function fillStep4(creds) {
   status('Step 4: Confirm Policy…');
-  await wait(2000); // Fixed wait for page to settle
+  
+  // Smart wait: at least 3s buffer, then monitor up to 10s total
+  await wait(3000); 
+  const t0 = Date.now();
+  while (Date.now() - t0 < 7000) {
+    const btn = document.querySelector('input[id*="Continue" i], button[id*="Continue" i], input[type="submit"]');
+    if (btn && btn.offsetParent && !btn.disabled) break;
+    await wait(500);
+  }
+  await wait(1000); // Final small safety buffer
 
   async function ensureSelected() {
     const agreeChk = q(

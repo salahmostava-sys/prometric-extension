@@ -128,21 +128,43 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 // ── Settings ──────────────────────────────────────────────────────────────────
-const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'defCity', 'defState', 'defPostal', 'defCountry', 'defAnswer', 'passPattern', 'sheetUrl'];
+const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'defCity', 'defState', 'defPostal', 'defCountry', 'defAnswer', 'passPattern', 'sheetUrl', 'desktopNotifications', 'autoRetry', 'waPhone', 'whatsappAlerts', 'waApiKey'];
 
 async function loadSettings() {
   const settings = await chrome.storage.local.get(SETTINGS_KEYS);
-  if (settings.pageDelay) document.getElementById('pageDelay').value = settings.pageDelay;
-  if (settings.userDelay) document.getElementById('userDelay').value = settings.userDelay;
-  if (settings.autoSubmit !== undefined) document.getElementById('autoSubmit').checked = settings.autoSubmit;
-  if (settings.defAddress) document.getElementById('defAddress').value = settings.defAddress;
-  if (settings.defCity) document.getElementById('defCity').value = settings.defCity;
-  if (settings.defState) document.getElementById('defState').value = settings.defState;
-  if (settings.defPostal) document.getElementById('defPostal').value = settings.defPostal;
-  if (settings.defCountry) document.getElementById('defCountry').value = settings.defCountry;
-  if (settings.defAnswer) document.getElementById('defAnswer').value = settings.defAnswer;
-  if (settings.passPattern) document.getElementById('passPattern').value = settings.passPattern;
-  if (settings.sheetUrl) document.getElementById('sheetUrl').value = settings.sheetUrl;
+  
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = !!val;
+    else el.value = val || '';
+  };
+
+  setVal('pageDelay', settings.pageDelay);
+  setVal('userDelay', settings.userDelay);
+  setVal('autoSubmit', settings.autoSubmit);
+  setVal('autoRetry', settings.autoRetry);
+  setVal('desktopNotifications', settings.desktopNotifications);
+  
+  if (settings.whatsappAlerts !== undefined) {
+    const waChk = document.getElementById('whatsappAlerts');
+    if (waChk) {
+      waChk.checked = settings.whatsappAlerts;
+      const field = document.getElementById('waPhoneField');
+      if (field) field.style.display = settings.whatsappAlerts ? 'block' : 'none';
+    }
+  }
+  
+  setVal('waPhone', settings.waPhone);
+  setVal('waApiKey', settings.waApiKey);
+  setVal('defAddress', settings.defAddress);
+  setVal('defCity', settings.defCity);
+  setVal('defState', settings.defState);
+  setVal('defPostal', settings.defPostal);
+  setVal('defCountry', settings.defCountry);
+  setVal('defAnswer', settings.defAnswer);
+  setVal('passPattern', settings.passPattern);
+  setVal('sheetUrl', settings.sheetUrl);
 }
 
 // ── Settings Actions ──────────────────────────────────────────────────────────
@@ -1059,4 +1081,8 @@ setInterval(checkClipboard, 1000);
 setInterval(checkBatchStatus, 1000);
 checkClipboard();
 checkBatchStatus();
+document.getElementById('whatsappAlerts')?.addEventListener('change', e => {
+  document.getElementById('waPhoneField').style.display = e.target.checked ? 'block' : 'none';
+});
+
 loadSettings();

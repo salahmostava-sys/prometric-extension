@@ -104,16 +104,61 @@ async function openNextTab() {
     }
   } else {
     // End of queue
+    const { autoRetry, queue = [] } = await chrome.storage.local.get(['autoRetry', 'queue']);
+    
+    // Check if we have failed items to retry
+    const failedItems = queue.filter(i => i.status === 'failed' && !i.retried);
+    
+    if (autoRetry !== false && failedItems.length > 0) {
+      // Mark as retried and reset to pending
+      failedItems.forEach(i => {
+        i.status = 'pending';
+        i.retried = true;
+      });
+      await chrome.storage.local.set({ queue, queueIndex: 0 });
+      await openNextTab();
+      return;
+    }
+
     await chrome.storage.local.set({ isRunning: false });
     await updateBadge();
     
-    // Play sound / Show notification when batch completes
-    chrome.notifications.create({
-      type: 'basic', iconUrl: 'icon128.png',
-      title: 'Batch Complete ✅',
-      message: 'All registrations have been processed successfully.',
-      priority: 1
-    });
+    const { desktopNotifications, whatsappAlerts, waPhone } = await chrome.storage.local.get(['desktopNotifications', 'whatsappAlerts', 'waPhone']);
+    
+    const done   = queue.filter(i => i.status === 'done').length;
+    const failed = queue.filter(i => i.status === 'failed').length;
+    const total  = queue.length;
+    
+    // 1. Desktop Notification
+    if (desktopNotifications !== false) {
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon128.png',
+        title: 'Batch Complete ✅',
+        message: `Registration finished: ${done} Successful, ${failed} Failed.`,
+        priority: 2
+      });
+    }
+
+    // 2. WhatsApp Notification (Automated via CallMeBot)
+    if (whatsappAlerts && waPhone && waApiKey) {
+      const cleanPhone = waPhone.replace(/\D/g, '');
+      if (cleanPhone) {
+        const text = encodeURIComponent(
+          `✅ *تم الانتهاء من تسجيل الدفعة بنجاح!*\n\n` +
+          `📊 *ملخص العمليات:*\n` +
+          `• عدد الناجحين: ${done}\n` +
+          `• عدد الفاشلين: ${failed}\n` +
+          `• إجمالي الدفعة: ${total}\n\n` +
+          `🕒 *الوقت:* ${new Date().toLocaleString('ar-EG')}\n\n` +
+          `🚀 _تم بواسطة: Prometric Auto Register_`
+        );
+        
+        const apiUrl = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${text}&apikey=${waApiKey}`;
+        
+        fetch(apiUrl).catch(err => console.error('WhatsApp notification failed:', err));
+      }
+    }
   }
 }
 
