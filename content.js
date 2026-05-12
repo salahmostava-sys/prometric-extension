@@ -453,7 +453,7 @@ async function handleDashboard(creds) {
     'box-shadow:0 12px 48px rgba(0,0,0,.65)'
   ].join(';');
 
-  const btnLabel = isBatch ? '📋 Copy & Continue' : '📋 Copy & Sign Out';
+  const btnLabel = isBatch ? '📋 Copy & Continue' : '📋 Copy & Finish';
 
   box.innerHTML = `
     <div style="color:#3fb950;font-size:26px;font-weight:800;margin-bottom:22px;text-align:center;letter-spacing:-.3px">
@@ -483,7 +483,7 @@ async function handleDashboard(creds) {
     </button>
     <div id="__prom_done_msg"
       style="margin-top:10px;text-align:center;font-size:12px;color:#7d8590;display:none">
-      ✓ Copied — signing out…
+      ✓ Copied — ${isBatch ? 'signing out…' : 'finishing…'}
     </div>
   `;
 
@@ -527,7 +527,7 @@ async function handleDashboard(creds) {
     // 4. Brief visual pause, then close overlay + sign out
     await sleep(900);
     card.remove();
-    doSignOut();
+    if (isBatch) doSignOut();
   });
 
   if (AUTO_SUBMIT) {
