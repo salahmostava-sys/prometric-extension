@@ -1,7 +1,10 @@
 // content.js — MAIN world
 const LOGIN_URL = 'https://tcnet1.prometric.com/Login.aspx?ibt=785937226&ClientNameSingleSite=ibtamea';
 const REGISTER_URL = 'https://tcnet1.prometric.com/Registration.aspx';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = ms => {
+  const scaledMs = Math.round(ms * (PAGE_DELAY / 2000));
+  return new Promise(r => setTimeout(r, Math.max(10, scaledMs)));
+};
 
 let PAGE_DELAY = 2000;
 let AUTO_SUBMIT = false;

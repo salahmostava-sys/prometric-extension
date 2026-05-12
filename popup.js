@@ -34,8 +34,8 @@ async function applySpeedMode(isTurbo) {
     btn.style.borderColor = 'var(--yellow)';
     const pD = document.getElementById('pageDelay');
     const uD = document.getElementById('userDelay');
-    if (pD) pD.value = 0.5;
-    if (uD) uD.value = 2;
+    if (pD) pD.value = 0.2;
+    if (uD) uD.value = 0.5;
   } else {
     btn.textContent = '🐢 Safe';
     btn.style.color = 'var(--green)';
@@ -54,8 +54,8 @@ document.getElementById('speedToggle')?.addEventListener('click', async () => {
   applySpeedMode(newTurbo);
   await chrome.storage.local.set({ 
     speedMode: newTurbo ? 'turbo' : 'safe',
-    pageDelay: newTurbo ? 0.5 : 2.5,
-    userDelay: newTurbo ? 2 : 6
+    pageDelay: newTurbo ? 0.2 : 2.5,
+    userDelay: newTurbo ? 0.5 : 6
   });
 });
 
