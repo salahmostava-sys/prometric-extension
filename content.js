@@ -90,6 +90,16 @@ function fallbackCopy(text) {
 }
 
 // ── Fill field (native setter + events) ──────────────────────────────────────
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
 function setVal(el, value) {
   if (!el) return;
   try {
@@ -528,17 +538,17 @@ async function handleDashboard(creds) {
 
     <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:12px">
       <div style="color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Name</div>
-      <div style="font-weight:700;font-size:15px">${creds.firstName} ${creds.lastName}</div>
+      <div style="font-weight:700;font-size:15px">${escapeHtml(creds.firstName)} ${escapeHtml(creds.lastName)}</div>
     </div>
 
     <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:12px">
       <div style="color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Username</div>
-      <div style="font-weight:700;color:#3fb950;font-family:monospace;font-size:16px;word-break:break-all">${user}</div>
+      <div style="font-weight:700;color:#3fb950;font-family:monospace;font-size:16px;word-break:break-all">${escapeHtml(user)}</div>
     </div>
 
     <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:26px">
       <div style="color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Password</div>
-      <div style="font-weight:700;font-family:monospace;font-size:16px">${creds.password}</div>
+      <div style="font-weight:700;font-family:monospace;font-size:16px">${escapeHtml(creds.password)}</div>
     </div>
 
     <button id="__prom_action"

@@ -79,6 +79,16 @@ function fallbackCopyPopup(text) {
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
 function genCreds(name) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
@@ -128,7 +138,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 // ── Settings ──────────────────────────────────────────────────────────────────
-const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'defCity', 'defState', 'defPostal', 'defCountry', 'defAnswer', 'passPattern', 'sheetUrl', 'desktopNotifications', 'autoRetry', 'waPhone', 'whatsappAlerts', 'waApiKey'];
+const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'defCity', 'defState', 'defPostal', 'defCountry', 'defAnswer', 'passPattern', 'sheetUrl', 'desktopNotifications', 'autoRetry'];
 
 async function loadSettings() {
   const settings = await chrome.storage.local.get(SETTINGS_KEYS);
@@ -145,18 +155,6 @@ async function loadSettings() {
   setVal('autoSubmit', settings.autoSubmit);
   setVal('autoRetry', settings.autoRetry);
   setVal('desktopNotifications', settings.desktopNotifications);
-  
-  if (settings.whatsappAlerts !== undefined) {
-    const waChk = document.getElementById('whatsappAlerts');
-    if (waChk) {
-      waChk.checked = settings.whatsappAlerts;
-      const field = document.getElementById('waPhoneField');
-      if (field) field.style.display = settings.whatsappAlerts ? 'block' : 'none';
-    }
-  }
-  
-  setVal('waPhone', settings.waPhone);
-  setVal('waApiKey', settings.waApiKey);
   setVal('defAddress', settings.defAddress);
   setVal('defCity', settings.defCity);
   setVal('defState', settings.defState);
@@ -461,8 +459,8 @@ function renderQueue() {
     <div class="queue-item" id="qi-${i}">
       <div class="q-dot ${item.status}" id="qd-${i}"></div>
       <div style="flex:1;min-width:0">
-        <div class="q-name">${item.name}</div>
-        <div class="q-email">${item.email}</div>
+        <div class="q-name">${escapeHtml(item.name)}</div>
+        <div class="q-email">${escapeHtml(item.email)}</div>
       </div>
       <div class="q-status ${item.status}" id="qs-${i}">${statusLabel(item.status)}</div>
     </div>`).join('');
@@ -652,29 +650,15 @@ async function loadHistory() {
 
   list.innerHTML = history.map((h, i) => `
     <div class="hist-item">
-      <div class="hist-name" title="${h.name || ''}">${h.name || '—'}</div>
-      <div class="hist-user" title="${h.finalUsername || ''}">${h.finalUsername || '—'}</div>
-      <div class="hist-pass" title="${h.password || ''}">${h.password || '—'}</div>
+      <div class="hist-name" title="${escapeHtml(h.name || '')}">${escapeHtml(h.name || '—')}</div>
+      <div class="hist-user" title="${escapeHtml(h.finalUsername || '')}">${escapeHtml(h.finalUsername || '—')}</div>
+      <div class="hist-pass" title="${escapeHtml(h.password || '')}">${escapeHtml(h.password || '—')}</div>
       <div style="text-align:right;white-space:nowrap">
-        <span class="hist-badge ${h.status}" title="${h.date ? new Date(h.date).toLocaleString('en-GB') : ''}">${h.status === 'done' ? '✓' : '✗'}</span>
+        <span class="hist-badge ${escapeHtml(h.status)}" title="${escapeHtml(h.date ? new Date(h.date).toLocaleString('en-GB') : '')}">${h.status === 'done' ? '✓' : '✗'}</span>
         ${h.status === 'done' ? `<button class="hist-copy" data-index="${i}">Copy</button>` : ''}
       </div>
     </div>`).join('');
 }
-
-document.getElementById('exportCSV')?.addEventListener('click', async () => {
-  const { history = [] } = await chrome.storage.local.get(['history']);
-  if (!history.length) return;
-  const rows = [['Name', 'Username', 'Password', 'Email', 'Status', 'Date']];
-  history.forEach(h => rows.push([h.name || '', h.finalUsername || '', h.password || '', h.email || '', h.status || '', h.date ? new Date(h.date).toLocaleString() : '']));
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-  
-  chrome.downloads.download({
-    url: 'data:text/csv;base64,' + btoa(unescape(encodeURIComponent(csv))),
-    filename: `prometric_history_${new Date().toISOString().slice(0, 10)}.csv`,
-    saveAs: false
-  });
-});
 
 document.getElementById('clearHist')?.addEventListener('click', async () => {
   if (!confirm('Clear all history?')) return;
@@ -849,7 +833,7 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
     if (daySel) daySel.innerHTML = '<option value="-1">— No filter —</option>';
 
     headers.forEach((h, i) => {
-      const opt = `<option value="${i}">${h || 'Unnamed Column'}</option>`;
+      const opt = `<option value="${i}">${escapeHtml(h || 'Unnamed Column')}</option>`;
       nameSel.innerHTML += opt;
       emailSel.innerHTML += opt;
       if (daySel) daySel.innerHTML += opt;
@@ -922,10 +906,10 @@ function renderSheetPreview() {
     const c = genCreds(item.name);
     return `
     <div class="sheet-grid" style="padding:6px 12px;border-bottom:1px solid var(--border)">
-      <div style="font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${item.name}">${item.name}</div>
-      <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${item.email}">${item.email}</div>
-      <div style="font-family:monospace;color:var(--blue);font-size:11px">${c ? c.username : ''}</div>
-      <div style="font-family:monospace;color:var(--yellow);font-size:11px">${c ? c.password : ''}</div>
+      <div style="font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+      <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(item.email)}">${escapeHtml(item.email)}</div>
+      <div style="font-family:monospace;color:var(--blue);font-size:11px">${escapeHtml(c ? c.username : '')}</div>
+      <div style="font-family:monospace;color:var(--yellow);font-size:11px">${escapeHtml(c ? c.password : '')}</div>
       <div style="text-align:right">
         <button class="delete-row-btn" data-idx="${item.origIndex}" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:bold;padding:0 5px" title="Exclude from batch">✕</button>
       </div>
@@ -996,11 +980,11 @@ function buildDayFilter(dIdx) {
   if (days.length === 0) { filterWrap.style.display = 'none'; renderSheetPreview(); return; }
 
   badgesWrap.innerHTML = days.map(day => `
-    <button class="day-badge selected" data-day="${day}"
+    <button class="day-badge selected" data-day="${escapeHtml(day)}"
       style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
              background:rgba(56,139,253,.2);color:var(--blue);border:1px solid rgba(56,139,253,.4);
              transition:.15s">
-      ${day}
+      ${escapeHtml(day)}
     </button>`).join('');
 
   filterWrap.style.display = 'block';
@@ -1081,8 +1065,4 @@ setInterval(checkClipboard, 1000);
 setInterval(checkBatchStatus, 1000);
 checkClipboard();
 checkBatchStatus();
-document.getElementById('whatsappAlerts')?.addEventListener('change', e => {
-  document.getElementById('waPhoneField').style.display = e.target.checked ? 'block' : 'none';
-});
-
 loadSettings();

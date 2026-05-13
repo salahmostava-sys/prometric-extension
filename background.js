@@ -123,7 +123,7 @@ async function openNextTab() {
     await chrome.storage.local.set({ isRunning: false });
     await updateBadge();
     
-    const { desktopNotifications, whatsappAlerts, waPhone } = await chrome.storage.local.get(['desktopNotifications', 'whatsappAlerts', 'waPhone']);
+    const { desktopNotifications } = await chrome.storage.local.get(['desktopNotifications']);
     
     const done   = queue.filter(i => i.status === 'done').length;
     const failed = queue.filter(i => i.status === 'failed').length;
@@ -138,26 +138,6 @@ async function openNextTab() {
         message: `Registration finished: ${done} Successful, ${failed} Failed.`,
         priority: 2
       });
-    }
-
-    // 2. WhatsApp Notification (Automated via CallMeBot)
-    if (whatsappAlerts && waPhone && waApiKey) {
-      const cleanPhone = waPhone.replace(/\D/g, '');
-      if (cleanPhone) {
-        const text = encodeURIComponent(
-          `✅ *تم الانتهاء من تسجيل الدفعة بنجاح!*\n\n` +
-          `📊 *ملخص العمليات:*\n` +
-          `• عدد الناجحين: ${done}\n` +
-          `• عدد الفاشلين: ${failed}\n` +
-          `• إجمالي الدفعة: ${total}\n\n` +
-          `🕒 *الوقت:* ${new Date().toLocaleString('ar-EG')}\n\n` +
-          `🚀 _تم بواسطة: Prometric Auto Register_`
-        );
-        
-        const apiUrl = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${text}&apikey=${waApiKey}`;
-        
-        fetch(apiUrl).catch(err => console.error('WhatsApp notification failed:', err));
-      }
     }
   }
 }
