@@ -159,6 +159,19 @@ function renderValidation(panel, body, statusEl, stats) {
   `).join('');
 }
 
+// -- sendMsg: retry once if service worker was sleeping (MV3) ---
+async function sendMsg(payload) {
+  try {
+    return await chrome.runtime.sendMessage(payload);
+  } catch (e) {
+    if (e?.message?.includes('Receiving end does not exist')) {
+      // Service worker was asleep — wait briefly and retry once
+      await new Promise(r => setTimeout(r, 300));
+      try { return await chrome.runtime.sendMessage(payload); } catch (_) {}
+    }
+  }
+}
+
 async function confirmReplaceRunning() {
   const { isRunning, singleRunning, queue = [] } = await chrome.storage.local.get(['isRunning', 'singleRunning', 'queue']);
   if (!isRunning && !singleRunning) return true;
@@ -166,13 +179,13 @@ async function confirmReplaceRunning() {
     ? `A registration is already running with ${queue.length} queued item(s). Stop it and start a new one?`
     : 'A registration is already running. Stop it and start a new one?';
   if (!confirm(msg)) return false;
-  await chrome.runtime.sendMessage({ action: 'clearSession' });
+  await sendMsg({ action: 'clearSession' });
   return true;
 }
 
 async function clearCurrentSession() {
   if (!confirm('Clear the current session only? History and settings will be kept.')) return;
-  await chrome.runtime.sendMessage({ action: 'clearSession' });
+  await sendMsg({ action: 'clearSession' });
   batchItems = [];
   queueWrap.style.display = 'none';
   bStart.disabled = true;
@@ -349,7 +362,7 @@ sStart.addEventListener('click', async () => {
   });
   const { defAddress, defCity, defState, defPostal, defCountry } = await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
   
-  await chrome.runtime.sendMessage({
+  await sendMsg({
     action: 'startSingle',
     item: { 
       name: sName.value.trim(), 
@@ -371,7 +384,7 @@ sStart.addEventListener('click', async () => {
 });
 
 document.getElementById('stopSingle').addEventListener('click', async () => {
-  await chrome.runtime.sendMessage({ action: 'stopQueue' });
+  await sendMsg({ action: 'stopQueue' });
   singleBanner.classList.remove('show');
   
   sStart.style.display = 'block';
@@ -607,7 +620,7 @@ bStart.addEventListener('click', async () => {
     country:        defCountry || 'Saudi Arabia'
   }));
   userStopped = false;
-  await chrome.runtime.sendMessage({ action: 'startQueue', items });
+  await sendMsg({ action: 'startQueue', items });
   batchBanner.classList.add('show');
   
   bStart.style.display = 'none';
@@ -620,7 +633,7 @@ bStart.addEventListener('click', async () => {
 
 stopBatch.addEventListener('click', async () => {
   userStopped = true;
-  await chrome.runtime.sendMessage({ action: 'stopQueue' });
+  await sendMsg({ action: 'stopQueue' });
   
   stopBatch.style.display = 'none';
   batchSpinner.style.display = 'none';
@@ -631,7 +644,7 @@ stopBatch.addEventListener('click', async () => {
 if (resumeBtn) {
   resumeBtn.addEventListener('click', async () => {
     userStopped = false;
-    await chrome.runtime.sendMessage({ action: 'resumeQueue' });
+    await sendMsg({ action: 'resumeQueue' });
     
     bStart.style.display = 'none';
     resumeBtn.style.display = 'none';
@@ -644,7 +657,7 @@ if (resumeBtn) {
 
 retryFailedBtn?.addEventListener('click', async () => {
   if (!(await confirmReplaceRunning())) return;
-  await chrome.runtime.sendMessage({ action: 'retryFailed' });
+  await sendMsg({ action: 'retryFailed' });
   showMessage(bMsg, 'ok', 'Retrying failed registrations.');
 });
 
