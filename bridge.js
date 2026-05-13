@@ -20,12 +20,24 @@ async function sendDataToPage() {
   }));
 }
 
+// Retry once if service worker was sleeping (MV3)
+async function sendToBackground(payload) {
+  try {
+    return await chrome.runtime.sendMessage(payload);
+  } catch (e) {
+    if (e?.message?.includes('Receiving end does not exist')) {
+      await new Promise(r => setTimeout(r, 300));
+      try { return await chrome.runtime.sendMessage(payload); } catch (_) {}
+    }
+  }
+}
+
 // Listen for messages FROM MAIN world content.js
 window.addEventListener('__prom_msg', async (e) => {
   const { action, payload } = e.detail || {};
 
   if (action === 'stepDone') {
-    chrome.runtime.sendMessage({
+    await sendToBackground({
       action:        'stepDone',
       finalUsername: payload?.finalUsername || '',
       password:      payload?.password      || '',
@@ -35,8 +47,7 @@ window.addEventListener('__prom_msg', async (e) => {
   }
 
   if (action === 'stepFailed') {
-    // OK FIX 1: pass name so history records it correctly
-    chrome.runtime.sendMessage({
+    await sendToBackground({
       action: 'stepFailed',
       name:   payload?.name   || '',
       reason: payload?.reason || ''

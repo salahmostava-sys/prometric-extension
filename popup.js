@@ -175,9 +175,10 @@ async function sendMsg(payload) {
 async function confirmReplaceRunning() {
   const { isRunning, singleRunning, queue = [] } = await chrome.storage.local.get(['isRunning', 'singleRunning', 'queue']);
   if (!isRunning && !singleRunning) return true;
-  const msg = queue.length
-    ? `A registration is already running with ${queue.length} queued item(s). Stop it and start a new one?`
-    : 'A registration is already running. Stop it and start a new one?';
+  const isBatch = isRunning && queue.length > 1;
+  const msg = isBatch
+    ? `A batch is already running with ${queue.length} queued item(s). Stop it and start a new one?`
+    : 'A single registration is already running. Stop it and start a new one?';
   if (!confirm(msg)) return false;
   await sendMsg({ action: 'clearSession' });
   return true;
@@ -1141,7 +1142,7 @@ document.getElementById('sheetStart')?.addEventListener('click', async () => {
     country:        defCountry || 'Saudi Arabia'
   }));
 
-  await chrome.runtime.sendMessage({ action: 'startQueue', items });
+  await sendMsg({ action: 'startQueue', items });
   window.close();
 });
 
@@ -1234,7 +1235,7 @@ async function checkBatchStatus() {
 }
 
 document.getElementById('globalStopBatch')?.addEventListener('click', () => {
-  chrome.runtime.sendMessage({ action: 'stopQueue' });
+  sendMsg({ action: 'stopQueue' });
 });
 
 // Poll every second

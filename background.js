@@ -123,7 +123,9 @@ async function openNextTab() {
         i.failureReason = '';
         i.retried = true;
       });
-      await chrome.storage.local.set({ queue, queueIndex: 0 });
+      // Start from the first pending item, not always index 0
+      const firstPendingIdx = queue.findIndex(i => i.status === 'pending');
+      await chrome.storage.local.set({ queue, queueIndex: firstPendingIdx >= 0 ? firstPendingIdx : 0 });
       await openNextTab();
       return;
     }
