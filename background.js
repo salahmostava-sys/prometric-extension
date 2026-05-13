@@ -63,7 +63,7 @@ async function addRunLog(message, type = 'info') {
   await chrome.storage.local.set({ runLogs: runLogs.slice(0, 200) });
 }
 
-// ── Progress Badge ────────────────────────────────────────────────────────────
+// -- Progress Badge ---
 async function updateBadge() {
   const { queue, queueIndex, isRunning } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning']);
   if (isRunning && queue && queue.length > 0) {
@@ -74,7 +74,7 @@ async function updateBadge() {
   }
 }
 
-// ✅ FIX 2: replaced recursion with iterative loop to prevent stack overflow
+// OK FIX 2: replaced recursion with iterative loop to prevent stack overflow
 async function openNextTab() {
   const { queue, queueIndex, isRunning, currentTabId } = await getState();
   if (!isRunning) {
@@ -142,7 +142,7 @@ async function openNextTab() {
       chrome.notifications.create({
         type: 'basic',
         iconUrl: 'icon128.png',
-        title: 'Batch Complete ✅',
+        title: 'Batch Complete OK',
         message: `Registration finished: ${done} Successful, ${failed} Failed.`,
         priority: 2
       });
@@ -150,10 +150,10 @@ async function openNextTab() {
   }
 }
 
-// ── Message Routing ───────────────────────────────────────────────────────────
+// -- Message Routing ---
 // background.js handles:  startSingle | startQueue | stopQueue | resumeQueue | stepDone | stepFailed
 // bridge.js handles:      pauseBatch | resumeBatch | stopBatch | updateItem | saveCopied
-// (bridge.js runs in the ISOLATED world and writes directly to chrome.storage —
+// (bridge.js runs in the ISOLATED world and writes directly to chrome.storage -
 //  no round-trip through background.js is needed for those actions.)
 let isMsgProcessing = false;
 const backgroundMsgQueue = [];
@@ -190,7 +190,7 @@ async function handleMessage(msg, sender) {
     };
 
     if (queue && queueIndex < queue.length) {
-      // 🛡️ VERIFICATION: Only increment if the name matches the expected current person
+      // Guard VERIFICATION: Only increment if the name matches the expected current person
       // This prevents double-increments if messages are duplicated or arrive out of order
       if (queue[queueIndex].name === msg.name || !msg.name) {
         queue[queueIndex].status        = 'done';
@@ -203,7 +203,7 @@ async function handleMessage(msg, sender) {
     await saveToHistory(entry);
     await addRunLog(`Done: ${entry.name || entry.finalUsername || 'Current item'}`, 'done');
 
-    // ✅ FIX 5: update savedCreds with the REAL finalUsername after registration
+    // OK FIX 5: update savedCreds with the REAL finalUsername after registration
     await chrome.storage.local.set({
       savedCreds: {
         name:     msg.name          || '',
@@ -262,7 +262,7 @@ async function handleMessage(msg, sender) {
   }
 
   if (msg.action === 'startQueue') {
-    // 🧹 CLEANUP: Close existing registration tab if any
+    // Cleanup CLEANUP: Close existing registration tab if any
     const { currentTabId } = await getState();
     if (currentTabId) {
       try { await chrome.tabs.remove(currentTabId); } catch(e) {}
@@ -315,21 +315,21 @@ async function handleMessage(msg, sender) {
   }
 }
 
-// ── Context Menu (Icon Dropdown) ─────────────────────────────────────────────
+// -- Context Menu (Icon Dropdown) ---
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "pause_queue",
-    title: "⏸ Pause Registration",
+    title: "Pause Registration",
     contexts: ["action"]
   });
   chrome.contextMenus.create({
     id: "resume_queue",
-    title: "▶ Resume Registration",
+    title: "Resume Registration",
     contexts: ["action"]
   });
   chrome.contextMenus.create({
     id: "stop_clear",
-    title: "⏹ Stop & Clear Queue",
+    title: "Stop & Clear Queue",
     contexts: ["action"]
   });
 });

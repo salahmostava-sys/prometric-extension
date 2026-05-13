@@ -1,4 +1,4 @@
-// content.js — MAIN world
+// content.js - MAIN world
 const LOGIN_URL = 'https://tcnet1.prometric.com/Login.aspx?ibt=785937226&ClientNameSingleSite=ibtamea';
 const REGISTER_URL = 'https://tcnet1.prometric.com/Registration.aspx';
 const sleep = ms => {
@@ -13,7 +13,7 @@ let DEFAULT_ANSWER = 'a';
 let GLOBAL_RUNNING = false;
 let GLOBAL_SINGLE = false;
 
-// ── Status indicator ──────────────────────────────────────────────────────────
+// -- Status indicator ---
 function status(msg, color = '#2ea043') {
   let el = document.getElementById('__prom__');
   let txtEl = document.getElementById('__prom_txt__');
@@ -31,13 +31,13 @@ function status(msg, color = '#2ea043') {
     // Add inline Pause for Batch mode
     if (window.__isBatch) {
       const pauseBtn = document.createElement('button');
-      pauseBtn.textContent = '⏸ Pause';
+      pauseBtn.textContent = 'Pause';
       pauseBtn.style.cssText = 'background:rgba(0,0,0,0.2);border:none;color:#fff;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:11px;font-weight:bold';
       pauseBtn.onclick = () => {
         if (pauseBtn.textContent.includes('Pause')) {
-          send('pauseBatch'); pauseBtn.textContent = '▶ Resume'; pauseBtn.style.background = 'rgba(0,0,0,0.4)';
+          send('pauseBatch'); pauseBtn.textContent = 'Resume'; pauseBtn.style.background = 'rgba(0,0,0,0.4)';
         } else {
-          send('resumeBatch'); pauseBtn.textContent = '⏸ Pause'; pauseBtn.style.background = 'rgba(0,0,0,0.2)';
+          send('resumeBatch'); pauseBtn.textContent = 'Pause'; pauseBtn.style.background = 'rgba(0,0,0,0.2)';
         }
       };
       el.appendChild(pauseBtn);
@@ -45,7 +45,7 @@ function status(msg, color = '#2ea043') {
     
     // Stop button always available if active
     const stopBtn = document.createElement('button');
-    stopBtn.textContent = '⏹ Stop';
+    stopBtn.textContent = 'Stop';
     stopBtn.style.cssText = 'background:rgba(255,0,0,0.5);border:none;color:#fff;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:11px;font-weight:bold';
     stopBtn.onclick = () => { send('stopBatch'); el.remove(); };
     el.appendChild(stopBtn);
@@ -54,14 +54,14 @@ function status(msg, color = '#2ea043') {
   } else {
     el.style.background = color;
   }
-  txtEl.textContent = '⚡ ' + msg;
+  txtEl.textContent = 'Turbo ' + msg;
 }
 
 function send(action, payload) {
   window.dispatchEvent(new CustomEvent('__prom_msg', { detail: { action, payload } }));
 }
 
-// ── Copy helper: reliable copy + saves to storage for 30s cross-tab access ──
+// -- Copy helper: reliable copy + saves to storage for 30s cross-tab access --
 function copyText(text, label) {
   // 1. Try modern clipboard API
   if (navigator.clipboard && window.isSecureContext) {
@@ -80,7 +80,7 @@ function copyText(text, label) {
 function fallbackCopy(text) {
   const ta = document.createElement('textarea');
   ta.value = text;
-  // Not opacity:0 — some browsers reject invisible elements for clipboard
+  // Not opacity:0 - some browsers reject invisible elements for clipboard
   ta.style.cssText = 'position:fixed;top:50%;left:50%;width:2px;height:2px;opacity:0.01;border:none;outline:none;resize:none';
   document.body.appendChild(ta);
   ta.focus();
@@ -89,7 +89,7 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
-// ── Fill field (native setter + events) ──────────────────────────────────────
+// -- Fill field (native setter + events) ---
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;',
@@ -218,9 +218,9 @@ function detectStep() {
   return null;
 }
 
-// ── STEP 1 — Prometric Info ───────────────────────────────────────────────────
+// -- STEP 1 - Prometric Info ---
 async function fillStep1() {
-  status('Step 1: Selecting IBTA MEA…');
+  status('Step 1: Selecting IBTA MEA...');
   const sel = await waitFor(['select']);
   if (!sel) return;
   await sleep(100);
@@ -229,15 +229,15 @@ async function fillStep1() {
   clickContinue();
 }
 
-// ── STEP 2 — Sign In Info ─────────────────────────────────────────────────────
+// -- STEP 2 - Sign In Info ---
 async function fillStep2(creds) {
-  status('Step 2: Username…');
+  status('Step 2: Username...');
   const userEl = await waitFor([
     'input[id*="Username" i]',
     'input[placeholder*="Username" i]',
     'input[name*="Username" i]'
   ]);
-  if (!userEl) { status('❌ Username field not found', '#d73a49'); return; }
+  if (!userEl) { status('Error Username field not found', '#d73a49'); return; }
 
   // Username + retry if taken
   // Dynamic wait: polls up to 4s for server validation response
@@ -261,7 +261,7 @@ async function fillStep2(creds) {
       const borderColor = style.borderColor || style.border || '';
       if (borderColor.includes('255, 0') || borderColor.includes('rgb(255,0') || borderColor.includes('f85149')) return true;
     }
-    return false; // no error found → name is available
+    return false; // no error found -> name is available
   }
 
   let suffix = '';
@@ -269,7 +269,7 @@ async function fillStep2(creds) {
     const tryName = creds.username + suffix;
     status(`Trying username: ${tryName}`);
 
-    // ── Step 1: Query the field fresh every iteration ──────────────────────────
+    // -- Step 1: Query the field fresh every iteration ---
     function getField() {
       return document.querySelector('input[id*="Username" i]') ||
              document.querySelector('input[placeholder*="Username" i]') ||
@@ -277,7 +277,7 @@ async function fillStep2(creds) {
              userEl;
     }
 
-    // ── Step 2: Clear the field ────────────────────────────────────────────────
+    // -- Step 2: Clear the field ---
     let el = getField();
     el.focus();
     el.select();
@@ -286,7 +286,7 @@ async function fillStep2(creds) {
     el.dispatchEvent(new Event('change', { bubbles: true }));
     await sleep(400);
 
-    // ── Step 3: Wait until error disappears (UpdatePanel will refresh DOM) ─────
+    // -- Step 3: Wait until error disappears (UpdatePanel will refresh DOM) ---
     const t_clear = Date.now();
     while (Date.now() - t_clear < 2500) {
       const stillOld = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
@@ -298,7 +298,7 @@ async function fillStep2(creds) {
       await sleep(150);
     }
 
-    // ── Step 4: Re-query AFTER UpdatePanel may have replaced the element ───────
+    // -- Step 4: Re-query AFTER UpdatePanel may have replaced the element ---
     el = getField();
     el.focus();
 
@@ -315,7 +315,7 @@ async function fillStep2(creds) {
     el.dispatchEvent(new Event('change', { bubbles: true }));
     await sleep(100);
 
-    // ── Step 5: Verify value actually appears in the field ────────────────────
+    // -- Step 5: Verify value actually appears in the field ---
     for (let attempt = 0; attempt < 3; attempt++) {
       const checkEl = getField();
       if (checkEl.value === tryName) break;
@@ -333,23 +333,23 @@ async function fillStep2(creds) {
 
     blurEl(getField());
 
-    // ── Step 6: Wait for server validation (dynamic, up to 4s) ───────────────
+    // -- Step 6: Wait for server validation (dynamic, up to 4s) ---
     const taken = await waitForUsernameValidation(3000);
 
     if (!taken) {
       creds.finalUsername = tryName;
       send('updateItem', creds);
-      status('Username OK ✓');
+      status('Username OK');
       break;
     }
-    status(`⚠️ "${tryName}" taken, trying next…`, '#d29922');
+    status(`Warning "${tryName}" taken, trying next...`, '#d29922');
     const next = nextSuffix(suffix);
     if (!next) { send('stepFailed', { name: creds.firstName + ' ' + creds.lastName }); return; }
     suffix = next;
   }
 
   // Password (first 2 password inputs)
-  status('Step 2: Password…');
+  status('Step 2: Password...');
   const pwAll = [...document.querySelectorAll('input[type="password"]')];
   for (let i = 0; i < Math.min(pwAll.length, 2); i++) {
     pwAll[i].focus();
@@ -358,7 +358,7 @@ async function fillStep2(creds) {
   }
 
   // Security questions: trigger dropdown then fill text inputs
-  status('Step 2: Security questions…');
+  status('Step 2: Security questions...');
   const qDropdown = q('select[id*="Question" i]', 'select[name*="Question" i]');
   if (qDropdown) {
     qDropdown.focus();
@@ -400,20 +400,20 @@ async function fillStep2(creds) {
   }
 
   await sleep(300); // Turbo: reduced from 2000
-  status('Step 2: Submitting…');
+  status('Step 2: Submitting...');
   clickContinue();
-  // No second click here — MutationObserver handles next step
+  // No second click here - MutationObserver handles next step
 }
 
-// ── STEP 3 — Profile Info ─────────────────────────────────────────────────────
+// -- STEP 3 - Profile Info ---
 async function fillStep3(creds) {
-  status('Step 3: Profile Info…');
+  status('Step 3: Profile Info...');
   const fnEl = await waitFor([
     'input[placeholder="First Name"]',
     'input[id*="FirstName" i]',
     'input[name*="FirstName" i]'
   ]);
-  if (!fnEl) { status('❌ First Name not found', '#d73a49'); return; }
+  if (!fnEl) { status('Error First Name not found', '#d73a49'); return; }
 
   await sleep(200);
   setVal(fnEl, creds.firstName);
@@ -430,14 +430,14 @@ async function fillStep3(creds) {
   [...document.querySelectorAll('input,select')].forEach(el => { if (el.offsetParent) blurEl(el); });
 
   await sleep(300); // Turbo: reduced from 2000
-  status('Step 3: Submitting…');
+  status('Step 3: Submitting...');
   clickContinue();
-  // BUG FIX: only ONE clickContinue here — MutationObserver picks up Step 4
+  // BUG FIX: only ONE clickContinue here - MutationObserver picks up Step 4
 }
 
-// ── STEP 4 — Confirm Policy ───────────────────────────────────────────────────
+// -- STEP 4 - Confirm Policy ---
 async function fillStep4(creds) {
-  status('Step 4: Confirm Policy…');
+  status('Step 4: Confirm Policy...');
   
   // Smart wait: at least 3s buffer, then monitor up to 10s total
   await wait(3000); 
@@ -486,7 +486,7 @@ async function fillStep4(creds) {
   await wait(1500); // Fixed wait for button to enable
 
   for (let i = 0; i < 4; i++) {
-    status(`Step 4: Submitting (Attempt ${i+1}/4)…`);
+    status(`Step 4: Submitting (Attempt ${i+1}/4)...`);
     await ensureSelected();
     const success = clickContinue();
     if (success) {
@@ -496,25 +496,25 @@ async function fillStep4(creds) {
     await wait(2000);
   }
   
-  status('⚠️ Could not advance from Step 4', '#d73a49');
+  status('Warning Could not advance from Step 4', '#d73a49');
 }
 
-// ── FINAL STEP — Dashboard ────────────────────────────────────────────────────
+// -- FINAL STEP - Dashboard ---
 async function handleDashboard(creds) {
   // If we already showed it, don't do it again
   if (document.getElementById('__prom_card')) return;
 
-  status('✅ Registration Complete!');
+  status('OK Registration Complete!');
 
   const user    = creds.finalUsername || creds.username;
   const isBatch = window.__isBatch;
 
-  // ── Overlay ──────────────────────────────────────────────────────────────────
+  // -- Overlay ---
   const card = document.createElement('div');
   card.id = '__prom_card';
   card.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2147483646;display:flex;align-items:center;justify-content:center';
 
-  // ── Box — wider & taller ────────────────────────────────────────────────────
+  // -- Box - wider & taller ---
   const box = document.createElement('div');
   box.style.cssText = [
     'background:#0d1117',
@@ -529,11 +529,11 @@ async function handleDashboard(creds) {
     'box-shadow:0 12px 48px rgba(0,0,0,.65)'
   ].join(';');
 
-  const btnLabel = isBatch ? '📋 Copy & Continue' : '📋 Copy & Finish';
+  const btnLabel = isBatch ? 'Copy & Continue' : 'Copy & Finish';
 
   box.innerHTML = `
     <div style="color:#3fb950;font-size:26px;font-weight:800;margin-bottom:22px;text-align:center;letter-spacing:-.3px">
-      ✅ Registration Complete!
+      OK Registration Complete!
     </div>
 
     <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:12px">
@@ -559,7 +559,7 @@ async function handleDashboard(creds) {
     </button>
     <div id="__prom_done_msg"
       style="margin-top:10px;text-align:center;font-size:12px;color:#7d8590;display:none">
-      ✓ Copied — ${isBatch ? 'signing out…' : 'finishing…'}
+      OK Copied - ${isBatch ? 'signing out...' : 'finishing...'}
     </div>
   `;
 
@@ -574,7 +574,7 @@ async function handleDashboard(creds) {
   actionBtn.addEventListener('mouseup',    () => actionBtn.style.transform  = 'scale(1)');
 
   function doSignOut() {
-    status('Signing out…');
+    status('Signing out...');
     const signOut = [...document.querySelectorAll('a,span,div,button')]
       .find(e => (e.textContent||'').trim() === 'Sign Out' && e.tagName !== 'SCRIPT');
     if (signOut) signOut.click();
@@ -585,7 +585,7 @@ async function handleDashboard(creds) {
     // 1. Prevent double-click
     actionBtn.disabled = true;
     actionBtn.style.background = '#238636';
-    actionBtn.textContent = '✓ Copied!';
+    actionBtn.textContent = 'OK Copied!';
     document.getElementById('__prom_done_msg').style.display = 'block';
 
     // 2. Copy credentials to clipboard
@@ -607,12 +607,12 @@ async function handleDashboard(creds) {
   });
 
   if (AUTO_SUBMIT) {
-    status('Auto-continuing in 2s…');
+    status('Auto-continuing in 2s...');
     setTimeout(() => actionBtn.click(), 2000);
   }
 }
 
-// ── Navigation ────────────────────────────────────────────────────────────────
+// -- Navigation ---
 async function handleInvalidHostHeader() {
   if (document.readyState !== 'complete') await new Promise(r => window.addEventListener('load', r, { once: true }));
   await sleep(300);
@@ -628,7 +628,7 @@ async function handleLoginPage() {
   else window.location.href = REGISTER_URL;
 }
 
-// ── MAIN ──────────────────────────────────────────────────────────────────────
+// -- MAIN ---
 let filledStep = null;
 let filling = false;
 let currentItem = null;
@@ -645,7 +645,7 @@ async function handleStep(step) {
   }
 
   if (filling || step === filledStep) return;
-  if (!currentItem) { status('⚠️ No data', '#d73a49'); return; }
+  if (!currentItem) { status('Warning No data', '#d73a49'); return; }
   if (!GLOBAL_RUNNING && !GLOBAL_SINGLE) {
     status('Paused/Stopped', '#6e7681');
     return;
@@ -661,7 +661,7 @@ async function handleStep(step) {
     else if (step === 'signin') await fillStep2(currentItem);
     else if (step === 'prometric') await fillStep1();
   } catch (e) {
-    status('❌ ' + e.message, '#d73a49');
+    status('Error ' + e.message, '#d73a49');
     console.error('[Prometric]', e);
   }
   filling = false;
@@ -691,7 +691,7 @@ async function run() {
   window.__isBatch = state.isRunning;
   GLOBAL_RUNNING = state.isRunning;
   GLOBAL_SINGLE = state.singleRunning;
-  status('Active…', '#0969da');
+  status('Active...', '#0969da');
   currentItem = state.currentItem;
 
   if (url.includes('InvalidHostHeader')) { await handleInvalidHostHeader(); return; }
@@ -700,7 +700,7 @@ async function run() {
   if (document.readyState !== 'complete') await new Promise(r => window.addEventListener('load', r, { once: true }));
   await sleep(800);
 
-  if (!currentItem) { status('⚠️ No active data', '#d73a49'); return; }
+  if (!currentItem) { status('Warning No active data', '#d73a49'); return; }
 
   let step = null;
   for (let i = 0; i < 20; i++) { step = detectStep(); if (step) break; await sleep(150); }
@@ -723,4 +723,4 @@ window.addEventListener('__prom_init', e => {
   if (e.detail && e.detail.isRunning !== undefined) GLOBAL_RUNNING = e.detail.isRunning;
   if (e.detail && e.detail.singleRunning !== undefined) GLOBAL_SINGLE = e.detail.singleRunning;
 });
-run().catch(e => { status('❌ ' + e.message, '#d73a49'); });
+run().catch(e => { status('Error ' + e.message, '#d73a49'); });

@@ -24,7 +24,7 @@ body.light-mode .btn-blue { background: rgba(9,105,218,.1); border-color: rgba(9
 body.light-mode .btn-blue:hover { background: rgba(9,105,218,.2); }
 body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;overflow-x:hidden;display:flex;flex-direction:column}
 
-/* ── Header ── */
+/* -- Header -- */
 .hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
 .hdr-icon{width:32px;height:32px;background:#fff url('icon.png') center/contain no-repeat;border-radius:6px;flex-shrink:0}
 .hdr-title{font-weight:700;font-size:14px;color:var(--text)}
@@ -33,23 +33,23 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 .theme-toggle:hover{background:var(--border)}
 .badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 8px;border-radius:20px}
 
-/* ── Tabs ── */
+/* -- Tabs -- */
 .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface)}
 .tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;transition:.2s}
 .tab.active{color:var(--green);border-bottom-color:var(--green)}
 
-/* ── Content ── */
+/* -- Content -- */
 .pane{padding:16px;display:none}
 .pane.active{display:block}
 
-/* ── Form ── */
+/* -- Form -- */
 .field{margin-bottom:12px}
 .field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px}
 .field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;outline:none;transition:.2s}
 .field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(63,185,80,.15)}
 .field input::placeholder{color:var(--muted)}
 
-/* ── Preview chip ── */
+/* -- Preview chip -- */
 .preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin:10px 0;display:none}
 .preview.show{display:block}
 .prev-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
@@ -59,7 +59,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 .copy{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:1px 6px;border-radius:4px;cursor:pointer;transition:.2s}
 .copy:hover{border-color:var(--green);color:var(--green)}
 
-/* ── Upload area ── */
+/* -- Upload area -- */
 .upload-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:11px}
 .upload-header span{font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
 .dl-template{background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;font-weight:600;transition:.2s}
@@ -73,7 +73,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 .upload-title{font-weight:600;color:var(--text);font-size:12px;margin-bottom:2px}
 .upload-sub{font-size:10px;color:var(--muted)}
 
-/* ── Queue ── */
+/* -- Queue -- */
 .queue-wrap{margin-top:12px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius)}
 .validation-panel,.log-panel{display:none;margin-top:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);overflow:hidden}
 .validation-panel.show,.log-panel.show{display:block}
@@ -106,7 +106,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 .q-status.done{color:var(--green)}
 .q-status.failed{color:var(--red)}
 
-/* ── Buttons ── */
+/* -- Buttons -- */
 .btn{width:100%;padding:10px;border:none;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;transition:.2s;margin-top:6px}
 .btn-green{background:var(--green2);color:#fff}
 .btn-green:hover{background:var(--green)}
@@ -124,17 +124,17 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 .msg.ok{display:block;background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);color:var(--green)}
 .msg.err{display:block;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);color:var(--red)}
 
-/* ── Running Banner ── */
+/* -- Running Banner -- */
 .running-banner,.banner{display:none;align-items:center;gap:8px;padding:10px 12px;background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.3);border-radius:var(--radius);margin-bottom:12px;font-size:12px;color:var(--yellow)}
 .running-banner.show,.banner.show{display:flex}
 .spinner{width:14px;height:14px;border:2px solid rgba(210,153,34,.3);border-top-color:var(--yellow);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── Resume Banner ── */
+/* -- Resume Banner -- */
 .resume-banner{display:none;align-items:center;gap:8px;padding:10px 12px;background:rgba(56,139,253,.08);border:1px solid rgba(56,139,253,.3);border-radius:var(--radius);margin-bottom:12px;font-size:12px;color:var(--blue)}
 .resume-banner.show{display:flex}
 
-/* ── Saved Credentials Panel ── */
+/* -- Saved Credentials Panel -- */
 .saved-creds{display:none;background:var(--bg);border-top:1px solid var(--border);padding:12px 16px;font-size:12px;margin-top:auto}
 .saved-creds-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;background:var(--bg);padding:8px 12px;border-radius:8px;border:1px solid var(--surface2)}
 .saved-creds-row:last-child{margin-bottom:0}
@@ -143,7 +143,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 .sc-copy{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;transition:.2s}
 .sc-copy:hover{border-color:var(--muted);color:var(--text);background:var(--surface2)}
 
-/* ── History Tab ── */
+/* -- History Tab -- */
 .tabs{display:flex}
 #pane-history{padding:0}
 .hist-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
@@ -163,7 +163,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 .export-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;transition:.2s}
 .export-btn:hover{border-color:var(--green);color:var(--green)}
 
-/* ── Clipboard Banner ── */
+/* -- Clipboard Banner -- */
 .clip-banner{display:none;align-items:center;gap:10px;padding:10px 14px;background:rgba(56,139,253,.1);border-bottom:1px solid rgba(56,139,253,.3);font-size:12px;color:var(--blue)}
 .clip-banner.show{display:flex}
 .clip-timer{flex-shrink:0;width:28px;height:28px}
@@ -180,16 +180,16 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
   <div class="hdr-icon"></div>
   <div>
     <div class="hdr-title">Prometric Auto Register</div>
-    <div class="hdr-sub">IBTA MEA · Auto Fill</div>
+    <div class="hdr-sub">IBTA MEA - Auto Fill</div>
   </div>
   <div style="margin-left:auto; display:flex; gap:6px">
-    <button class="theme-toggle" id="speedToggle" title="Toggle Speed Mode (Turbo/Safe)" style="margin-left:0; font-weight:700; color:var(--yellow); border-color:var(--yellow)">⚡ Turbo</button>
-    <button class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode" style="margin-left:0">☀️</button>
+    <button class="theme-toggle" id="speedToggle" title="Toggle Speed Mode (Turbo/Safe)" style="margin-left:0; font-weight:700; color:var(--yellow); border-color:var(--yellow)">Turbo</button>
+    <button class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode" style="margin-left:0">Light</button>
   </div>
   <div class="badge" id="versionBadge">v3.0</div>
 </div>
 
-<!-- ── CLIPBOARD BANNER ── -->
+<!-- -- CLIPBOARD BANNER -- -->
 <div class="clip-banner" id="clipBanner">
   <div class="clip-timer">
     <svg viewBox="0 0 28 28" width="28" height="28">
@@ -197,7 +197,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
       <circle class="prog" id="clipTimerCircle" cx="14" cy="14" r="11.5"/>
     </svg>
   </div>
-  <span class="clip-text" id="clipText">📋 Copied!</span>
+  <span class="clip-text" id="clipText">Copied!</span>
   <button class="clip-copy" id="clipCopyBtn">Copy Again</button>
 </div>
 
@@ -206,27 +206,27 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
   <div class="tab" data-tab="batch">Excel / CSV</div>
   <div class="tab" data-tab="sheet">Google Sheet</div>
   <div class="tab" data-tab="history">History</div>
-  <div class="tab" data-tab="settings">Settings ⚙️</div>
+  <div class="tab" data-tab="settings">Settings</div>
 </div>
 
-<!-- ── GLOBAL BATCH BANNER ── -->
+<!-- -- GLOBAL BATCH BANNER -- -->
 <div class="running-banner" id="globalBatchBanner" style="display:none;margin-top:-10px;margin-bottom:15px;background:var(--surface2);border:1px solid var(--border)">
   <div class="spinner"></div>
   <div style="flex:1">
     <div style="font-weight:700;font-size:12px;color:var(--green)">Batch Running...</div>
     <div style="font-size:10px;color:var(--muted)" id="globalBatchProgress">0 / 0 completed</div>
   </div>
-  <button class="btn btn-red" style="width:auto;padding:6px 12px;margin:0;font-size:11px" id="globalStopBatch">⏹ Stop</button>
+  <button class="btn btn-red" style="width:auto;padding:6px 12px;margin:0;font-size:11px" id="globalStopBatch">Stop</button>
 </div>
 
 
 
-<!-- ── SINGLE PANE ── -->
+<!-- -- SINGLE PANE -- -->
 <div class="pane active" id="pane-single">
   <div class="running-banner" id="singleBanner">
     <div class="spinner"></div>
-    <span style="flex:1">Registration in progress…</span>
-    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopSingle">⏹ Stop</button>
+    <span style="flex:1">Registration in progress...</span>
+    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopSingle">Stop</button>
   </div>
 
   <div class="field">
@@ -238,47 +238,47 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
     <input type="email" id="sEmail" placeholder="example@email.com"/>
   </div>
 
-  <button class="btn btn-green" id="sStart" disabled>🚀 Start Registration</button>
+  <button class="btn btn-green" id="sStart" disabled>Start Registration</button>
   <div class="msg" id="sMsg"></div>
 
-  <!-- ── SAVED CREDENTIALS PANEL (Single mode only) ── -->
+  <!-- -- SAVED CREDENTIALS PANEL (Single mode only) -- -->
   <div class="saved-creds" id="savedCredsPanel" style="margin-top:20px; border-radius:8px; border:1px solid var(--border); border-top:none; padding:0; background:transparent">
     <div class="saved-creds-row">
       <span class="saved-creds-label">NAME</span>
-      <span class="saved-creds-val" id="scName" style="font-family:inherit;font-weight:400">—</span>
+      <span class="saved-creds-val" id="scName" style="font-family:inherit;font-weight:400">-</span>
     </div>
     <div class="saved-creds-row">
       <span class="saved-creds-label">USER</span>
-      <span class="saved-creds-val" id="scUser" style="font-family:'Courier New',monospace">—</span>
+      <span class="saved-creds-val" id="scUser" style="font-family:'Courier New',monospace">-</span>
       <button class="sc-copy" data-copy="scUser">Copy</button>
     </div>
     <div class="saved-creds-row">
       <span class="saved-creds-label">PASS</span>
-      <span class="saved-creds-val" id="scPass" style="font-family:'Courier New',monospace">—</span>
+      <span class="saved-creds-val" id="scPass" style="font-family:'Courier New',monospace">-</span>
       <button class="sc-copy" data-copy="scPass">Copy</button>
     </div>
   </div>
 </div>
 
-<!-- ── BATCH PANE ── -->
+<!-- -- BATCH PANE -- -->
 <div class="pane" id="pane-batch">
 
   <!-- Status banner (Running / Paused) -->
   <div class="banner running-banner" id="batchBanner">
     <div class="spinner" id="batchSpinner"></div>
     <span id="batchProgress" style="flex:1">Batch registration in progress...</span>
-    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopBatch">⏹ Stop</button>
-    <button class="btn btn-blue" style="width:auto;padding:4px 12px;margin:0;display:none" id="resumeBatch">▶ Resume</button>
+    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopBatch">Stop</button>
+    <button class="btn btn-blue" style="width:auto;padding:4px 12px;margin:0;display:none" id="resumeBatch">Resume</button>
   </div>
 
   <div class="upload-header">
     <span>Data File</span>
-    <button class="dl-template" id="downloadTemplate">⬇ Download Template (CSV)</button>
+    <button class="dl-template" id="downloadTemplate">Download Template (CSV)</button>
   </div>
 
   <label class="upload-area" id="uploadArea" for="fileInput">
     <input type="file" id="fileInput" accept=".csv,.xlsx,.xls"/>
-    <div class="upload-btn">📁 Choose File</div>
+    <div class="upload-btn">Choose File</div>
     <div class="upload-text">
       <div class="upload-title">Upload Data File</div>
       <div class="upload-sub">Excel (.xlsx) or CSV</div>
@@ -302,7 +302,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
   </div>
 
   <div class="controls-row">
-    <button class="btn btn-green" id="bStart" disabled>🚀 Start Batch Registration</button>
+    <button class="btn btn-green" id="bStart" disabled>Start Batch Registration</button>
     <button class="btn btn-blue" id="retryFailed" style="display:none">Retry Failed</button>
   </div>
   <button class="btn btn-red" id="clearSession" style="display:none">Clear Current Session</button>
@@ -316,7 +316,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
   <div class="msg" id="bMsg"></div>
 </div>
 
-<!-- ── PANE 3: Google Sheet ── -->
+<!-- -- PANE 3: Google Sheet -- -->
 <div class="pane" id="pane-sheet">
   <div class="running-banner" id="sheetBanner">
     <div class="spinner"></div>
@@ -349,7 +349,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
       <div class="field" style="margin-bottom:0">
         <label style="font-size:10px;margin-bottom:2px">Day <span style="font-weight:400;color:var(--muted)">(opt)</span></label>
         <select id="sheetDayCol" style="width:100%;padding:5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;outline:none">
-          <option value="-1">— None —</option>
+          <option value="-1">- None -</option>
         </select>
       </div>
     </div>
@@ -377,17 +377,17 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
     </div>
   </div>
 
-  <button class="btn btn-green" id="sheetStart" disabled>🚀 Start Batch Registration</button>
+  <button class="btn btn-green" id="sheetStart" disabled>Start Batch Registration</button>
   <div class="msg" id="sheetMsg"></div>
 </div>
 
-<!-- ── PANE 4: History ── -->
+<!-- -- PANE 4: History -- -->
 <div class="pane" id="pane-history">
   <div class="hist-toolbar">
     <span id="histCount">0 records</span>
     <div style="display:flex;gap:6px">
-      <button class="export-btn" id="exportCSV">⬇ Export CSV</button>
-      <button class="export-btn" id="clearHist">🗑 Clear</button>
+      <button class="export-btn" id="exportCSV">Download Export CSV</button>
+      <button class="export-btn" id="clearHist">Clear</button>
     </div>
   </div>
   <div id="histAnalytics" style="display:none; padding:12px 16px; border-bottom:1px solid var(--border); background:var(--surface2)">
@@ -406,11 +406,11 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
   <div class="hist-list" id="histList"><div class="hist-empty">No registrations yet</div></div>
 </div>
 
-<!-- ── PANE 5: Settings ── -->
+<!-- -- PANE 5: Settings -- -->
 <div class="pane" id="pane-settings">
   <!-- Automation Section -->
   <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">⚙️ Automation Control</div>
+    <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Settings Automation Control</div>
     <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
       <div class="field" style="margin:0">
         <label>Page Delay (Seconds)</label>
@@ -441,7 +441,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 
   <!-- Registration Data Section -->
   <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">📍 Default Personal Data</div>
+    <div style="font-weight:700;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Data Default Personal Data</div>
     <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
       <div class="field" style="margin:0">
         <label>Mailing Address</label>
@@ -472,7 +472,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 
   <!-- Account & Security Section -->
   <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">🔐 Account & Security</div>
+    <div style="font-weight:700;font-size:11px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Security Account & Security</div>
     <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
       <div class="field" style="margin:0">
         <label>Security Answer</label>
@@ -488,7 +488,7 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 
   <!-- Notifications Section -->
   <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">🔔 Notifications</div>
+    <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Notifications</div>
     <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
       <div style="display:flex;align-items:center;gap:10px">
         <div style="flex:1">
@@ -501,14 +501,14 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
   </div>
 
   <div style="margin-top:24px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:20px">
-    <button class="btn btn-green" id="saveSettings" style="flex:2">💾 Save Settings</button>
-    <button class="btn btn-blue" id="resetSettings" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text)">🔄 Default</button>
-    <button class="btn" id="cancelSettings" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted)">✕ Cancel</button>
+    <button class="btn btn-green" id="saveSettings" style="flex:2">Save Settings</button>
+    <button class="btn btn-blue" id="resetSettings" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text)">Default</button>
+    <button class="btn" id="cancelSettings" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted)">x Cancel</button>
   </div>
 
   <div style="margin-top:40px;border-top:1px dashed var(--border);padding-top:20px;opacity:0.8">
     <button class="btn btn-blue" id="clearCurrentSessionSettings" style="width:100%;font-size:11px">Clear Current Session Only</button>
-    <button class="btn" id="clearAllData" style="width:100%;background:rgba(248,81,73,0.1);color:var(--red);border:1px solid rgba(248,81,73,0.3);font-size:11px">🗑 Reset System (Clear History/Queue)</button>
+    <button class="btn" id="clearAllData" style="width:100%;background:rgba(248,81,73,0.1);color:var(--red);border:1px solid rgba(248,81,73,0.3);font-size:11px">Reset System (Clear History/Queue)</button>
   </div>
 </div>
 
