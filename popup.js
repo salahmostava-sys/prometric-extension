@@ -89,6 +89,98 @@ function escapeHtml(value) {
   }[ch]));
 }
 
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+}
+
+function showMessage(el, type, text) {
+  if (!el) return;
+  el.className = `msg ${type}`;
+  el.textContent = text;
+  el.style.display = text ? 'block' : 'none';
+}
+
+function validateBatchItems(items) {
+  const seenNames = new Set();
+  const seenEmails = new Set();
+  const stats = {
+    total: items.length,
+    valid: 0,
+    missingEmail: 0,
+    invalidEmail: 0,
+    duplicateNames: 0,
+    duplicateEmails: 0,
+    longNames: 0
+  };
+
+  items.forEach(item => {
+    const name = String(item.name || '').trim();
+    const email = String(item.email || '').trim();
+    const nameKey = name.toLowerCase();
+    const emailKey = email.toLowerCase();
+    let ok = !!name;
+
+    if (!email) {
+      stats.missingEmail++;
+      ok = false;
+    } else if (!isValidEmail(email)) {
+      stats.invalidEmail++;
+      ok = false;
+    }
+
+    if (name.length > 40) stats.longNames++;
+    if (nameKey && seenNames.has(nameKey)) stats.duplicateNames++;
+    if (emailKey && seenEmails.has(emailKey)) stats.duplicateEmails++;
+    if (nameKey) seenNames.add(nameKey);
+    if (emailKey) seenEmails.add(emailKey);
+    if (ok) stats.valid++;
+  });
+
+  stats.hasBlockingIssues = stats.total === 0 || stats.missingEmail > 0 || stats.invalidEmail > 0;
+  return stats;
+}
+
+function renderValidation(panel, body, statusEl, stats) {
+  if (!panel || !body || !statusEl) return;
+  panel.classList.add('show');
+  statusEl.textContent = stats.hasBlockingIssues ? 'Needs review' : 'Ready';
+  body.innerHTML = [
+    ['Total rows', stats.total],
+    ['Valid rows', stats.valid],
+    ['Missing email', stats.missingEmail, stats.missingEmail ? 'errline' : ''],
+    ['Invalid email', stats.invalidEmail, stats.invalidEmail ? 'errline' : ''],
+    ['Duplicate names', stats.duplicateNames, stats.duplicateNames ? 'warn' : ''],
+    ['Duplicate emails', stats.duplicateEmails, stats.duplicateEmails ? 'warn' : ''],
+    ['Long names', stats.longNames, stats.longNames ? 'warn' : '']
+  ].map(([label, value, cls]) => `
+    <div class="validation-row ${cls || ''}">
+      <span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>
+    </div>
+  `).join('');
+}
+
+async function confirmReplaceRunning() {
+  const { isRunning, singleRunning, queue = [] } = await chrome.storage.local.get(['isRunning', 'singleRunning', 'queue']);
+  if (!isRunning && !singleRunning) return true;
+  const msg = queue.length
+    ? `A registration is already running with ${queue.length} queued item(s). Stop it and start a new one?`
+    : 'A registration is already running. Stop it and start a new one?';
+  if (!confirm(msg)) return false;
+  await chrome.runtime.sendMessage({ action: 'clearSession' });
+  return true;
+}
+
+async function clearCurrentSession() {
+  if (!confirm('Clear the current session only? History and settings will be kept.')) return;
+  await chrome.runtime.sendMessage({ action: 'clearSession' });
+  batchItems = [];
+  queueWrap.style.display = 'none';
+  bStart.disabled = true;
+  fileInput.value = '';
+  if (typeof renderLogs === 'function') renderLogs();
+  location.reload();
+}
+
 function genCreds(name) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
@@ -212,7 +304,7 @@ document.getElementById('resetSettings')?.addEventListener('click', async () => 
 
 document.getElementById('clearAllData')?.addEventListener('click', async () => {
   if (!confirm('⚠️ Are you sure? This will delete History and Active Queues, but KEEP your Settings.')) return;
-  const toClear = ['history', 'queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'savedCreds'];
+  const toClear = ['history', 'queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'savedCreds', 'runLogs'];
   await chrome.storage.local.remove(toClear);
   location.reload();
 });
@@ -251,6 +343,7 @@ sEmail.addEventListener('input', updateSinglePreview);
 sStart.addEventListener('click', async () => {
   const c = genCreds(sName.value);
   if (!c) return;
+  if (!(await confirmReplaceRunning())) return;
   await chrome.storage.local.set({
     savedCreds: { username: c.username, password: c.password, name: sName.value.trim() }
   });
@@ -391,6 +484,13 @@ const bMsg          = document.getElementById('bMsg');
 const batchBanner   = document.getElementById('batchBanner');
 const batchSpinner  = document.getElementById('batchSpinner');
 const batchProgress = document.getElementById('batchProgress');
+const retryFailedBtn = document.getElementById('retryFailed');
+const clearSessionBtn = document.getElementById('clearSession');
+const batchValidation = document.getElementById('batchValidation');
+const batchValidationBody = document.getElementById('batchValidationBody');
+const batchValidationStatus = document.getElementById('batchValidationStatus');
+const batchLogPanel = document.getElementById('batchLogPanel');
+const batchLogs = document.getElementById('batchLogs');
 
 uploadArea.addEventListener('dragover',  e => { e.preventDefault(); uploadArea.classList.add('drag'); });
 uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag'));
@@ -440,11 +540,16 @@ async function handleFile(file) {
     state:          'JEDDAH',
     postalCode:     '00000',
     country:        'Saudi Arabia'
-  })).filter(i => i.name && i.email);
+  })).filter(i => i.name);
 
+  const stats = validateBatchItems(batchItems);
+  renderValidation(batchValidation, batchValidationBody, batchValidationStatus, stats);
   renderQueue();
   queueWrap.style.display = 'block';
-  bStart.disabled = batchItems.length === 0;
+  bStart.disabled = batchItems.length === 0 || stats.hasBlockingIssues;
+  if (stats.hasBlockingIssues) {
+    showMessage(bMsg, 'err', 'Fix missing or invalid emails before starting the batch.');
+  }
   
   // Show Start button, hide others
   bStart.style.display = 'block';
@@ -460,14 +565,14 @@ function renderQueue() {
       <div class="q-dot ${item.status}" id="qd-${i}"></div>
       <div style="flex:1;min-width:0">
         <div class="q-name">${escapeHtml(item.name)}</div>
-        <div class="q-email">${escapeHtml(item.email)}</div>
+        <div class="q-email">${escapeHtml(item.failureReason || item.email)}</div>
       </div>
       <div class="q-status ${item.status}" id="qs-${i}">${statusLabel(item.status)}</div>
     </div>`).join('');
 }
 
 function statusLabel(s) {
-  return { pending: 'Waiting', running: '▶ Running', done: '✓ Done', failed: '✗ Failed' }[s] || s;
+  return { pending: 'Waiting', running: 'Running', done: 'Done', failed: 'Failed' }[s] || s;
 }
 
 document.getElementById('clearQueue').addEventListener('click', () => {
@@ -475,6 +580,7 @@ document.getElementById('clearQueue').addEventListener('click', () => {
   queueWrap.style.display = 'none';
   bStart.disabled = true;
   fileInput.value = '';
+  if (batchValidation) batchValidation.classList.remove('show');
   
   bStart.style.display = 'block';
   stopBatch.style.display = 'none';
@@ -484,6 +590,13 @@ document.getElementById('clearQueue').addEventListener('click', () => {
 });
 
 bStart.addEventListener('click', async () => {
+  if (!(await confirmReplaceRunning())) return;
+  const stats = validateBatchItems(batchItems);
+  renderValidation(batchValidation, batchValidationBody, batchValidationStatus, stats);
+  if (stats.hasBlockingIssues) {
+    showMessage(bMsg, 'err', 'Batch has missing or invalid emails. Fix the file first.');
+    return;
+  }
   const { defAddress, defCity, defState, defPostal, defCountry } = await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
   const items = batchItems.map(i => ({
     ...i,
@@ -502,9 +615,7 @@ bStart.addEventListener('click', async () => {
   stopBatch.style.display = 'block';
   batchSpinner.style.display = 'block';
   
-  bMsg.className = 'msg ok';
-  bMsg.textContent = `✅ Started ${batchItems.length} registrations!`;
-  bMsg.style.display = 'block';
+  showMessage(bMsg, 'ok', `Started ${batchItems.length} registrations.`);
 });
 
 stopBatch.addEventListener('click', async () => {
@@ -514,9 +625,7 @@ stopBatch.addEventListener('click', async () => {
   stopBatch.style.display = 'none';
   batchSpinner.style.display = 'none';
   
-  bMsg.className = 'msg err';
-  bMsg.textContent = '⏹ Execution stopped by user.';
-  bMsg.style.display = 'block';
+  showMessage(bMsg, 'err', 'Execution stopped by user.');
 });
 
 if (resumeBtn) {
@@ -529,17 +638,48 @@ if (resumeBtn) {
     stopBatch.style.display = 'block';
     batchSpinner.style.display = 'block';
     
-    bMsg.className = 'msg ok';
-    bMsg.textContent = '▶ Resuming batch registration…';
-    bMsg.style.display = 'block';
+    showMessage(bMsg, 'ok', 'Resuming batch registration.');
   });
+}
+
+retryFailedBtn?.addEventListener('click', async () => {
+  if (!(await confirmReplaceRunning())) return;
+  await chrome.runtime.sendMessage({ action: 'retryFailed' });
+  showMessage(bMsg, 'ok', 'Retrying failed registrations.');
+});
+
+clearSessionBtn?.addEventListener('click', clearCurrentSession);
+document.getElementById('clearCurrentSessionSettings')?.addEventListener('click', clearCurrentSession);
+document.getElementById('clearLogs')?.addEventListener('click', async () => {
+  await chrome.storage.local.set({ runLogs: [] });
+  renderLogs([]);
+});
+
+function renderLogs(logs = null) {
+  if (!batchLogPanel || !batchLogs) return;
+  if (!logs || logs.length === 0) {
+    batchLogPanel.classList.remove('show');
+    batchLogs.innerHTML = '';
+    return;
+  }
+  batchLogPanel.classList.add('show');
+  batchLogs.innerHTML = logs.slice(0, 50).map(log => {
+    const t = log.date ? new Date(log.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+      <div class="log-item">
+        <div class="log-time">${escapeHtml(t)}</div>
+        <div class="log-text" title="${escapeHtml(log.message || '')}">${escapeHtml(log.message || '')}</div>
+      </div>
+    `;
+  }).join('');
 }
 
 // ── Poll status ───────────────────────────────────────────────────────────────
 let userStopped = false;
 
 async function pollStatus() {
-  const { queue, queueIndex, isRunning, singleRunning } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning', 'singleRunning']);
+  const { queue, queueIndex, isRunning, singleRunning, runLogs = [] } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning', 'singleRunning', 'runLogs']);
+  renderLogs(runLogs);
   
   // Single Mode UI updates
   if (singleRunning) {
@@ -553,14 +693,24 @@ async function pollStatus() {
   }
 
   // Batch Mode UI updates
-  if (!queue || queue.length === 0) return;
+  if (!queue || queue.length === 0) {
+    if (retryFailedBtn) retryFailedBtn.style.display = 'none';
+    if (clearSessionBtn) clearSessionBtn.style.display = 'none';
+    return;
+  }
 
-  if (batchItems.length === 0 && queue.length > 0) {
+  const queueChanged = queue.length === batchItems.length && queue.some((it, i) =>
+    it.status !== batchItems[i]?.status ||
+    it.finalUsername !== batchItems[i]?.finalUsername ||
+    it.failureReason !== batchItems[i]?.failureReason
+  );
+  if (isRunning || singleRunning || batchItems.length === 0 || queueChanged) {
     batchItems = queue;
     renderQueue();
     queueWrap.style.display = 'block';
     bStart.disabled = true;
   }
+  if (clearSessionBtn) clearSessionBtn.style.display = queue.length > 0 ? 'block' : 'none';
 
   if (queue.length > 0) {
     queue.forEach((item, i) => {
@@ -586,6 +736,7 @@ async function pollStatus() {
       resumeBtn.style.display = 'none';
       stopBatch.style.display = 'block';
       batchSpinner.style.display = 'block';
+      if (retryFailedBtn) retryFailedBtn.style.display = 'none';
       userStopped = false;
     } else if (queue.length > 1) { // Stopped batch mode
       const pendingItems = queue.slice(queueIndex).filter(it => it.status === 'pending');
@@ -600,13 +751,15 @@ async function pollStatus() {
         batchBanner.style.background = 'rgba(56,139,253,.08)';
         batchBanner.style.borderColor = 'rgba(56,139,253,.3)';
         batchProgress.style.color = 'var(--blue)';
-        batchProgress.textContent = `⏸ Queue paused — ${pendingItems.length} remaining`;
+        batchProgress.textContent = `Queue paused - ${pendingItems.length} remaining`;
         resumeBtn.style.display = 'block';
       } else {
         batchBanner.classList.remove('show');
         resumeBtn.style.display = 'none';
         bStart.style.display = 'block';
       }
+      const failedCount = queue.filter(it => it.status === 'failed').length;
+      if (retryFailedBtn) retryFailedBtn.style.display = failedCount > 0 && !isRunning ? 'block' : 'none';
     }
   }
 }
@@ -650,11 +803,11 @@ async function loadHistory() {
 
   list.innerHTML = history.map((h, i) => `
     <div class="hist-item">
-      <div class="hist-name" title="${escapeHtml(h.name || '')}">${escapeHtml(h.name || '—')}</div>
+      <div class="hist-name" title="${escapeHtml(h.reason || h.name || '')}">${escapeHtml(h.name || '—')}</div>
       <div class="hist-user" title="${escapeHtml(h.finalUsername || '')}">${escapeHtml(h.finalUsername || '—')}</div>
       <div class="hist-pass" title="${escapeHtml(h.password || '')}">${escapeHtml(h.password || '—')}</div>
       <div style="text-align:right;white-space:nowrap">
-        <span class="hist-badge ${escapeHtml(h.status)}" title="${escapeHtml(h.date ? new Date(h.date).toLocaleString('en-GB') : '')}">${h.status === 'done' ? '✓' : '✗'}</span>
+        <span class="hist-badge ${escapeHtml(h.status)}" title="${escapeHtml(h.reason || (h.date ? new Date(h.date).toLocaleString('en-GB') : ''))}">${h.status === 'done' ? '✓' : '✗'}</span>
         ${h.status === 'done' ? `<button class="hist-copy" data-index="${i}">Copy</button>` : ''}
       </div>
     </div>`).join('');
@@ -733,11 +886,18 @@ document.getElementById('exportCSV')?.addEventListener('click', async () => {
   try {
     // History is unshifted (newest first), so reverse it to keep original registration order
     const exportData = [...history].reverse();
-    const header = 'Name,Email,Username,Password,Status\n';
+    const header = 'Name,Email,Username,Password,Status,Reason,Date\n';
     const csvContent = exportData.map(h => {
-      const n = (h.name || '').replace(/"/g, '""');
-      const e = (h.email || '').replace(/"/g, '""');
-      return `"${n}","${e}","${h.finalUsername || h.username || ''}","${h.password || ''}","${h.status || ''}"`;
+      const row = [
+        h.name || '',
+        h.email || '',
+        h.finalUsername || h.username || '',
+        h.password || '',
+        h.status || '',
+        h.reason || '',
+        h.date ? new Date(h.date).toLocaleString() : ''
+      ];
+      return row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
     }).join('\n');
 
     // Use BOM for UTF-8 to ensure Excel opens it correctly with any language
@@ -787,8 +947,7 @@ function parseCSVLine(line) {
 function showSheetError(msg) {
   const el = document.getElementById('sheetMsg');
   if(el) {
-    el.textContent = msg;
-    el.style.display = msg ? 'block' : 'none';
+    showMessage(el, msg ? 'err' : '', msg);
   }
 }
 
@@ -929,6 +1088,7 @@ document.getElementById('sheetNameCol')?.addEventListener('change', renderSheetP
 document.getElementById('sheetEmailCol')?.addEventListener('change', renderSheetPreview);
 
 document.getElementById('sheetStart')?.addEventListener('click', async () => {
+  if (!(await confirmReplaceRunning())) return;
   const nIdx = parseInt(document.getElementById('sheetNameCol').value);
   const eIdx = parseInt(document.getElementById('sheetEmailCol').value);
   const daySel = document.getElementById('sheetDayCol');
@@ -950,6 +1110,10 @@ document.getElementById('sheetStart')?.addEventListener('click', async () => {
   }
 
   if (items.length === 0) return showSheetError('No valid names found matching the selected filters.');
+  const stats = validateBatchItems(items);
+  if (stats.hasBlockingIssues) {
+    return showSheetError(`Sheet check failed: ${stats.missingEmail} missing email, ${stats.invalidEmail} invalid email.`);
+  }
 
   const { defAddress, defCity, defState, defPostal, defCountry } = await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
 
