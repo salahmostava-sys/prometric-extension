@@ -63,6 +63,7 @@ window.addEventListener('__prom_msg', async (e) => {
   }
   if (action === 'resumeBatch') {
     await chrome.storage.local.set({ isRunning: true });
+    await sendToBackground({ action: 'resumeQueue' });
   }
   if (action === 'stopBatch') {
     await chrome.storage.local.set({ isRunning: false, singleRunning: false });

@@ -193,8 +193,22 @@ function nextSuffix(s) {
     if (n < 99) return String(n + 1);
     return 'a';
   }
-  const c = s.charCodeAt(0);
-  return c < 122 ? String.fromCharCode(c + 1) : null;
+  let res = '';
+  let carry = true;
+  for (let i = s.length - 1; i >= 0; i--) {
+    if (carry) {
+      if (s.charCodeAt(i) < 122) {
+        res = String.fromCharCode(s.charCodeAt(i) + 1) + res;
+        carry = false;
+      } else {
+        res = 'a' + res;
+      }
+    } else {
+      res = s[i] + res;
+    }
+  }
+  if (carry) res = 'a' + res;
+  return res.length > 3 ? null : res;
 }
 
 function detectStep() {
@@ -214,7 +228,7 @@ function detectStep() {
 
   if (q('input[placeholder="First Name"]', 'input[id*="FirstName" i]')) return 'profile';
   if (q('input[id*="Username" i]', 'input[placeholder*="Username" i]')) return 'signin';
-  if (document.querySelector('select')) return 'prometric';
+  if (q('select[id*="Client" i]', 'select[name*="Client" i]', 'option[value*="IBTA" i]')) return 'prometric';
   return null;
 }
 
@@ -591,19 +605,21 @@ async function handleDashboard(creds) {
     // 2. Copy credentials to clipboard
     copyText(`${user}\t${creds.password}`, `${user} / ${creds.password}`);
 
-    // 3. Notify background (resume batch if needed, log history)
-    if (isBatch) send('resumeBatch');
+    // 3. Brief visual pause, then close overlay + sign out
+    await sleep(900);
+    card.remove();
+    if (isBatch) {
+      doSignOut();
+      await sleep(500); // small buffer for sign-out to initiate
+    }
+
+    // 4. Notify background - triggers openNextTab() internally after userDelay
     send('stepDone', {
       finalUsername: user,
       password:      creds.password,
       name:          creds.firstName + ' ' + creds.lastName,
       email:         creds.email
     });
-
-    // 4. Brief visual pause, then close overlay + sign out
-    await sleep(900);
-    card.remove();
-    if (isBatch) doSignOut();
   });
 
   if (AUTO_SUBMIT) {

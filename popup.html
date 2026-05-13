@@ -204,18 +204,25 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 <div class="tabs">
   <div class="tab active" data-tab="single">Single</div>
   <div class="tab" data-tab="batch">Excel / CSV</div>
+  <button class="clip-copy" id="clipCopyBtn">Copy Again</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="single">Single</div>
+  <div class="tab" data-tab="batch">Excel / CSV</div>
   <div class="tab" data-tab="sheet">Google Sheet</div>
   <div class="tab" data-tab="history">History</div>
   <div class="tab" data-tab="settings">Settings</div>
 </div>
 
-<!-- -- GLOBAL BATCH BANNER -- -->
 <div class="running-banner" id="globalBatchBanner" style="display:none;margin-top:-10px;margin-bottom:15px;background:var(--surface2);border:1px solid var(--border)">
-  <div class="spinner"></div>
+  <div class="spinner" id="globalBatchSpinner"></div>
   <div style="flex:1">
-    <div style="font-weight:700;font-size:12px;color:var(--green)">Batch Running...</div>
+    <div style="font-weight:700;font-size:12px;color:var(--green)" id="globalBatchTitle">Batch Running...</div>
     <div style="font-size:10px;color:var(--muted)" id="globalBatchProgress">0 / 0 completed</div>
   </div>
+  <button class="btn" style="width:auto;padding:6px 12px;margin:0 4px;font-size:11px;background:var(--yellow);color:#fff" id="globalPauseBatch">Pause</button>
+  <button class="btn btn-blue" style="width:auto;padding:6px 12px;margin:0 4px;font-size:11px;display:none" id="globalResumeBatch">Resume</button>
   <button class="btn btn-red" style="width:auto;padding:6px 12px;margin:0;font-size:11px" id="globalStopBatch">Stop</button>
 </div>
 
@@ -263,12 +270,12 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 <!-- -- BATCH PANE -- -->
 <div class="pane" id="pane-batch">
 
-  <!-- Status banner (Running / Paused) -->
   <div class="banner running-banner" id="batchBanner">
     <div class="spinner" id="batchSpinner"></div>
     <span id="batchProgress" style="flex:1">Batch registration in progress...</span>
-    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopBatch">Stop</button>
-    <button class="btn btn-blue" style="width:auto;padding:4px 12px;margin:0;display:none" id="resumeBatch">Resume</button>
+    <button class="btn" style="width:auto;padding:4px 12px;margin:0;background:var(--yellow);color:#fff" id="pauseBatchBtn">Pause</button>
+    <button class="btn btn-blue" style="width:auto;padding:4px 12px;margin:0;display:none" id="resumeBatchBtn">Resume</button>
+    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0;margin-left:4px" id="cancelBatchBtn">Stop</button>
   </div>
 
   <div class="upload-header">
