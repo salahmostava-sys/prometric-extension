@@ -373,7 +373,7 @@ async function fillStep2(creds) {
     }
     status(`Warning "${tryName}" taken, trying next...`, '#d29922');
     const next = nextSuffix(suffix);
-    if (!next) { send('stepFailed', { name: creds.firstName + ' ' + creds.lastName }); return; }
+    if (!next) { send('stepFailed', { name: creds.firstName + ' ' + creds.lastName, queueId: creds._queueId }); return; }
     suffix = next;
   }
 
@@ -633,7 +633,8 @@ async function handleDashboard(creds) {
       finalUsername: user,
       password:      creds.password,
       name:          creds.firstName + ' ' + creds.lastName,
-      email:         creds.email
+      email:         creds.email,
+      queueId:       creds._queueId
     });
   });
 
@@ -711,6 +712,7 @@ async function run() {
   // Wait for state from bridge.js
   const state = await new Promise(resolve => {
     window.addEventListener('__prom_init', e => resolve(e.detail), { once: true });
+    window.dispatchEvent(new CustomEvent('__prom_ready'));
     setTimeout(() => resolve(null), 1500);
   });
 
@@ -748,9 +750,9 @@ async function run() {
 
 window.addEventListener('__prom_init', e => { 
   if (e.detail && e.detail.currentItem) currentItem = e.detail.currentItem; 
-  if (e.detail && e.detail.pageDelay) PAGE_DELAY = e.detail.pageDelay * 1000;
+  if (e.detail && e.detail.pageDelay !== undefined) PAGE_DELAY = e.detail.pageDelay * 1000;
   if (e.detail && e.detail.autoSubmit !== undefined) AUTO_SUBMIT = e.detail.autoSubmit;
-  if (e.detail && e.detail.defAnswer) DEFAULT_ANSWER = e.detail.defAnswer;
+  if (e.detail && e.detail.defAnswer !== undefined) DEFAULT_ANSWER = e.detail.defAnswer;
   if (e.detail && e.detail.isRunning !== undefined) GLOBAL_RUNNING = e.detail.isRunning;
   if (e.detail && e.detail.singleRunning !== undefined) GLOBAL_SINGLE = e.detail.singleRunning;
 });

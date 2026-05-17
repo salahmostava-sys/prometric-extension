@@ -2,6 +2,8 @@
 // Handles chrome APIs and passes data to/from MAIN world content.js
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const DEFAULT_PAGE_DELAY = 1;
+const DEFAULT_ANSWER = 'a';
 
 // Send currentItem to MAIN world
 async function sendDataToPage() {
@@ -13,9 +15,9 @@ async function sendDataToPage() {
       isRunning, 
       singleRunning,
       isLast,
-      pageDelay: pageDelay || 2,
-      autoSubmit: autoSubmit || false,
-      defAnswer: defAnswer || 'a'
+      pageDelay: pageDelay ?? DEFAULT_PAGE_DELAY,
+      autoSubmit: autoSubmit ?? false,
+      defAnswer: defAnswer ?? DEFAULT_ANSWER
     }
   }));
 }
@@ -42,7 +44,8 @@ window.addEventListener('__prom_msg', async (e) => {
       finalUsername: payload?.finalUsername || '',
       password:      payload?.password      || '',
       name:          payload?.name          || '',
-      email:         payload?.email         || ''
+      email:         payload?.email         || '',
+      queueId:       payload?.queueId       || ''
     });
   }
 
@@ -50,7 +53,8 @@ window.addEventListener('__prom_msg', async (e) => {
     await sendToBackground({
       action: 'stepFailed',
       name:   payload?.name   || '',
-      reason: payload?.reason || ''
+      reason: payload?.reason || '',
+      queueId: payload?.queueId || ''
     });
   }
 
@@ -82,8 +86,15 @@ window.addEventListener('__prom_msg', async (e) => {
   }
 });
 
-// Send data when page loads
+// Send data when page loads. MAIN world may not have attached its listener yet,
+// so also respond to an explicit ready signal and do a couple of short retries.
 sendDataToPage();
+setTimeout(sendDataToPage, 250);
+setTimeout(sendDataToPage, 1000);
+
+window.addEventListener('__prom_ready', () => {
+  sendDataToPage();
+});
 
 // Also re-send if storage changes (for future items in batch)
 chrome.storage.onChanged.addListener((changes) => {
@@ -94,9 +105,9 @@ chrome.storage.onChanged.addListener((changes) => {
           currentItem: state.currentItem || null, 
           isRunning: state.isRunning, 
           singleRunning: state.singleRunning,
-          pageDelay: state.pageDelay || 2,
-          autoSubmit: state.autoSubmit || false,
-          defAnswer: state.defAnswer || 'a'
+          pageDelay: state.pageDelay ?? DEFAULT_PAGE_DELAY,
+          autoSubmit: state.autoSubmit ?? false,
+          defAnswer: state.defAnswer ?? DEFAULT_ANSWER
         }
       }));
     });

@@ -3,6 +3,22 @@ const { version } = chrome.runtime.getManifest();
 const versionBadge = document.getElementById('versionBadge');
 if (versionBadge) versionBadge.textContent = 'v' + version;
 
+const DEFAULT_SETTINGS = {
+  pageDelay: 1,
+  userDelay: 2,
+  autoSubmit: false,
+  autoRetry: true,
+  desktopNotifications: true,
+  defAddress: 'Al-Alameya',
+  defCity: 'JEDDAH',
+  defState: 'JEDDAH',
+  defPostal: '00000',
+  defCountry: 'Saudi Arabia',
+  defAnswer: 'a',
+  passPattern: '{F}@{f}#$1970',
+  sheetUrl: ''
+};
+
 // -- Theme Toggle ---
 async function applyTheme(isLight) {
   if (isLight) {
@@ -252,8 +268,9 @@ async function loadSettings() {
   const setVal = (id, val) => {
     const el = document.getElementById(id);
     if (!el) return;
-    if (el.type === 'checkbox') el.checked = !!val;
-    else el.value = val || '';
+    const value = val ?? DEFAULT_SETTINGS[id] ?? '';
+    if (el.type === 'checkbox') el.checked = !!value;
+    else el.value = value;
   };
 
   setVal('pageDelay', settings.pageDelay);
@@ -298,19 +315,7 @@ document.getElementById('cancelSettings')?.addEventListener('click', () => {
 
 document.getElementById('resetSettings')?.addEventListener('click', async () => {
   if (!confirm('Reset all settings to defaults?')) return;
-  const defaults = {
-    pageDelay: 1,
-    userDelay: 2,
-    autoSubmit: false,
-    defAddress: 'Al-Alameya',
-    defCity: 'JEDDAH',
-    defState: 'JEDDAH',
-    defPostal: '00000',
-    defCountry: 'Saudi Arabia',
-    defAnswer: 'a',
-    passPattern: '{F}@{f}#$1970'
-  };
-  await chrome.storage.local.set(defaults);
+  await chrome.storage.local.set(DEFAULT_SETTINGS);
   await loadSettings();
   updateSinglePreview();
   alert('Settings reset to defaults.');
@@ -318,7 +323,7 @@ document.getElementById('resetSettings')?.addEventListener('click', async () => 
 
 document.getElementById('clearAllData')?.addEventListener('click', async () => {
   if (!confirm('Warning Are you sure? This will delete History and Active Queues, but KEEP your Settings.')) return;
-  const toClear = ['history', 'queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'savedCreds', 'runLogs'];
+  const toClear = ['history', 'queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'savedCreds', 'copiedCreds', 'currentTabId', 'runLogs'];
   await chrome.storage.local.remove(toClear);
   location.reload();
 });
@@ -398,24 +403,77 @@ document.getElementById('stopSingle').addEventListener('click', async () => {
 // -- BATCH MODE - CSV/Excel parser ---
 let batchItems = [];
 
+function parseDelimitedRows(text) {
+  const rows = [];
+  let row = [], cur = '', inQ = false;
+  const src = String(text || '').replace(/^\uFEFF/, '');
+
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    const next = src[i + 1];
+
+    if (ch === '"') {
+      if (inQ && next === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQ = !inQ;
+      }
+      continue;
+    }
+
+    if (ch === ',' && !inQ) {
+      row.push(cur.trim());
+      cur = '';
+      continue;
+    }
+
+    if ((ch === '\n' || ch === '\r') && !inQ) {
+      if (ch === '\r' && next === '\n') i++;
+      row.push(cur.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cur = '';
+      continue;
+    }
+
+    cur += ch;
+  }
+
+  row.push(cur.trim());
+  if (row.some(Boolean)) rows.push(row);
+  return rows;
+}
+
 function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
+  const rows = parseDelimitedRows(text);
   let start = 0;
-  const first = lines[0].toLowerCase();
+  const first = (rows[0] || []).join(' ').toLowerCase();
   if (first.includes('name') || first.includes('email')) start = 1;
 
-  return lines.slice(start).map(line => {
-    const cols = [];
-    let cur = '', inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { inQ = !inQ; continue; }
-      if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
-      else cur += ch;
-    }
-    cols.push(cur.trim());
-    return cols;
-  }).filter(c => c.length >= 2 && c[0].trim());
+  return rows.slice(start).filter(c => c.length >= 2 && c[0].trim());
+}
+
+function decodeXml(value) {
+  return String(value || '').replace(/&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-f]+);/gi, entity => {
+    const named = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'" };
+    if (named[entity]) return named[entity];
+    if (entity.startsWith('&#x')) return String.fromCodePoint(parseInt(entity.slice(3, -1), 16));
+    if (entity.startsWith('&#')) return String.fromCodePoint(parseInt(entity.slice(2, -1), 10));
+    return entity;
+  });
+}
+
+function colIndex(col) {
+  return [...col].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+}
+
+function textFromCellXml(cellXml) {
+  const parts = [];
+  for (const m of cellXml.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)) {
+    parts.push(decodeXml(m[1]));
+  }
+  return parts.join('');
 }
 
 async function parseXLSX(buffer) {
@@ -461,8 +519,8 @@ async function parseXLSX(buffer) {
 
     const shared = [];
     if (entries['xl/sharedStrings.xml']) {
-      const matches = entries['xl/sharedStrings.xml'].matchAll(/<t[^>]*>([^<]*)<\/t>/g);
-      for (const m of matches) shared.push(m[1]);
+      const items = entries['xl/sharedStrings.xml'].matchAll(/<si[^>]*>([\s\S]*?)<\/si>/g);
+      for (const item of items) shared.push(textFromCellXml(item[1]));
     }
 
     const sheetXML  = entries['xl/worksheets/sheet1.xml'] || '';
@@ -470,10 +528,21 @@ async function parseXLSX(buffer) {
     const rowMatches = sheetXML.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g);
     for (const rm of rowMatches) {
       const cells = [];
-      const cellMatches = rm[1].matchAll(/<c[^>]*r="([A-Z]+)\d+"[^>]*(?:t="([^"]*)")?[^>]*>[\s\S]*?<v>(\d+(?:\.\d+)?)<\/v>[\s\S]*?<\/c>/g);
+      const cellMatches = rm[1].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g);
       for (const cm of cellMatches) {
-        const type = cm[2], val = cm[3];
-        cells.push(type === 's' ? (shared[parseInt(val)] || '') : val);
+        const attrs = cm[1];
+        const body = cm[2];
+        const ref = attrs.match(/\br="([A-Z]+)\d+"/);
+        const type = attrs.match(/\bt="([^"]*)"/)?.[1] || '';
+        const value = body.match(/<v>([\s\S]*?)<\/v>/)?.[1] || '';
+        const idx = ref ? colIndex(ref[1]) : cells.length;
+        let cellValue = '';
+
+        if (type === 's') cellValue = shared[parseInt(value, 10)] || '';
+        else if (type === 'inlineStr') cellValue = textFromCellXml(body);
+        else cellValue = decodeXml(value || textFromCellXml(body));
+
+        cells[idx] = cellValue;
       }
       if (cells.length > 0) rows.push(cells);
     }
@@ -960,16 +1029,7 @@ let sheetData = [];
 let excludedSheetRows = new Set();
 
 function parseCSVLine(line) {
-  const cols = [];
-  let cur = '', inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') { inQ = !inQ; continue; }
-    if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
-    else cur += ch;
-  }
-  cols.push(cur.trim());
-  return cols;
+  return parseDelimitedRows(line)[0] || [];
 }
 
 function showSheetError(msg) {
@@ -1003,13 +1063,13 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
     if (!res.ok) throw new Error('Cannot read sheet. Ensure share settings are "Anyone with the link can view".');
     
     const text = await res.text();
-    const lines = text.trim().split(/\r?\n/);
-    if (lines.length < 2) throw new Error('Sheet is empty or has only one row.');
+    const rows = parseDelimitedRows(text);
+    if (rows.length < 2) throw new Error('Sheet is empty or has only one row.');
 
     excludedSheetRows.clear();
 
-    const headers = parseCSVLine(lines[0]);
-    sheetData = lines.slice(1).map(parseCSVLine);
+    const headers = rows[0];
+    sheetData = rows.slice(1);
 
     const nameSel = document.getElementById('sheetNameCol');
     const emailSel = document.getElementById('sheetEmailCol');
