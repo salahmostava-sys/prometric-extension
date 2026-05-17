@@ -467,16 +467,6 @@ async function fillStep3(creds) {
 // -- STEP 4 - Confirm Policy ---
 async function fillStep4(creds) {
   status('Step 4: Confirm Policy...');
-  
-  // Smart wait: at least 3s buffer, then monitor up to 10s total
-  await wait(3000); 
-  const t0 = Date.now();
-  while (Date.now() - t0 < 7000) {
-    const btn = document.querySelector('input[id*="Continue" i], button[id*="Continue" i], input[type="submit"]');
-    if (btn && btn.offsetParent && !btn.disabled) break;
-    await wait(500);
-  }
-  await wait(1000); // Final small safety buffer
 
   async function ensureSelected() {
     const agreeChk = q(
@@ -511,21 +501,54 @@ async function fillStep4(creds) {
     }
   }
 
-  await ensureSelected();
-  await wait(1500); // Fixed wait for button to enable
+  function findReadyContinue() {
+    const candidates = [
+      ...document.querySelectorAll('input[id*="Continue" i], button[id*="Continue" i], a[id*="Continue" i]'),
+      ...document.querySelectorAll('input[type="submit"], button, input[type="button"], a, [role="button"]')
+    ];
 
-  for (let i = 0; i < 4; i++) {
-    status(`Step 4: Submitting (Attempt ${i+1}/4)...`);
+    return candidates.find(el => {
+      if (!el.offsetParent || el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
+      const text = (el.value || el.textContent || el.getAttribute('aria-label') || '').trim().toLowerCase();
+      if (!(text === 'continue' || text.startsWith('continue') || text === 'next' || text.includes('continue'))) return false;
+      const style = window.getComputedStyle(el);
+      return style.visibility !== 'hidden' && style.display !== 'none' && style.pointerEvents !== 'none';
+    });
+  }
+
+  function clickReadyContinue(btn) {
+    btn.focus();
+    btn.click();
+    ['mousedown', 'mouseup', 'click'].forEach(type => {
+      try {
+        btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+      } catch (_) {}
+    });
+  }
+
+  const deadline = Date.now() + 30000;
+  let attempts = 0;
+
+  while (Date.now() < deadline) {
+    attempts++;
+    status(`Step 4: Waiting for Continue...`);
     await ensureSelected();
-    const success = clickContinue();
-    if (success) {
-      await wait(3000); // Fixed wait for navigation
+
+    const btn = findReadyContinue();
+    if (btn) {
+      status(`Step 4: Continue found, submitting...`);
+      clickReadyContinue(btn);
+      await wait(2500);
       if (detectStep() !== 'policy') return; 
+      if (attempts % 4 === 0) {
+        status('Step 4: Still on policy, retrying...', '#d29922');
+      }
     }
-    await wait(2000);
+
+    await wait(400);
   }
   
-  status('Warning Could not advance from Step 4', '#d73a49');
+  status('Warning Continue did not become ready on Step 4', '#d73a49');
 }
 
 // -- FINAL STEP - Dashboard ---

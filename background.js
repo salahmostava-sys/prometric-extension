@@ -2,6 +2,7 @@ const START_URL = 'https://tcnet1.prometric.com/InvalidHostHeader.aspx';
 const DEFAULT_AUTO_RETRY = true;
 const DEFAULT_DESKTOP_NOTIFICATIONS = true;
 const DEFAULT_USER_DELAY = 2;
+let openNextInProgress = false;
 
 function makeQueueId(prefix = 'q') {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -12,6 +13,30 @@ function isCurrentQueueMessage(queue, queueIndex, msg) {
   const current = queue[queueIndex];
   if (msg.queueId) return current._queueId === msg.queueId;
   return current.name === msg.name || !msg.name;
+}
+
+function itemDedupKey(item) {
+  const name = String(item.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const email = String(item.email || '').trim().toLowerCase();
+  return `${name}|${email}`;
+}
+
+function dedupeItems(items) {
+  const seen = new Set();
+  const unique = [];
+  let skipped = 0;
+
+  for (const item of items || []) {
+    const key = itemDedupKey(item);
+    if (seen.has(key)) {
+      skipped++;
+      continue;
+    }
+    seen.add(key);
+    unique.push(item);
+  }
+
+  return { unique, skipped };
 }
 
 async function keepRegistrationTabAlive(tabId) {
