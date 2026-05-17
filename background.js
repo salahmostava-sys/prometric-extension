@@ -14,6 +14,13 @@ function isCurrentQueueMessage(queue, queueIndex, msg) {
   return current.name === msg.name || !msg.name;
 }
 
+async function keepRegistrationTabAlive(tabId) {
+  if (!tabId) return;
+  try {
+    await chrome.tabs.update(tabId, { autoDiscardable: false });
+  } catch (_) {}
+}
+
 async function buildCredentials(item) {
   const parts = (item.name || '').trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
@@ -117,13 +124,16 @@ async function openNextTab() {
       await addRunLog(`Processing: ${queue[newIdx].name || 'Unnamed'}`, 'running');
       if (currentTabId) {
         try {
-          await chrome.tabs.update(currentTabId, { url: START_URL });
+          await chrome.tabs.update(currentTabId, { url: START_URL, active: false });
+          await keepRegistrationTabAlive(currentTabId);
         } catch (e) {
-          const tab = await chrome.tabs.create({ url: START_URL });
+          const tab = await chrome.tabs.create({ url: START_URL, active: false });
+          await keepRegistrationTabAlive(tab.id);
           await chrome.storage.local.set({ currentTabId: tab.id });
         }
       } else {
-        const tab = await chrome.tabs.create({ url: START_URL });
+        const tab = await chrome.tabs.create({ url: START_URL, active: false });
+        await keepRegistrationTabAlive(tab.id);
         await chrome.storage.local.set({ currentTabId: tab.id });
       }
     }
@@ -283,7 +293,8 @@ async function handleMessage(msg, sender) {
       queue: [item], queueIndex: 0, isRunning: false, singleRunning: true,
       currentItem: { ...item, ...creds }
     });
-    const tab = await chrome.tabs.create({ url: START_URL });
+    const tab = await chrome.tabs.create({ url: START_URL, active: false });
+    await keepRegistrationTabAlive(tab.id);
     await chrome.storage.local.set({ currentTabId: tab.id });
   }
 

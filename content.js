@@ -638,7 +638,7 @@ async function handleDashboard(creds) {
     });
   });
 
-  if (AUTO_SUBMIT) {
+  if (AUTO_SUBMIT || isBatch) {
     status('Auto-continuing in 2s...');
     setTimeout(() => actionBtn.click(), 2000);
   }
