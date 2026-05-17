@@ -491,9 +491,10 @@ const uploadArea    = document.getElementById('uploadArea');
 const queueWrap     = document.getElementById('queueWrap');
 const queueList     = document.getElementById('queueList');
 const qCount        = document.getElementById('qCount');
-const bStart        = document.getElementById('bStart');
-const stopBatch     = document.getElementById('stopBatch');
-const resumeBtn     = document.getElementById('resumeBatch');
+const bStart         = document.getElementById('bStart');
+const pauseBatchBtn  = document.getElementById('pauseBatchBtn');
+const resumeBatchBtn = document.getElementById('resumeBatchBtn');
+const cancelBatchBtn = document.getElementById('cancelBatchBtn');
 const bMsg          = document.getElementById('bMsg');
 const batchBanner   = document.getElementById('batchBanner');
 const batchSpinner  = document.getElementById('batchSpinner');
@@ -567,8 +568,9 @@ async function handleFile(file) {
   
   // Show Start button, hide others
   bStart.style.display = 'block';
-  stopBatch.style.display = 'none';
-  resumeBtn.style.display = 'none';
+  pauseBatchBtn.style.display = 'none';
+  resumeBatchBtn.style.display = 'none';
+  cancelBatchBtn.style.display = 'none';
   batchBanner.classList.remove('show');
 }
 
@@ -597,8 +599,9 @@ document.getElementById('clearQueue').addEventListener('click', () => {
   if (batchValidation) batchValidation.classList.remove('show');
   
   bStart.style.display = 'block';
-  stopBatch.style.display = 'none';
-  resumeBtn.style.display = 'none';
+  pauseBatchBtn.style.display = 'none';
+  resumeBatchBtn.style.display = 'none';
+  cancelBatchBtn.style.display = 'none';
   batchBanner.classList.remove('show');
   bMsg.style.display = 'none';
 });
@@ -625,36 +628,44 @@ bStart.addEventListener('click', async () => {
   batchBanner.classList.add('show');
   
   bStart.style.display = 'none';
-  resumeBtn.style.display = 'none';
-  stopBatch.style.display = 'block';
+  resumeBatchBtn.style.display = 'none';
+  pauseBatchBtn.style.display = 'block';
+  cancelBatchBtn.style.display = 'block';
   batchSpinner.style.display = 'block';
   
   showMessage(bMsg, 'ok', `Started ${batchItems.length} registrations.`);
 });
 
-stopBatch.addEventListener('click', async () => {
+pauseBatchBtn?.addEventListener('click', async () => {
   userStopped = true;
   await sendMsg({ action: 'stopQueue' });
-  
-  stopBatch.style.display = 'none';
+  pauseBatchBtn.style.display = 'none';
   batchSpinner.style.display = 'none';
-  
-  showMessage(bMsg, 'err', 'Execution stopped by user.');
+  showMessage(bMsg, 'err', 'Execution paused.');
 });
 
-if (resumeBtn) {
-  resumeBtn.addEventListener('click', async () => {
-    userStopped = false;
-    await sendMsg({ action: 'resumeQueue' });
-    
-    bStart.style.display = 'none';
-    resumeBtn.style.display = 'none';
-    stopBatch.style.display = 'block';
-    batchSpinner.style.display = 'block';
-    
-    showMessage(bMsg, 'ok', 'Resuming batch registration.');
-  });
-}
+resumeBatchBtn?.addEventListener('click', async () => {
+  userStopped = false;
+  await sendMsg({ action: 'resumeQueue' });
+  bStart.style.display = 'none';
+  resumeBatchBtn.style.display = 'none';
+  pauseBatchBtn.style.display = 'block';
+  cancelBatchBtn.style.display = 'block';
+  batchSpinner.style.display = 'block';
+  showMessage(bMsg, 'ok', 'Resuming batch registration.');
+});
+
+cancelBatchBtn?.addEventListener('click', async () => {
+  userStopped = true;
+  await sendMsg({ action: 'clearSession' });
+  bStart.style.display = 'block';
+  pauseBatchBtn.style.display = 'none';
+  resumeBatchBtn.style.display = 'none';
+  cancelBatchBtn.style.display = 'none';
+  batchSpinner.style.display = 'none';
+  batchBanner.classList.remove('show');
+  showMessage(bMsg, 'err', 'Execution stopped and queue cleared.');
+});
 
 retryFailedBtn?.addEventListener('click', async () => {
   if (!(await confirmReplaceRunning())) return;
@@ -747,8 +758,9 @@ async function pollStatus() {
       batchProgress.textContent = `Processing ${Math.min(queueIndex + 1, queue.length)} of ${queue.length}...`;
       
       bStart.style.display = 'none';
-      resumeBtn.style.display = 'none';
-      stopBatch.style.display = 'block';
+      resumeBatchBtn.style.display = 'none';
+      pauseBatchBtn.style.display = 'block';
+      cancelBatchBtn.style.display = 'block';
       batchSpinner.style.display = 'block';
       if (retryFailedBtn) retryFailedBtn.style.display = 'none';
       userStopped = false;
@@ -757,7 +769,7 @@ async function pollStatus() {
       const hasPending   = pendingItems.length > 0 && queueIndex < queue.length;
       
       bStart.style.display = 'none';
-      stopBatch.style.display = 'none';
+      pauseBatchBtn.style.display = 'none';
       batchSpinner.style.display = 'none';
       
       if (hasPending) {
@@ -766,10 +778,12 @@ async function pollStatus() {
         batchBanner.style.borderColor = 'rgba(56,139,253,.3)';
         batchProgress.style.color = 'var(--blue)';
         batchProgress.textContent = `Queue paused - ${pendingItems.length} remaining`;
-        resumeBtn.style.display = 'block';
+        resumeBatchBtn.style.display = 'block';
+        cancelBatchBtn.style.display = 'block';
       } else {
         batchBanner.classList.remove('show');
-        resumeBtn.style.display = 'none';
+        resumeBatchBtn.style.display = 'none';
+        cancelBatchBtn.style.display = 'none';
         bStart.style.display = 'block';
       }
       const failedCount = queue.filter(it => it.status === 'failed').length;
@@ -1223,19 +1237,42 @@ async function checkBatchStatus() {
   const { isRunning, queue, queueIndex } = await chrome.storage.local.get(['isRunning', 'queue', 'queueIndex']);
   const banner = document.getElementById('globalBatchBanner');
   const progText = document.getElementById('globalBatchProgress');
+  const title = document.getElementById('globalBatchTitle');
+  const pauseBtn = document.getElementById('globalPauseBatch');
+  const resumeBtn = document.getElementById('globalResumeBatch');
+  const stopBtn = document.getElementById('globalStopBatch');
+  const spinner = document.getElementById('globalBatchSpinner');
   
   if (!banner || !progText) return;
 
-  if (isRunning && queue && queue.length > 0) {
+  if (queue && queue.length > 0) {
     banner.style.display = 'flex';
     progText.textContent = `${queueIndex} / ${queue.length} completed`;
+    
+    if (isRunning) {
+      if (title) title.textContent = 'Batch Running...';
+      if (spinner) spinner.style.display = 'block';
+      if (pauseBtn) pauseBtn.style.display = 'block';
+      if (resumeBtn) resumeBtn.style.display = 'none';
+    } else {
+      if (title) title.textContent = 'Batch Paused';
+      if (spinner) spinner.style.display = 'none';
+      if (pauseBtn) pauseBtn.style.display = 'none';
+      if (resumeBtn) resumeBtn.style.display = 'block';
+    }
   } else {
     banner.style.display = 'none';
   }
 }
 
-document.getElementById('globalStopBatch')?.addEventListener('click', () => {
+document.getElementById('globalPauseBatch')?.addEventListener('click', () => {
   sendMsg({ action: 'stopQueue' });
+});
+document.getElementById('globalResumeBatch')?.addEventListener('click', () => {
+  sendMsg({ action: 'resumeQueue' });
+});
+document.getElementById('globalStopBatch')?.addEventListener('click', () => {
+  sendMsg({ action: 'clearSession' });
 });
 
 // Poll every second
