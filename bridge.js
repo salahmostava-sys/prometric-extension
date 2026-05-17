@@ -64,6 +64,7 @@ window.addEventListener('__prom_msg', async (e) => {
 
   if (action === 'pauseBatch') {
     await chrome.storage.local.set({ isRunning: false });
+    await sendToBackground({ action: 'stopQueue' });
   }
   if (action === 'resumeBatch') {
     await chrome.storage.local.set({ isRunning: true });
@@ -71,6 +72,7 @@ window.addEventListener('__prom_msg', async (e) => {
   }
   if (action === 'stopBatch') {
     await chrome.storage.local.set({ isRunning: false, singleRunning: false });
+    await sendToBackground({ action: 'stopQueue' });
   }
 
   // Save copied credentials with expiry for cross-tab access
