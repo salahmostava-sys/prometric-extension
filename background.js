@@ -122,86 +122,96 @@ async function updateBadge() {
 
 // OK FIX 2: replaced recursion with iterative loop to prevent stack overflow
 async function openNextTab() {
-  const { queue, queueIndex, isRunning, currentTabId } = await getState();
-  if (!isRunning) {
-    await updateBadge();
+  if (openNextInProgress) {
+    await addRunLog('Skipped duplicate open-next request', 'warn');
     return;
   }
 
-  // We need to loop forward until we find a pending item or reach the end.
-  let newIdx = queueIndex;
-  while (newIdx < queue.length && queue[newIdx].status !== 'pending') {
-    newIdx++;
-  }
+  openNextInProgress = true;
+  try {
+    const { queue, queueIndex, isRunning, currentTabId } = await getState();
+    if (!isRunning) {
+      await updateBadge();
+      return;
+    }
 
-  if (newIdx < queue.length) {
-    await updateBadge();
-    if (!queue[newIdx]._queueId) {
-      queue[newIdx]._queueId = makeQueueId('item');
-      await chrome.storage.local.set({ queue });
+    // We need to loop forward until we find a pending item or reach the end.
+    let newIdx = queueIndex;
+    while (newIdx < queue.length && queue[newIdx].status !== 'pending') {
+      newIdx++;
     }
-    if (newIdx !== queueIndex) {
-      await chrome.storage.local.set({ queueIndex: newIdx });
-    }
-    const creds = await buildCredentials(queue[newIdx]);
-    if (creds) {
-      await chrome.storage.local.set({ currentItem: { ...queue[newIdx], ...creds } });
-      await addRunLog(`Processing: ${queue[newIdx].name || 'Unnamed'}`, 'running');
-      if (currentTabId) {
-        try {
-          await chrome.tabs.update(currentTabId, { url: START_URL, active: false });
-          await keepRegistrationTabAlive(currentTabId);
-        } catch (e) {
+
+    if (newIdx < queue.length) {
+      await updateBadge();
+      if (!queue[newIdx]._queueId) {
+        queue[newIdx]._queueId = makeQueueId('item');
+        await chrome.storage.local.set({ queue });
+      }
+      if (newIdx !== queueIndex) {
+        await chrome.storage.local.set({ queueIndex: newIdx });
+      }
+      const creds = await buildCredentials(queue[newIdx]);
+      if (creds) {
+        await chrome.storage.local.set({ currentItem: { ...queue[newIdx], ...creds } });
+        await addRunLog(`Processing: ${queue[newIdx].name || 'Unnamed'}`, 'running');
+        if (currentTabId) {
+          try {
+            await chrome.tabs.update(currentTabId, { url: START_URL, active: false });
+            await keepRegistrationTabAlive(currentTabId);
+          } catch (e) {
+            const tab = await chrome.tabs.create({ url: START_URL, active: false });
+            await keepRegistrationTabAlive(tab.id);
+            await chrome.storage.local.set({ currentTabId: tab.id });
+          }
+        } else {
           const tab = await chrome.tabs.create({ url: START_URL, active: false });
           await keepRegistrationTabAlive(tab.id);
           await chrome.storage.local.set({ currentTabId: tab.id });
         }
-      } else {
-        const tab = await chrome.tabs.create({ url: START_URL, active: false });
-        await keepRegistrationTabAlive(tab.id);
-        await chrome.storage.local.set({ currentTabId: tab.id });
+      }
+    } else {
+      // End of queue
+      const { autoRetry, queue = [] } = await chrome.storage.local.get(['autoRetry', 'queue']);
+
+      // Check if we have failed items to retry
+      const failedItems = queue.filter(i => i.status === 'failed' && !i.retried);
+
+      if ((autoRetry ?? DEFAULT_AUTO_RETRY) && failedItems.length > 0) {
+        // Mark as retried and reset to pending
+        failedItems.forEach(i => {
+          i.status = 'pending';
+          i.failureReason = '';
+          i.retried = true;
+        });
+        // Start from the first pending item, not always index 0
+        const firstPendingIdx = queue.findIndex(i => i.status === 'pending');
+        await chrome.storage.local.set({ queue, queueIndex: firstPendingIdx >= 0 ? firstPendingIdx : 0 });
+        openNextInProgress = false;
+        await openNextTab();
+        return;
+      }
+
+      await chrome.storage.local.set({ isRunning: false });
+      await updateBadge();
+
+      const { desktopNotifications } = await chrome.storage.local.get(['desktopNotifications']);
+
+      const done   = queue.filter(i => i.status === 'done').length;
+      const failed = queue.filter(i => i.status === 'failed').length;
+
+      // 1. Desktop Notification
+      if (desktopNotifications ?? DEFAULT_DESKTOP_NOTIFICATIONS) {
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icon128.png',
+          title: 'Batch Complete OK',
+          message: `Registration finished: ${done} Successful, ${failed} Failed.`,
+          priority: 2
+        });
       }
     }
-  } else {
-    // End of queue
-    const { autoRetry, queue = [] } = await chrome.storage.local.get(['autoRetry', 'queue']);
-    
-    // Check if we have failed items to retry
-    const failedItems = queue.filter(i => i.status === 'failed' && !i.retried);
-    
-    if ((autoRetry ?? DEFAULT_AUTO_RETRY) && failedItems.length > 0) {
-      // Mark as retried and reset to pending
-      failedItems.forEach(i => {
-        i.status = 'pending';
-        i.failureReason = '';
-        i.retried = true;
-      });
-      // Start from the first pending item, not always index 0
-      const firstPendingIdx = queue.findIndex(i => i.status === 'pending');
-      await chrome.storage.local.set({ queue, queueIndex: firstPendingIdx >= 0 ? firstPendingIdx : 0 });
-      await openNextTab();
-      return;
-    }
-
-    await chrome.storage.local.set({ isRunning: false });
-    await updateBadge();
-    
-    const { desktopNotifications } = await chrome.storage.local.get(['desktopNotifications']);
-    
-    const done   = queue.filter(i => i.status === 'done').length;
-    const failed = queue.filter(i => i.status === 'failed').length;
-    const total  = queue.length;
-    
-    // 1. Desktop Notification
-    if (desktopNotifications ?? DEFAULT_DESKTOP_NOTIFICATIONS) {
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icon128.png',
-        title: 'Batch Complete OK',
-        message: `Registration finished: ${done} Successful, ${failed} Failed.`,
-        priority: 2
-      });
-    }
+  } finally {
+    openNextInProgress = false;
   }
 }
 
@@ -330,8 +340,9 @@ async function handleMessage(msg, sender) {
       try { await chrome.tabs.remove(currentTabId); } catch(e) {}
     }
     
+    const { unique, skipped } = dedupeItems(msg.items);
     const batchId = makeQueueId('batch');
-    const items = msg.items.map((i, idx) => ({
+    const items = unique.map((i, idx) => ({
       ...i,
       _queueId: `${batchId}_${idx}`,
       status: 'pending',
@@ -339,6 +350,7 @@ async function handleMessage(msg, sender) {
     }));
     await chrome.storage.local.set({ queue: items, queueIndex: 0, isRunning: true, currentTabId: null, runLogs: [] });
     await addRunLog(`Batch started: ${items.length} items`, 'start');
+    if (skipped) await addRunLog(`Skipped duplicate rows: ${skipped}`, 'warn');
     await openNextTab();
   }
 
