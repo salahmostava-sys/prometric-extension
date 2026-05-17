@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS = {
   userDelay: 2,
   autoSubmit: false,
   autoRetry: true,
+  stabilityMode: false,
   desktopNotifications: true,
   defAddress: 'Al-Alameya',
   defCity: 'JEDDAH',
@@ -119,6 +120,7 @@ function showMessage(el, type, text) {
 function validateBatchItems(items) {
   const seenNames = new Set();
   const seenEmails = new Set();
+  const seenExact = new Set();
   const stats = {
     total: items.length,
     valid: 0,
@@ -126,6 +128,7 @@ function validateBatchItems(items) {
     invalidEmail: 0,
     duplicateNames: 0,
     duplicateEmails: 0,
+    exactDuplicates: 0,
     longNames: 0
   };
 
@@ -134,6 +137,7 @@ function validateBatchItems(items) {
     const email = String(item.email || '').trim();
     const nameKey = name.toLowerCase();
     const emailKey = email.toLowerCase();
+    const exactKey = `${nameKey}|${emailKey}`;
     let ok = !!name;
 
     if (!email) {
@@ -147,8 +151,10 @@ function validateBatchItems(items) {
     if (name.length > 40) stats.longNames++;
     if (nameKey && seenNames.has(nameKey)) stats.duplicateNames++;
     if (emailKey && seenEmails.has(emailKey)) stats.duplicateEmails++;
+    if (nameKey && emailKey && seenExact.has(exactKey)) stats.exactDuplicates++;
     if (nameKey) seenNames.add(nameKey);
     if (emailKey) seenEmails.add(emailKey);
+    if (nameKey && emailKey) seenExact.add(exactKey);
     if (ok) stats.valid++;
   });
 
@@ -167,6 +173,7 @@ function renderValidation(panel, body, statusEl, stats) {
     ['Invalid email', stats.invalidEmail, stats.invalidEmail ? 'errline' : ''],
     ['Duplicate names', stats.duplicateNames, stats.duplicateNames ? 'warn' : ''],
     ['Duplicate emails', stats.duplicateEmails, stats.duplicateEmails ? 'warn' : ''],
+    ['Exact duplicates removed', stats.exactDuplicates, stats.exactDuplicates ? 'warn' : ''],
     ['Long names', stats.longNames, stats.longNames ? 'warn' : '']
   ].map(([label, value, cls]) => `
     <div class="validation-row ${cls || ''}">
@@ -260,7 +267,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 // -- Settings ---
-const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'defCity', 'defState', 'defPostal', 'defCountry', 'defAnswer', 'passPattern', 'sheetUrl', 'desktopNotifications', 'autoRetry'];
+const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'defCity', 'defState', 'defPostal', 'defCountry', 'defAnswer', 'passPattern', 'sheetUrl', 'desktopNotifications', 'autoRetry', 'stabilityMode'];
 
 async function loadSettings() {
   const settings = await chrome.storage.local.get(SETTINGS_KEYS);
@@ -277,6 +284,7 @@ async function loadSettings() {
   setVal('userDelay', settings.userDelay);
   setVal('autoSubmit', settings.autoSubmit);
   setVal('autoRetry', settings.autoRetry);
+  setVal('stabilityMode', settings.stabilityMode);
   setVal('desktopNotifications', settings.desktopNotifications);
   setVal('defAddress', settings.defAddress);
   setVal('defCity', settings.defCity);
@@ -323,7 +331,7 @@ document.getElementById('resetSettings')?.addEventListener('click', async () => 
 
 document.getElementById('clearAllData')?.addEventListener('click', async () => {
   if (!confirm('Warning Are you sure? This will delete History and Active Queues, but KEEP your Settings.')) return;
-  const toClear = ['history', 'queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'savedCreds', 'copiedCreds', 'currentTabId', 'runLogs'];
+  const toClear = ['history', 'queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'savedCreds', 'copiedCreds', 'currentTabId', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped', 'runLogs'];
   await chrome.storage.local.remove(toClear);
   location.reload();
 });
@@ -560,6 +568,7 @@ const uploadArea    = document.getElementById('uploadArea');
 const queueWrap     = document.getElementById('queueWrap');
 const queueList     = document.getElementById('queueList');
 const qCount        = document.getElementById('qCount');
+const exportQueueBtn = document.getElementById('exportQueue');
 const bStart         = document.getElementById('bStart');
 const pauseBatchBtn  = document.getElementById('pauseBatchBtn');
 const resumeBatchBtn = document.getElementById('resumeBatchBtn');
@@ -660,6 +669,19 @@ function statusLabel(s) {
   return { pending: 'Waiting', running: 'Running', done: 'Done', failed: 'Failed' }[s] || s;
 }
 
+function downloadRowsAsCSV(rows, filename) {
+  const csvContent = rows.map(row =>
+    row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
 document.getElementById('clearQueue').addEventListener('click', () => {
   batchItems = [];
   queueWrap.style.display = 'none';
@@ -673,6 +695,33 @@ document.getElementById('clearQueue').addEventListener('click', () => {
   cancelBatchBtn.style.display = 'none';
   batchBanner.classList.remove('show');
   bMsg.style.display = 'none';
+});
+
+exportQueueBtn?.addEventListener('click', async () => {
+  const { queue = [] } = await chrome.storage.local.get(['queue']);
+  const source = queue.length ? queue : batchItems;
+  if (!source.length) return;
+
+  const rows = [
+    ['Name', 'Email', 'Username', 'Password', 'Status', 'Reason', 'Failure Kind', 'Retryable', 'URL', 'Step', 'Snippet'],
+    ...source.map(item => {
+      const creds = genCreds(item.name || '');
+      return [
+        item.name || '',
+        item.email || '',
+        item.finalUsername || creds?.username || '',
+        item.password || creds?.password || '',
+        item.status || 'pending',
+        item.failureReason || '',
+        item.failureKind || '',
+        item.retryable === undefined ? '' : String(item.retryable),
+        item.failureUrl || '',
+        item.failureStep || '',
+        item.pageSnippet || ''
+      ];
+    })
+  ];
+  downloadRowsAsCSV(rows, `prometric_queue_${new Date().toISOString().slice(0,10)}.csv`);
 });
 
 bStart.addEventListener('click', async () => {
@@ -703,6 +752,9 @@ bStart.addEventListener('click', async () => {
   batchSpinner.style.display = 'block';
   
   showMessage(bMsg, 'ok', `Started ${batchItems.length} registrations.`);
+  if (stats.exactDuplicates) {
+    showMessage(bMsg, 'ok', `Started ${batchItems.length - stats.exactDuplicates} registrations. Removed ${stats.exactDuplicates} exact duplicate row(s).`);
+  }
 });
 
 pauseBatchBtn?.addEventListener('click', async () => {
@@ -983,28 +1035,23 @@ document.getElementById('exportCSV')?.addEventListener('click', async () => {
   try {
     // History is unshifted (newest first), so reverse it to keep original registration order
     const exportData = [...history].reverse();
-    const header = 'Name,Email,Username,Password,Status,Reason,Date\n';
-    const csvContent = exportData.map(h => {
-      const row = [
+    const rows = [
+      ['Name', 'Email', 'Username', 'Password', 'Status', 'Reason', 'Failure Kind', 'URL', 'Step', 'Date'],
+      ...exportData.map(h => [
         h.name || '',
         h.email || '',
         h.finalUsername || h.username || '',
         h.password || '',
         h.status || '',
         h.reason || '',
+        h.failureKind || '',
+        h.url || '',
+        h.step || '',
         h.date ? new Date(h.date).toLocaleString() : ''
-      ];
-      return row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
-    }).join('\n');
+      ])
+    ];
 
-    // Use BOM for UTF-8 to ensure Excel opens it correctly with any language
-    const blob = new Blob(['\uFEFF' + header + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `prometric_batch_${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+    downloadRowsAsCSV(rows, `prometric_batch_${new Date().toISOString().slice(0,10)}.csv`);
   } catch (e) {
     console.error('Export failed:', e);
     alert('Export failed. Check console for details.');

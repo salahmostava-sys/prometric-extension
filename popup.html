@@ -297,7 +297,10 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
   <div class="queue-wrap" id="queueWrap" style="display:none">
     <div class="queue-hdr">
       <span id="qCount">0 people</span>
-      <button class="copy" id="clearQueue">Clear</button>
+      <div style="display:flex;gap:6px">
+        <button class="copy" id="exportQueue">Export</button>
+        <button class="copy" id="clearQueue">Clear</button>
+      </div>
     </div>
     <div id="queueList"></div>
   </div>
@@ -436,6 +439,13 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
           <div style="font-size:10px;color:var(--muted)">Retry failed registrations once.</div>
         </div>
         <input type="checkbox" id="autoRetry" style="width:18px;height:18px"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:12px">Stability Mode</div>
+          <div style="font-size:10px;color:var(--muted)">Use longer waits for slow/background pages.</div>
+        </div>
+        <input type="checkbox" id="stabilityMode" style="width:18px;height:18px"/>
       </div>
     </div>
   </div>

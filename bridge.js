@@ -7,7 +7,7 @@ const DEFAULT_ANSWER = 'a';
 
 // Send currentItem to MAIN world
 async function sendDataToPage() {
-  const { currentItem, isRunning, singleRunning, pageDelay, autoSubmit, defAnswer, queue, queueIndex } = await chrome.storage.local.get(['currentItem', 'isRunning', 'singleRunning', 'pageDelay', 'autoSubmit', 'defAnswer', 'queue', 'queueIndex']);
+  const { currentItem, isRunning, singleRunning, pageDelay, autoSubmit, defAnswer, stabilityMode, queue, queueIndex } = await chrome.storage.local.get(['currentItem', 'isRunning', 'singleRunning', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex']);
   const isLast = isRunning && queue && queueIndex === queue.length - 1;
   window.dispatchEvent(new CustomEvent('__prom_init', {
     detail: { 
@@ -17,6 +17,7 @@ async function sendDataToPage() {
       isLast,
       pageDelay: pageDelay ?? DEFAULT_PAGE_DELAY,
       autoSubmit: autoSubmit ?? false,
+      stabilityMode: stabilityMode ?? false,
       defAnswer: defAnswer ?? DEFAULT_ANSWER
     }
   }));
@@ -45,6 +46,8 @@ window.addEventListener('__prom_msg', async (e) => {
       password:      payload?.password      || '',
       name:          payload?.name          || '',
       email:         payload?.email         || '',
+      url:           payload?.url           || '',
+      step:          payload?.step          || '',
       queueId:       payload?.queueId       || ''
     });
   }
@@ -52,9 +55,14 @@ window.addEventListener('__prom_msg', async (e) => {
   if (action === 'stepFailed') {
     await sendToBackground({
       action: 'stepFailed',
-      name:   payload?.name   || '',
-      reason: payload?.reason || '',
-      queueId: payload?.queueId || ''
+      name:        payload?.name        || '',
+      reason:      payload?.reason      || '',
+      failureKind: payload?.failureKind || '',
+      retryable:   payload?.retryable,
+      url:         payload?.url         || '',
+      step:        payload?.step        || '',
+      pageSnippet: payload?.pageSnippet || '',
+      queueId:     payload?.queueId     || ''
     });
   }
 
@@ -100,8 +108,8 @@ window.addEventListener('__prom_ready', () => {
 
 // Also re-send if storage changes (for future items in batch)
 chrome.storage.onChanged.addListener((changes) => {
-  if (changes.currentItem || changes.isRunning || changes.singleRunning || changes.pageDelay || changes.autoSubmit || changes.defAnswer) {
-    chrome.storage.local.get(['isRunning', 'singleRunning', 'currentItem', 'pageDelay', 'autoSubmit', 'defAnswer']).then(state => {
+  if (changes.currentItem || changes.isRunning || changes.singleRunning || changes.pageDelay || changes.autoSubmit || changes.defAnswer || changes.stabilityMode) {
+    chrome.storage.local.get(['isRunning', 'singleRunning', 'currentItem', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode']).then(state => {
       window.dispatchEvent(new CustomEvent('__prom_init', {
         detail: { 
           currentItem: state.currentItem || null, 
@@ -109,6 +117,7 @@ chrome.storage.onChanged.addListener((changes) => {
           singleRunning: state.singleRunning,
           pageDelay: state.pageDelay ?? DEFAULT_PAGE_DELAY,
           autoSubmit: state.autoSubmit ?? false,
+          stabilityMode: state.stabilityMode ?? false,
           defAnswer: state.defAnswer ?? DEFAULT_ANSWER
         }
       }));

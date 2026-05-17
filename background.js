@@ -2,6 +2,7 @@ const START_URL = 'https://tcnet1.prometric.com/InvalidHostHeader.aspx';
 const DEFAULT_AUTO_RETRY = true;
 const DEFAULT_DESKTOP_NOTIFICATIONS = true;
 const DEFAULT_USER_DELAY = 2;
+const DEFAULT_STABILITY_MODE = false;
 let openNextInProgress = false;
 let openNextPending = false;
 
@@ -9,11 +10,27 @@ function makeQueueId(prefix = 'q') {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function isCurrentQueueMessage(queue, queueIndex, msg) {
+function isCurrentQueueMessage(queue, queueIndex, msg, currentProcessingId = '') {
   if (!queue || queueIndex >= queue.length) return false;
   const current = queue[queueIndex];
+  if (msg.queueId && currentProcessingId) return msg.queueId === currentProcessingId;
   if (msg.queueId) return current._queueId === msg.queueId;
   return current.name === msg.name || !msg.name;
+}
+
+function isRetryableFailure(reason = '', failureKind = '', retryable) {
+  if (retryable === false) return false;
+  if (retryable === true) return true;
+  const text = `${failureKind} ${reason}`.toLowerCase();
+  if (text.includes('username exhausted') || text.includes('duplicate') || text.includes('invalid email')) return false;
+  return (
+    text.includes('timeout') ||
+    text.includes('not found') ||
+    text.includes('missing') ||
+    text.includes('page') ||
+    text.includes('network') ||
+    text.includes('unknown')
+  );
 }
 
 function itemDedupKey(item) {
@@ -94,7 +111,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 });
 
 async function getState() {
-  return chrome.storage.local.get(['queue','queueIndex','isRunning','currentTabId']);
+  return chrome.storage.local.get(['queue','queueIndex','isRunning','currentTabId','currentProcessingId','activeQueueId']);
 }
 
 // Save to history
@@ -155,7 +172,10 @@ async function openNextTab() {
       }
       const creds = await buildCredentials(queue[newIdx]);
       if (creds) {
-        await chrome.storage.local.set({ currentItem: { ...queue[newIdx], ...creds } });
+        await chrome.storage.local.set({
+          currentItem: { ...queue[newIdx], ...creds },
+          currentProcessingId: queue[newIdx]._queueId
+        });
         await addRunLog(`Processing: ${queue[newIdx].name || 'Unnamed'}`, 'running');
         if (currentTabId) {
           try {
@@ -177,7 +197,11 @@ async function openNextTab() {
       const { autoRetry, queue = [] } = await chrome.storage.local.get(['autoRetry', 'queue']);
 
       // Check if we have failed items to retry
-      const failedItems = queue.filter(i => i.status === 'failed' && !i.retried);
+      const failedItems = queue.filter(i =>
+        i.status === 'failed' &&
+        !i.retried &&
+        isRetryableFailure(i.failureReason, i.failureKind, i.retryable)
+      );
 
       if ((autoRetry ?? DEFAULT_AUTO_RETRY) && failedItems.length > 0) {
         // Mark as retried and reset to pending
@@ -193,7 +217,7 @@ async function openNextTab() {
         return;
       }
 
-      await chrome.storage.local.set({ isRunning: false });
+      await chrome.storage.local.set({ isRunning: false, currentProcessingId: '' });
       await updateBadge();
 
       const { desktopNotifications } = await chrome.storage.local.get(['desktopNotifications']);
@@ -249,7 +273,7 @@ async function processBackgroundQueue() {
 }
 
 async function handleMessage(msg, sender) {
-  const { queue, queueIndex } = await getState();
+  const { queue, queueIndex, currentProcessingId } = await getState();
 
   if (msg.action === 'stepDone') {
     const entry = {
@@ -257,14 +281,21 @@ async function handleMessage(msg, sender) {
       finalUsername: msg.finalUsername || '',
       password:      msg.password      || '',
       email:         msg.email         || '',
-      status:        'done'
+      status:        'done',
+      url:           msg.url           || '',
+      step:          msg.step          || ''
     };
 
     let accepted = false;
-    if (isCurrentQueueMessage(queue, queueIndex, msg)) {
+    if (isCurrentQueueMessage(queue, queueIndex, msg, currentProcessingId)) {
       queue[queueIndex].status        = 'done';
       queue[queueIndex].finalUsername = msg.finalUsername || '';
       queue[queueIndex].failureReason = '';
+      queue[queueIndex].failureKind   = '';
+      queue[queueIndex].retryable     = false;
+      queue[queueIndex].failureUrl    = '';
+      queue[queueIndex].failureStep   = '';
+      queue[queueIndex].pageSnippet   = '';
       await chrome.storage.local.set({ queue, queueIndex: queueIndex + 1 });
       accepted = true;
     }
@@ -286,9 +317,11 @@ async function handleMessage(msg, sender) {
     });
 
     // If batch mode, open next tab after delay
-    const { isRunning, userDelay = DEFAULT_USER_DELAY } = await chrome.storage.local.get(['isRunning', 'userDelay']);
+    await chrome.storage.local.set({ currentProcessingId: '' });
+    const { isRunning, userDelay = DEFAULT_USER_DELAY, stabilityMode = DEFAULT_STABILITY_MODE } = await chrome.storage.local.get(['isRunning', 'userDelay', 'stabilityMode']);
     if (isRunning) {
-      await new Promise(r => setTimeout(r, userDelay * 1000));
+      const delay = Math.max(Number(userDelay) || DEFAULT_USER_DELAY, stabilityMode ? 3 : 0);
+      await new Promise(r => setTimeout(r, delay * 1000));
       await openNextTab();
     } else {
       // Must be single mode, turn it off
@@ -301,12 +334,22 @@ async function handleMessage(msg, sender) {
       name:   msg.name   || '',
       email:  (queue && queueIndex < queue.length ? queue[queueIndex].email : '') || '',
       status: 'failed',
-      reason: msg.reason || 'Unknown error'
+      reason: msg.reason || 'Unknown error',
+      failureKind: msg.failureKind || '',
+      retryable: msg.retryable,
+      url: msg.url || '',
+      step: msg.step || '',
+      pageSnippet: msg.pageSnippet || ''
     };
     let accepted = false;
-    if (isCurrentQueueMessage(queue, queueIndex, msg)) {
+    if (isCurrentQueueMessage(queue, queueIndex, msg, currentProcessingId)) {
       queue[queueIndex].status = 'failed';
       queue[queueIndex].failureReason = entry.reason;
+      queue[queueIndex].failureKind = entry.failureKind;
+      queue[queueIndex].retryable = isRetryableFailure(entry.reason, entry.failureKind, entry.retryable);
+      queue[queueIndex].failureUrl = entry.url;
+      queue[queueIndex].failureStep = entry.step;
+      queue[queueIndex].pageSnippet = entry.pageSnippet;
       await chrome.storage.local.set({ queue, queueIndex: queueIndex + 1 });
       accepted = true;
     }
@@ -316,6 +359,7 @@ async function handleMessage(msg, sender) {
     }
     await saveToHistory(entry);
     await addRunLog(`Failed: ${entry.name || 'Current item'} - ${entry.reason}`, 'failed');
+    await chrome.storage.local.set({ currentProcessingId: '' });
     const { isRunning } = await getState();
     if (isRunning) {
       await openNextTab();
@@ -326,13 +370,16 @@ async function handleMessage(msg, sender) {
   }
 
   if (msg.action === 'startSingle') {
-    const item  = { ...msg.item, status: 'pending', _queueId: makeQueueId('single') };
+    const activeQueueId = makeQueueId('run');
+    const item  = { ...msg.item, status: 'pending', _queueId: makeQueueId('single'), _runId: activeQueueId };
     const creds = await buildCredentials(item);
     if (!creds) return;
     await addRunLog(`Single started: ${item.name || 'Unnamed'}`, 'start');
     await chrome.storage.local.set({
       queue: [item], queueIndex: 0, isRunning: false, singleRunning: true,
-      currentItem: { ...item, ...creds }
+      currentItem: { ...item, ...creds },
+      activeQueueId,
+      currentProcessingId: item._queueId
     });
     const tab = await chrome.tabs.create({ url: START_URL, active: false });
     await keepRegistrationTabAlive(tab.id);
@@ -347,14 +394,25 @@ async function handleMessage(msg, sender) {
     }
     
     const { unique, skipped } = dedupeItems(msg.items);
+    const activeQueueId = makeQueueId('run');
     const batchId = makeQueueId('batch');
     const items = unique.map((i, idx) => ({
       ...i,
       _queueId: `${batchId}_${idx}`,
+      _runId: activeQueueId,
       status: 'pending',
       failureReason: ''
     }));
-    await chrome.storage.local.set({ queue: items, queueIndex: 0, isRunning: true, currentTabId: null, runLogs: [] });
+    await chrome.storage.local.set({
+      queue: items,
+      queueIndex: 0,
+      isRunning: true,
+      currentTabId: null,
+      currentProcessingId: '',
+      activeQueueId,
+      lastDedupeSkipped: skipped,
+      runLogs: []
+    });
     await addRunLog(`Batch started: ${items.length} items`, 'start');
     if (skipped) await addRunLog(`Skipped duplicate rows: ${skipped}`, 'warn');
     await openNextTab();
@@ -382,10 +440,16 @@ async function handleMessage(msg, sender) {
       if (i.status === 'failed') {
         i.status = 'pending';
         i.failureReason = '';
+        i.failureKind = '';
+        i.failureUrl = '';
+        i.failureStep = '';
+        i.pageSnippet = '';
+        i.retryable = true;
         i.retried = true;
       }
     });
-    await chrome.storage.local.set({ queue, queueIndex: 0, isRunning: true, singleRunning: false });
+    const firstPendingIdx = queue.findIndex(i => i.status === 'pending');
+    await chrome.storage.local.set({ queue, queueIndex: firstPendingIdx >= 0 ? firstPendingIdx : 0, isRunning: true, singleRunning: false });
     await addRunLog(`Retrying failed items: ${failed.length}`, 'retry');
     await openNextTab();
   }
@@ -395,7 +459,7 @@ async function handleMessage(msg, sender) {
     if (currentTabId) {
       try { await chrome.tabs.remove(currentTabId); } catch(e) {}
     }
-    await chrome.storage.local.remove(['queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'currentTabId', 'copiedCreds', 'savedCreds']);
+    await chrome.storage.local.remove(['queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'currentTabId', 'copiedCreds', 'savedCreds', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped']);
     await chrome.storage.local.set({ runLogs: [] });
     await updateBadge();
   }
@@ -432,7 +496,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }
   } else if (info.menuItemId === "stop_clear") {
     await chrome.storage.local.set({ isRunning: false, singleRunning: false, queue: [], queueIndex: 0, runLogs: [] });
-    await chrome.storage.local.remove(['currentItem', 'currentTabId', 'copiedCreds', 'savedCreds']);
+    await chrome.storage.local.remove(['currentItem', 'currentTabId', 'copiedCreds', 'savedCreds', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped']);
     await updateBadge();
   }
 });

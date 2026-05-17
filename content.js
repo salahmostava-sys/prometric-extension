@@ -12,6 +12,7 @@ let AUTO_SUBMIT = false;
 let DEFAULT_ANSWER = 'a';
 let GLOBAL_RUNNING = false;
 let GLOBAL_SINGLE = false;
+let STABILITY_MODE = false;
 
 // -- Status indicator ---
 function status(msg, color = '#2ea043') {
@@ -59,6 +60,28 @@ function status(msg, color = '#2ea043') {
 
 function send(action, payload) {
   window.dispatchEvent(new CustomEvent('__prom_msg', { detail: { action, payload } }));
+}
+
+function pageSnippet() {
+  return String(document.body?.innerText || document.body?.textContent || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 700);
+}
+
+function failStep(reason, failureKind = 'page', retryable = true) {
+  const name = currentItem ? `${currentItem.firstName || ''} ${currentItem.lastName || ''}`.trim() : '';
+  status(`Error ${reason}`, '#d73a49');
+  send('stepFailed', {
+    name,
+    reason,
+    failureKind,
+    retryable,
+    url: window.location.href,
+    step: detectStep() || '',
+    pageSnippet: pageSnippet(),
+    queueId: currentItem?._queueId
+  });
 }
 
 // -- Copy helper: reliable copy + saves to storage for 30s cross-tab access --
@@ -237,7 +260,7 @@ function detectStep() {
 async function fillStep1() {
   status('Step 1: Selecting IBTA MEA...');
   const sel = await waitFor(['select']);
-  if (!sel) return;
+  if (!sel) { failStep('Prometric select not found', 'missing-field', true); return; }
   
   // Wait up to 5 seconds for "IBTA MEA" option to load dynamically
   let selected = false;
@@ -250,7 +273,7 @@ async function fillStep1() {
   }
 
   if (!selected) {
-    status('Error: Option IBTA MEA not found in dropdown', '#d73a49');
+    failStep('Option IBTA MEA not found in dropdown', 'missing-field', true);
     return;
   }
 
@@ -266,7 +289,7 @@ async function fillStep2(creds) {
     'input[placeholder*="Username" i]',
     'input[name*="Username" i]'
   ]);
-  if (!userEl) { status('Error Username field not found', '#d73a49'); return; }
+  if (!userEl) { failStep('Username field not found', 'missing-field', true); return; }
 
   // Username + retry if taken
   // Dynamic wait: polls up to 4s for server validation response
@@ -373,7 +396,7 @@ async function fillStep2(creds) {
     }
     status(`Warning "${tryName}" taken, trying next...`, '#d29922');
     const next = nextSuffix(suffix);
-    if (!next) { send('stepFailed', { name: creds.firstName + ' ' + creds.lastName, queueId: creds._queueId }); return; }
+    if (!next) { failStep('Username exhausted', 'validation', false); return; }
     suffix = next;
   }
 
@@ -442,7 +465,7 @@ async function fillStep3(creds) {
     'input[id*="FirstName" i]',
     'input[name*="FirstName" i]'
   ]);
-  if (!fnEl) { status('Error First Name not found', '#d73a49'); return; }
+  if (!fnEl) { failStep('First Name field not found', 'missing-field', true); return; }
 
   await sleep(200);
   setVal(fnEl, creds.firstName);
@@ -526,7 +549,7 @@ async function fillStep4(creds) {
     });
   }
 
-  const deadline = Date.now() + 30000;
+  const deadline = Date.now() + (STABILITY_MODE ? 60000 : 30000);
   let attempts = 0;
 
   while (Date.now() < deadline) {
@@ -548,7 +571,7 @@ async function fillStep4(creds) {
     await wait(400);
   }
   
-  status('Warning Continue did not become ready on Step 4', '#d73a49');
+  failStep('Continue did not become ready on Step 4', 'timeout', true);
 }
 
 // -- FINAL STEP - Dashboard ---
@@ -657,6 +680,8 @@ async function handleDashboard(creds) {
       password:      creds.password,
       name:          creds.firstName + ' ' + creds.lastName,
       email:         creds.email,
+      url:           window.location.href,
+      step:          detectStep() || 'dashboard',
       queueId:       creds._queueId
     });
   });
@@ -716,7 +741,7 @@ async function handleStep(step) {
     else if (step === 'signin') await fillStep2(currentItem);
     else if (step === 'prometric') await fillStep1();
   } catch (e) {
-    status('Error ' + e.message, '#d73a49');
+    failStep(e.message || 'Unhandled content error', 'exception', true);
     console.error('[Prometric]', e);
   }
   filling = false;
@@ -756,11 +781,12 @@ async function run() {
   if (document.readyState !== 'complete') await new Promise(r => window.addEventListener('load', r, { once: true }));
   await sleep(800);
 
-  if (!currentItem) { status('Warning No active data', '#d73a49'); return; }
+  if (!currentItem) { failStep('No active data for page', 'state', true); return; }
 
   let step = null;
   for (let i = 0; i < 20; i++) { step = detectStep(); if (step) break; await sleep(150); }
   if (step) await handleStep(step);
+  else failStep('Could not detect registration step', 'page', true);
 
   // Watch for UpdatePanel (AJAX) step changes
   observer = new MutationObserver(async () => {
@@ -775,6 +801,7 @@ window.addEventListener('__prom_init', e => {
   if (e.detail && e.detail.currentItem) currentItem = e.detail.currentItem; 
   if (e.detail && e.detail.pageDelay !== undefined) PAGE_DELAY = e.detail.pageDelay * 1000;
   if (e.detail && e.detail.autoSubmit !== undefined) AUTO_SUBMIT = e.detail.autoSubmit;
+  if (e.detail && e.detail.stabilityMode !== undefined) STABILITY_MODE = e.detail.stabilityMode;
   if (e.detail && e.detail.defAnswer !== undefined) DEFAULT_ANSWER = e.detail.defAnswer;
   if (e.detail && e.detail.isRunning !== undefined) GLOBAL_RUNNING = e.detail.isRunning;
   if (e.detail && e.detail.singleRunning !== undefined) GLOBAL_SINGLE = e.detail.singleRunning;
