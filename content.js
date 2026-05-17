@@ -120,14 +120,15 @@ function blurEl(el) {
 }
 
 function fillSelect(sel, text) {
-  if (!sel) return;
+  if (!sel) return false;
   for (let i = 0; i < sel.options.length; i++) {
     if (sel.options[i].text.toLowerCase().includes(text.toLowerCase())) {
       sel.selectedIndex = i;
       sel.dispatchEvent(new Event('change', { bubbles: true }));
-      return;
+      return true;
     }
   }
+  return false;
 }
 
 function q(...sels) {
@@ -228,7 +229,7 @@ function detectStep() {
 
   if (q('input[placeholder="First Name"]', 'input[id*="FirstName" i]')) return 'profile';
   if (q('input[id*="Username" i]', 'input[placeholder*="Username" i]')) return 'signin';
-  if (q('select[id*="Client" i]', 'select[name*="Client" i]', 'option[value*="IBTA" i]')) return 'prometric';
+  if (q('select') && (text.includes('Prometric Info') || text.includes('Test Provider') || text.includes('Test Provider or Program'))) return 'prometric';
   return null;
 }
 
@@ -237,8 +238,22 @@ async function fillStep1() {
   status('Step 1: Selecting IBTA MEA...');
   const sel = await waitFor(['select']);
   if (!sel) return;
-  await sleep(100);
-  fillSelect(sel, 'IBTA MEA');
+  
+  // Wait up to 5 seconds for "IBTA MEA" option to load dynamically
+  let selected = false;
+  for (let i = 0; i < 25; i++) {
+    if (fillSelect(sel, 'IBTA MEA')) {
+      selected = true;
+      break;
+    }
+    await sleep(200);
+  }
+
+  if (!selected) {
+    status('Error: Option IBTA MEA not found in dropdown', '#d73a49');
+    return;
+  }
+
   await sleep(300); // Turbo: reduced from 2000
   clickContinue();
 }
