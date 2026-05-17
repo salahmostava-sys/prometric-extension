@@ -3,6 +3,7 @@ const DEFAULT_AUTO_RETRY = true;
 const DEFAULT_DESKTOP_NOTIFICATIONS = true;
 const DEFAULT_USER_DELAY = 2;
 let openNextInProgress = false;
+let openNextPending = false;
 
 function makeQueueId(prefix = 'q') {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -123,11 +124,13 @@ async function updateBadge() {
 // OK FIX 2: replaced recursion with iterative loop to prevent stack overflow
 async function openNextTab() {
   if (openNextInProgress) {
-    await addRunLog('Skipped duplicate open-next request', 'warn');
+    openNextPending = true;
+    await addRunLog('Queued duplicate open-next request', 'warn');
     return;
   }
 
   openNextInProgress = true;
+  openNextPending = false;
   try {
     const { queue, queueIndex, isRunning, currentTabId } = await getState();
     if (!isRunning) {
@@ -186,8 +189,7 @@ async function openNextTab() {
         // Start from the first pending item, not always index 0
         const firstPendingIdx = queue.findIndex(i => i.status === 'pending');
         await chrome.storage.local.set({ queue, queueIndex: firstPendingIdx >= 0 ? firstPendingIdx : 0 });
-        openNextInProgress = false;
-        await openNextTab();
+        openNextPending = true;
         return;
       }
 
@@ -212,6 +214,10 @@ async function openNextTab() {
     }
   } finally {
     openNextInProgress = false;
+    if (openNextPending) {
+      openNextPending = false;
+      await openNextTab();
+    }
   }
 }
 
