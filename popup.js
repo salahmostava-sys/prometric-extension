@@ -241,19 +241,18 @@ function genCreds(name) {
   
   let firstName = parts[0];
   let idx = 1;
-  // Fill first name greedily up to 20 chars, ensuring at least 1 word is left for last name
-  while (idx < parts.length - 1 && (firstName.length + 1 + parts[idx].length) <= 20) {
-    firstName += ' ' + parts[idx];
-    idx++;
+  // Fill first name greedily, leaving exactly one last word for last name
+  while (idx < parts.length - 1) {
+     firstName += ' ' + parts[idx];
+     idx++;
   }
   
   let lastName = parts.slice(idx).join(' ');
   
-  // Enforce the hard 20-character limit just in case
-  if (firstName.length > 20) firstName = firstName.substring(0, 20).trim();
-  if (lastName.length > 20) lastName = lastName.substring(0, 20).trim();
+  // Zero truncation! Both names remain 100% complete.
+  const needsBypass = (firstName.length > 20 || lastName.length > 20);
 
-  return { username, password, firstName, lastName };
+  return { username, password, firstName, lastName, needsBypass };
 }
 
 // -- Tabs ---
@@ -352,17 +351,7 @@ const savedCredsPanel = document.getElementById('savedCredsPanel');
 function updateSinglePreview() {
   const c = genCreds(sName.value);
   const emailOk = sEmail.value.trim().length > 0;
-  if (c && emailOk) {
-    scNamePanel.textContent = sName.value.trim();
-    scUserPanel.textContent = c.username;
-    scPassPanel.textContent = c.password;
-    savedCredsPanel.style.display = 'block';
-    sStart.disabled = false;
-  } else {
-    // Re-run loadSavedCreds to show last real credentials if single input is cleared
-    loadSavedCreds();
-    sStart.disabled = true;
-  }
+  sStart.disabled = !(c && emailOk);
 }
 sName.addEventListener('input', updateSinglePreview);
 sEmail.addEventListener('input', updateSinglePreview);
@@ -570,13 +559,13 @@ const queueList     = document.getElementById('queueList');
 const qCount        = document.getElementById('qCount');
 const exportQueueBtn = document.getElementById('exportQueue');
 const bStart         = document.getElementById('bStart');
-const pauseBatchBtn  = document.getElementById('pauseBatchBtn');
-const resumeBatchBtn = document.getElementById('resumeBatchBtn');
-const cancelBatchBtn = document.getElementById('cancelBatchBtn');
+const pauseBatchBtn  = document.getElementById('globalPauseBatch');
+const resumeBatchBtn = document.getElementById('globalResumeBatch');
+const cancelBatchBtn = document.getElementById('globalStopBatch');
 const bMsg          = document.getElementById('bMsg');
-const batchBanner   = document.getElementById('batchBanner');
-const batchSpinner  = document.getElementById('batchSpinner');
-const batchProgress = document.getElementById('batchProgress');
+const batchBanner   = document.getElementById('globalBatchBanner');
+const batchSpinner  = document.getElementById('globalBatchSpinner');
+const batchProgress = document.getElementById('globalBatchProgress');
 const retryFailedBtn = document.getElementById('retryFailed');
 const clearSessionBtn = document.getElementById('clearSession');
 const batchValidation = document.getElementById('batchValidation');
@@ -779,12 +768,13 @@ resumeBatchBtn?.addEventListener('click', async () => {
 cancelBatchBtn?.addEventListener('click', async () => {
   userStopped = true;
   await sendMsg({ action: 'clearSession' });
-  bStart.style.display = 'block';
-  pauseBatchBtn.style.display = 'none';
-  resumeBatchBtn.style.display = 'none';
-  cancelBatchBtn.style.display = 'none';
-  batchSpinner.style.display = 'none';
-  batchBanner.classList.remove('show');
+  if (bStart) bStart.style.display = 'block';
+  if (sStart) sStart.style.display = 'block';
+  if (pauseBatchBtn) pauseBatchBtn.style.display = 'none';
+  if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
+  if (cancelBatchBtn) cancelBatchBtn.style.display = 'none';
+  if (batchSpinner) batchSpinner.style.display = 'none';
+  if (batchBanner) batchBanner.style.display = 'none';
   showMessage(bMsg, 'err', 'Execution stopped and queue cleared.');
 });
 
@@ -826,22 +816,40 @@ let userStopped = false;
 async function pollStatus() {
   const { queue, queueIndex, isRunning, singleRunning, runLogs = [] } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning', 'singleRunning', 'runLogs']);
   renderLogs(runLogs);
+
+  const titleEl = document.getElementById('globalBatchTitle');
   
   // Single Mode UI updates
   if (singleRunning) {
-    singleBanner.classList.add('show');
-    sStart.style.display = 'none';
-    stopSingle.style.display = 'block';
+    if (batchBanner) {
+      batchBanner.style.display = 'flex';
+      batchBanner.style.background = 'rgba(210,153,34,.1)';
+      batchBanner.style.borderColor = 'rgba(210,153,34,.3)';
+    }
+    if (titleEl) {
+      titleEl.textContent = 'Single Registration Running...';
+      titleEl.style.color = 'var(--green)';
+    }
+    if (batchProgress) {
+      batchProgress.style.color = 'var(--yellow)';
+      batchProgress.textContent = 'Automating Prometric registration...';
+    }
+    
+    if (sStart) sStart.style.display = 'none';
+    if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
+    if (pauseBatchBtn) pauseBatchBtn.style.display = 'none';
+    if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
+    if (batchSpinner) batchSpinner.style.display = 'block';
+    userStopped = false;
   } else {
-    singleBanner.classList.remove('show');
-    sStart.style.display = 'block';
-    stopSingle.style.display = 'none';
+    if (sStart) sStart.style.display = 'block';
   }
 
   // Batch Mode UI updates
   if (!queue || queue.length === 0) {
     if (retryFailedBtn) retryFailedBtn.style.display = 'none';
     if (clearSessionBtn) clearSessionBtn.style.display = 'none';
+    if (!singleRunning && batchBanner) batchBanner.style.display = 'none';
     return;
   }
 
@@ -858,7 +866,7 @@ async function pollStatus() {
   }
   if (clearSessionBtn) clearSessionBtn.style.display = queue.length > 0 ? 'block' : 'none';
 
-  if (queue.length > 0) {
+  if (queue.length > 0 && !singleRunning) {
     queue.forEach((item, i) => {
       const dot  = document.getElementById(`qd-${i}`);
       const stat = document.getElementById(`qs-${i}`);
@@ -871,40 +879,56 @@ async function pollStatus() {
       stat.textContent = statusLabel(s);
     });
 
-    if (isRunning && queue.length > 1) { // >1 means it's batch mode
-      batchBanner.classList.add('show');
-      batchBanner.style.background = 'rgba(210,153,34,.1)';
-      batchBanner.style.borderColor = 'rgba(210,153,34,.3)';
-      batchProgress.style.color = 'var(--yellow)';
-      batchProgress.textContent = `Processing ${Math.min(queueIndex + 1, queue.length)} of ${queue.length}...`;
+    if (isRunning) {
+      if (batchBanner) {
+        batchBanner.style.display = 'flex';
+        batchBanner.style.background = 'rgba(210,153,34,.1)';
+        batchBanner.style.borderColor = 'rgba(210,153,34,.3)';
+      }
+      if (titleEl) {
+        titleEl.textContent = 'Batch Registration Running...';
+        titleEl.style.color = 'var(--green)';
+      }
+      if (batchProgress) {
+        batchProgress.style.color = 'var(--yellow)';
+        batchProgress.textContent = `Processing ${Math.min(queueIndex + 1, queue.length)} of ${queue.length}...`;
+      }
       
       bStart.style.display = 'none';
-      resumeBatchBtn.style.display = 'none';
-      pauseBatchBtn.style.display = 'block';
-      cancelBatchBtn.style.display = 'block';
-      batchSpinner.style.display = 'block';
+      if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
+      if (pauseBatchBtn) pauseBatchBtn.style.display = 'block';
+      if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
+      if (batchSpinner) batchSpinner.style.display = 'block';
       if (retryFailedBtn) retryFailedBtn.style.display = 'none';
       userStopped = false;
-    } else if (queue.length > 1) { // Stopped batch mode
+    } else { // Stopped/Paused batch mode
       const pendingItems = queue.slice(queueIndex).filter(it => it.status === 'pending');
       const hasPending   = pendingItems.length > 0 && queueIndex < queue.length;
       
       bStart.style.display = 'none';
-      pauseBatchBtn.style.display = 'none';
-      batchSpinner.style.display = 'none';
+      if (pauseBatchBtn) pauseBatchBtn.style.display = 'none';
+      if (batchSpinner) batchSpinner.style.display = 'none';
       
       if (hasPending) {
-        batchBanner.classList.add('show');
-        batchBanner.style.background = 'rgba(56,139,253,.08)';
-        batchBanner.style.borderColor = 'rgba(56,139,253,.3)';
-        batchProgress.style.color = 'var(--blue)';
-        batchProgress.textContent = `Queue paused - ${pendingItems.length} remaining`;
-        resumeBatchBtn.style.display = 'block';
-        cancelBatchBtn.style.display = 'block';
+        if (batchBanner) {
+          batchBanner.style.display = 'flex';
+          batchBanner.style.background = 'rgba(56,139,253,.08)';
+          batchBanner.style.borderColor = 'rgba(56,139,253,.3)';
+        }
+        if (titleEl) {
+          titleEl.textContent = 'Batch Paused';
+          titleEl.style.color = 'var(--yellow)';
+        }
+        if (batchProgress) {
+          batchProgress.style.color = 'var(--blue)';
+          batchProgress.textContent = `Queue paused - ${pendingItems.length} remaining`;
+        }
+        if (resumeBatchBtn) resumeBatchBtn.style.display = 'block';
+        if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
       } else {
-        batchBanner.classList.remove('show');
-        resumeBatchBtn.style.display = 'none';
-        cancelBatchBtn.style.display = 'none';
+        if (batchBanner) batchBanner.style.display = 'none';
+        if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
+        if (cancelBatchBtn) cancelBatchBtn.style.display = 'none';
         bStart.style.display = 'block';
       }
       const failedCount = queue.filter(it => it.status === 'failed').length;
@@ -981,9 +1005,7 @@ loadHistory();
 
 // -- Saved Credentials Panel ---
 async function loadSavedCreds() {
-  const { savedCreds, isRunning, singleRunning } = await chrome.storage.local.get(['savedCreds', 'isRunning', 'singleRunning']);
-  // Don't overwrite the live preview if user is typing in single mode (unless it's actively running)
-  if (!singleRunning && document.getElementById('pane-single')?.classList.contains('active') && sName.value.trim().length > 0) return;
+  const { savedCreds } = await chrome.storage.local.get(['savedCreds']);
 
   if (savedCreds && savedCreds.username) {
     if (scNamePanel) scNamePanel.textContent = savedCreds.name     || '';
@@ -1339,52 +1361,7 @@ async function checkClipboard() {
   }
 }
 
-// -- Batch Status Banner - shows global progress when running ---
-async function checkBatchStatus() {
-  const { isRunning, queue, queueIndex } = await chrome.storage.local.get(['isRunning', 'queue', 'queueIndex']);
-  const banner = document.getElementById('globalBatchBanner');
-  const progText = document.getElementById('globalBatchProgress');
-  const title = document.getElementById('globalBatchTitle');
-  const pauseBtn = document.getElementById('globalPauseBatch');
-  const resumeBtn = document.getElementById('globalResumeBatch');
-  const stopBtn = document.getElementById('globalStopBatch');
-  const spinner = document.getElementById('globalBatchSpinner');
-  
-  if (!banner || !progText) return;
-
-  if (queue && queue.length > 0) {
-    banner.style.display = 'flex';
-    progText.textContent = `${queueIndex} / ${queue.length} completed`;
-    
-    if (isRunning) {
-      if (title) title.textContent = 'Batch Running...';
-      if (spinner) spinner.style.display = 'block';
-      if (pauseBtn) pauseBtn.style.display = 'block';
-      if (resumeBtn) resumeBtn.style.display = 'none';
-    } else {
-      if (title) title.textContent = 'Batch Paused';
-      if (spinner) spinner.style.display = 'none';
-      if (pauseBtn) pauseBtn.style.display = 'none';
-      if (resumeBtn) resumeBtn.style.display = 'block';
-    }
-  } else {
-    banner.style.display = 'none';
-  }
-}
-
-document.getElementById('globalPauseBatch')?.addEventListener('click', () => {
-  sendMsg({ action: 'stopQueue' });
-});
-document.getElementById('globalResumeBatch')?.addEventListener('click', () => {
-  sendMsg({ action: 'resumeQueue' });
-});
-document.getElementById('globalStopBatch')?.addEventListener('click', () => {
-  sendMsg({ action: 'clearSession' });
-});
-
 // Poll every second
 setInterval(checkClipboard, 1000);
-setInterval(checkBatchStatus, 1000);
 checkClipboard();
-checkBatchStatus();
 loadSettings();

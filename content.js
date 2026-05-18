@@ -436,8 +436,6 @@ async function fillStep2(creds) {
   document.querySelectorAll('input[placeholder*="Question Answered" i],input[id*="Answer" i],input[name*="Answer" i]')
     .forEach(inp => { if (inp.offsetParent) { inp.focus(); setVal(inp, DEFAULT_ANSWER); } });
 
-  await sleep(200);
-
   // Blur all to trigger validators
   [...document.querySelectorAll('input,select')].forEach(el => { if (el.offsetParent) blurEl(el); });
 
@@ -467,9 +465,18 @@ async function fillStep3(creds) {
   ]);
   if (!fnEl) { failStep('First Name field not found', 'missing-field', true); return; }
 
+  const lnEl = q('input[placeholder="Last Name"]', 'input[id*="LastName" i]');
+  
+  if (creds.needsBypass || (creds.firstName && creds.firstName.length > 20) || (creds.lastName && creds.lastName.length > 20)) {
+    status('Smart Mode: Bypassing site character limit...');
+    if (fnEl) fnEl.removeAttribute('maxlength');
+    if (lnEl) lnEl.removeAttribute('maxlength');
+    await sleep(100);
+  }
+
   await sleep(200);
   setVal(fnEl, creds.firstName);
-  setVal(q('input[placeholder="Last Name"]', 'input[id*="LastName" i]'), creds.lastName);
+  setVal(lnEl, creds.lastName);
   setVal(q('input[placeholder="Mailing Address"]', 'input[id*="Address1" i]'), creds.mailingAddress || 'Al-Alameya');
   setVal(q('input[placeholder="City"]', 'input[id*="City" i]'), creds.city || 'JEDDAH');
   setVal(q('input[placeholder="State/Province"]', 'input[id*="State" i]'), creds.state || 'JEDDAH');

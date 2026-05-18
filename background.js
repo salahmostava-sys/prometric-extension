@@ -63,7 +63,6 @@ async function keepRegistrationTabAlive(tabId) {
     await chrome.tabs.update(tabId, { autoDiscardable: false });
   } catch (_) {}
 }
-
 async function buildCredentials(item) {
   const parts = (item.name || '').trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
@@ -85,19 +84,18 @@ async function buildCredentials(item) {
   
   let firstName = parts[0];
   let idx = 1;
-  // Fill first name greedily up to 20 chars, ensuring at least 1 word is left for last name
-  while (idx < parts.length - 1 && (firstName.length + 1 + parts[idx].length) <= 20) {
+  // Fill first name greedily, leaving exactly one last word for last name
+  while (idx < parts.length - 1) {
     firstName += ' ' + parts[idx];
     idx++;
   }
   
   let lastName = parts.slice(idx).join(' ');
   
-  // Enforce the hard 20-character limit just in case
-  if (firstName.length > 20) firstName = firstName.substring(0, 20).trim();
-  if (lastName.length > 20) lastName = lastName.substring(0, 20).trim();
+  // Zero truncation! Both names remain 100% complete.
+  const needsBypass = (firstName.length > 20 || lastName.length > 20);
 
-  return { username, password, firstName, lastName };
+  return { username, password, firstName, lastName, needsBypass };
 }
 
 // Automatically stop the extension if the user closes the active registration tab

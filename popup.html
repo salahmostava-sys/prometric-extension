@@ -224,11 +224,6 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 
 <!-- -- SINGLE PANE -- -->
 <div class="pane active" id="pane-single">
-  <div class="running-banner" id="singleBanner">
-    <div class="spinner"></div>
-    <span style="flex:1">Registration in progress...</span>
-    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0" id="stopSingle">Stop</button>
-  </div>
 
   <div class="field">
     <label>Full Name</label>
@@ -263,14 +258,6 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 
 <!-- -- BATCH PANE -- -->
 <div class="pane" id="pane-batch">
-
-  <div class="banner running-banner" id="batchBanner">
-    <div class="spinner" id="batchSpinner"></div>
-    <span id="batchProgress" style="flex:1">Batch registration in progress...</span>
-    <button class="btn" style="width:auto;padding:4px 12px;margin:0;background:var(--yellow);color:#fff" id="pauseBatchBtn">Pause</button>
-    <button class="btn btn-blue" style="width:auto;padding:4px 12px;margin:0;display:none" id="resumeBatchBtn">Resume</button>
-    <button class="btn btn-red" style="width:auto;padding:4px 12px;margin:0;margin-left:4px" id="cancelBatchBtn">Stop</button>
-  </div>
 
   <div class="upload-header">
     <span>Data File</span>
@@ -322,16 +309,6 @@ body{width:550px;min-height:560px;background:var(--bg);color:var(--text);font-fa
 
 <!-- -- PANE 3: Google Sheet -- -->
 <div class="pane" id="pane-sheet">
-  <div class="running-banner" id="sheetBanner">
-    <div class="spinner"></div>
-    <div style="flex:1">
-      <div style="font-weight:700;color:var(--text);margin-bottom:2px">Fetching & Starting...</div>
-      <div style="color:var(--muted)">Downloading data from Google Sheets</div>
-    </div>
-  </div>
-
-
-
   <div class="field">
     <label>Google Sheet URL</label>
     <div style="display:flex;gap:8px">
