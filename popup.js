@@ -344,8 +344,6 @@ const sName        = document.getElementById('sName');
 const sEmail       = document.getElementById('sEmail');
 const sStart       = document.getElementById('sStart');
 const sMsg         = document.getElementById('sMsg');
-const singleBanner = document.getElementById('singleBanner');
-const stopSingle   = document.getElementById('stopSingle'); // <- explicit ref (used in pollStatus)
 
 const scNamePanel = document.getElementById('scName');
 const scUserPanel = document.getElementById('scUser');
@@ -385,20 +383,8 @@ sStart.addEventListener('click', async () => {
   sMsg.className = 'msg ok';
   sMsg.textContent = 'OK Opened! Filling in progress...';
   sMsg.style.display = 'block';
-  singleBanner.classList.add('show');
   
   sStart.style.display = 'none';
-});
-
-document.getElementById('stopSingle').addEventListener('click', async () => {
-  await sendMsg({ action: 'stopQueue' });
-  singleBanner.classList.remove('show');
-  
-  sStart.style.display = 'block';
-  
-  sMsg.className = 'msg err';
-  sMsg.textContent = 'Stop Registration stopped by user.';
-  sMsg.style.display = 'block';
 });
 
 // -- BATCH MODE - CSV/Excel parser ---
