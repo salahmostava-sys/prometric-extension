@@ -221,8 +221,12 @@ async function clearCurrentSession() {
 function genCreds(name) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
-  if (parts.length === 1) parts.push(parts[0]); // handle single word names
-  const username = (parts[0] + parts[1]).toUpperCase();
+  
+  // Clean parts to keep only alphabetical letters for the username
+  const cleanedParts = parts.map(p => p.replace(/[^A-Za-z]/g, '')).filter(Boolean);
+  const uPart1 = cleanedParts[0] || 'USER';
+  const uPart2 = cleanedParts[1] || uPart1;
+  const username = (uPart1 + uPart2).toUpperCase();
   
   // Password generation from pattern
   const patternInput = document.getElementById('passPattern');
