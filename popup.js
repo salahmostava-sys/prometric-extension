@@ -362,12 +362,9 @@ sStart.addEventListener('click', async () => {
   const c = genCreds(sName.value);
   if (!c) return;
   if (!(await confirmReplaceRunning())) return;
-  // FIX #3: Don't pre-store the generated username — it may change if the name is
-  // already taken. The real finalUsername is stored by background.js on stepDone.
-  // We only store name + password so the panel shows something useful immediately.
-  await chrome.storage.local.set({
-    savedCreds: { username: '', password: c.password, name: sName.value.trim() }
-  });
+  // Do NOT pre-save savedCreds here — the panel should only appear once
+  // registration fully completes. background.js saves the real finalUsername
+  // via stepDone, which is the only moment we want the panel to show.
   const { defAddress, defCity, defState, defPostal, defCountry } = await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
   
   await sendMsg({
@@ -1013,11 +1010,10 @@ loadHistory();
 async function loadSavedCreds() {
   const { savedCreds } = await chrome.storage.local.get(['savedCreds']);
 
-  // FIX #3 follow-up: Show panel when name exists even if username is still blank
-  // (username is empty during registration and gets filled in by stepDone)
-  if (savedCreds && savedCreds.name) {
+  // Only show after registration completes (username is filled by stepDone in background.js)
+  if (savedCreds && savedCreds.username) {
     if (scNamePanel) scNamePanel.textContent = savedCreds.name     || '';
-    if (scUserPanel) scUserPanel.textContent = savedCreds.username || '(registering...)';
+    if (scUserPanel) scUserPanel.textContent = savedCreds.username || '';
     if (scPassPanel) scPassPanel.textContent = savedCreds.password || '';
     if (savedCredsPanel) savedCredsPanel.style.display = 'block';
   } else {
