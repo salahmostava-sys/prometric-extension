@@ -816,10 +816,9 @@ window.addEventListener('__prom_init', e => {
   if (e.detail && e.detail.defAnswer !== undefined) DEFAULT_ANSWER = e.detail.defAnswer;
   if (e.detail && e.detail.isRunning !== undefined) GLOBAL_RUNNING = e.detail.isRunning;
   if (e.detail && e.detail.singleRunning !== undefined) GLOBAL_SINGLE = e.detail.singleRunning;
-  // FIX #9: Stop the observer if both flags turned off (paused/stopped from popup)
-  if (!GLOBAL_RUNNING && !GLOBAL_SINGLE && observer) {
-    observer.disconnect();
-    observer = null;
-  }
+  // NOTE: We intentionally do NOT disconnect the observer here — this event
+  // fires on Pause too, and disconnecting would prevent Resume from working
+  // (the page wouldn't react to DOM changes after resumption).
+  // The observer callback already has a GLOBAL_RUNNING/GLOBAL_SINGLE guard.
 });
 run().catch(e => { status('Error ' + e.message, '#d73a49'); });
