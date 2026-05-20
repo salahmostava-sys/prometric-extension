@@ -71,8 +71,9 @@ window.addEventListener('__prom_msg', async (e) => {
   }
 
   if (action === 'pauseBatch') {
+    // FIX #1: Only pause batch (isRunning), never touch singleRunning.
+    // Sending 'stopQueue' to background also resets singleRunning, which is wrong.
     await chrome.storage.local.set({ isRunning: false });
-    await sendToBackground({ action: 'stopQueue' });
   }
   if (action === 'resumeBatch') {
     await chrome.storage.local.set({ isRunning: true });
@@ -109,12 +110,15 @@ window.addEventListener('__prom_ready', () => {
 // Also re-send if storage changes (for future items in batch)
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.currentItem || changes.isRunning || changes.singleRunning || changes.pageDelay || changes.autoSubmit || changes.defAnswer || changes.stabilityMode) {
-    chrome.storage.local.get(['isRunning', 'singleRunning', 'currentItem', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode']).then(state => {
+    // FIX #8: Include queue and queueIndex so isLast stays fresh
+    chrome.storage.local.get(['isRunning', 'singleRunning', 'currentItem', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex']).then(state => {
+      const isLast = state.isRunning && state.queue && state.queueIndex === state.queue.length - 1;
       window.dispatchEvent(new CustomEvent('__prom_init', {
         detail: { 
           currentItem: state.currentItem || null, 
           isRunning: state.isRunning, 
           singleRunning: state.singleRunning,
+          isLast,
           pageDelay: state.pageDelay ?? DEFAULT_PAGE_DELAY,
           autoSubmit: state.autoSubmit ?? false,
           stabilityMode: state.stabilityMode ?? false,

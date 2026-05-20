@@ -304,14 +304,14 @@ async function fillStep2(creds) {
           t.includes('username already found') ||
           t.includes('already found, please') ||
           t.includes('username already exists') ||
-          t.includes('already in use')
+          t.includes('already in use') ||
+          t.includes('username is not available') ||
+          t.includes('not available')
         );
       });
       if (taken) return true;
-      // Also check if the field border turned red (CSS validation)
-      const style = window.getComputedStyle(userEl);
-      const borderColor = style.borderColor || style.border || '';
-      if (borderColor.includes('255, 0') || borderColor.includes('rgb(255,0') || borderColor.includes('f85149')) return true;
+      // FIX #6: Removed brittle CSS border-color check — it breaks whenever
+      // Prometric updates their stylesheet. Text-based detection above is reliable.
     }
     return false; // no error found -> name is available
   }
@@ -796,8 +796,12 @@ async function run() {
   else failStep('Could not detect registration step', 'page', true);
 
   // Watch for UpdatePanel (AJAX) step changes
+  // FIX #9: Disconnect any previous observer before creating a new one
+  if (observer) { observer.disconnect(); observer = null; }
   observer = new MutationObserver(async () => {
     if (filling) return;
+    // Also stop observing if the extension was paused/stopped after page load
+    if (!GLOBAL_RUNNING && !GLOBAL_SINGLE) return;
     const s = detectStep();
     if (s && s !== filledStep && currentItem) await handleStep(s);
   });
@@ -812,5 +816,10 @@ window.addEventListener('__prom_init', e => {
   if (e.detail && e.detail.defAnswer !== undefined) DEFAULT_ANSWER = e.detail.defAnswer;
   if (e.detail && e.detail.isRunning !== undefined) GLOBAL_RUNNING = e.detail.isRunning;
   if (e.detail && e.detail.singleRunning !== undefined) GLOBAL_SINGLE = e.detail.singleRunning;
+  // FIX #9: Stop the observer if both flags turned off (paused/stopped from popup)
+  if (!GLOBAL_RUNNING && !GLOBAL_SINGLE && observer) {
+    observer.disconnect();
+    observer = null;
+  }
 });
 run().catch(e => { status('Error ' + e.message, '#d73a49'); });

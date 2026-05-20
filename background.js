@@ -324,7 +324,9 @@ async function handleMessage(msg, sender) {
     if (isRunning) {
       const delay = Math.max(Number(userDelay) || DEFAULT_USER_DELAY, stabilityMode ? 3 : 0);
       await new Promise(r => setTimeout(r, delay * 1000));
-      await openNextTab();
+      // FIX #2: Re-check isRunning after delay — a stop command may have arrived during the wait
+      const { isRunning: stillRunning } = await chrome.storage.local.get(['isRunning']);
+      if (stillRunning) await openNextTab();
     } else {
       // Must be single mode, turn it off
       await chrome.storage.local.set({ singleRunning: false });

@@ -362,8 +362,11 @@ sStart.addEventListener('click', async () => {
   const c = genCreds(sName.value);
   if (!c) return;
   if (!(await confirmReplaceRunning())) return;
+  // FIX #3: Don't pre-store the generated username — it may change if the name is
+  // already taken. The real finalUsername is stored by background.js on stepDone.
+  // We only store name + password so the panel shows something useful immediately.
   await chrome.storage.local.set({
-    savedCreds: { username: c.username, password: c.password, name: sName.value.trim() }
+    savedCreds: { username: '', password: c.password, name: sName.value.trim() }
   });
   const { defAddress, defCity, defState, defPostal, defCountry } = await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
   
@@ -603,15 +606,19 @@ async function handleFile(file) {
     return;
   }
 
+  // FIX #4: Read saved settings instead of using hardcoded defaults.
+  const { defAddress, defCity, defState, defPostal, defCountry } =
+    await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
+
   batchItems = rows.map(r => ({
     name:           (r[0] || '').trim(),
     email:          (r[1] || '').trim(),
     status:         'pending',
-    mailingAddress: 'Al-Alameya',
-    city:           'JEDDAH',
-    state:          'JEDDAH',
-    postalCode:     '00000',
-    country:        'Saudi Arabia'
+    mailingAddress: defAddress || 'Al-Alameya',
+    city:           defCity    || 'JEDDAH',
+    state:          defState   || 'JEDDAH',
+    postalCode:     defPostal  || '00000',
+    country:        defCountry || 'Saudi Arabia'
   })).filter(i => i.name);
 
   const stats = validateBatchItems(batchItems);
@@ -861,9 +868,18 @@ async function pollStatus() {
       const dot  = document.getElementById(`qd-${i}`);
       const stat = document.getElementById(`qs-${i}`);
       if (!dot || !stat) return;
-      const s = i < queueIndex       ? (item.status || 'done')
-              : i === queueIndex && isRunning ? 'running'
-              : 'pending';
+      // FIX #5: Prioritise the stored item.status so 'failed'/'done' items
+      // are never re-labelled as 'running' just because of queue index position.
+      let s;
+      if (item.status === 'done' || item.status === 'failed') {
+        s = item.status;
+      } else if (i === queueIndex && isRunning) {
+        s = 'running';
+      } else if (i < queueIndex) {
+        s = item.status || 'done';
+      } else {
+        s = 'pending';
+      }
       dot.className  = `q-dot ${s}`;
       stat.className = `q-status ${s}`;
       stat.textContent = statusLabel(s);
@@ -997,9 +1013,11 @@ loadHistory();
 async function loadSavedCreds() {
   const { savedCreds } = await chrome.storage.local.get(['savedCreds']);
 
-  if (savedCreds && savedCreds.username) {
+  // FIX #3 follow-up: Show panel when name exists even if username is still blank
+  // (username is empty during registration and gets filled in by stepDone)
+  if (savedCreds && savedCreds.name) {
     if (scNamePanel) scNamePanel.textContent = savedCreds.name     || '';
-    if (scUserPanel) scUserPanel.textContent = savedCreds.username || '';
+    if (scUserPanel) scUserPanel.textContent = savedCreds.username || '(registering...)';
     if (scPassPanel) scPassPanel.textContent = savedCreds.password || '';
     if (savedCredsPanel) savedCredsPanel.style.display = 'block';
   } else {
