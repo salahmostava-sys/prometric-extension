@@ -240,15 +240,9 @@ function detectStep() {
   if (text.includes('Sign Out') && text.includes('Update Information')) return 'dashboard';
 
   // Policy page: has "I AGREE" checkbox or "I Consent" radio
-  if (document.querySelector('input[type="checkbox"]') &&
-    [...document.querySelectorAll('*')].some(el =>
-      el.childElementCount === 0 &&
-      (el.textContent || '').trim() === 'I AGREE'
-    )) return 'policy';
-  if ([...document.querySelectorAll('h2,h3,h4,b,strong,div')].some(el =>
-    el.childElementCount === 0 &&
-    (el.textContent || '').includes('PERSONAL DATA PRIVACY')
-  )) return 'policy';
+  // Check for keywords in body text first as a quick and highly efficient bypass.
+  if (text.includes('I AGREE') && document.querySelector('input[type="checkbox"]')) return 'policy';
+  if (text.includes('PERSONAL DATA PRIVACY') || text.includes('I Consent')) return 'policy';
 
   if (q('input[placeholder="First Name"]', 'input[id*="FirstName" i]')) return 'profile';
   if (q('input[id*="Username" i]', 'input[placeholder*="Username" i]')) return 'signin';
@@ -295,19 +289,24 @@ async function fillStep2(creds) {
   // Dynamic wait: polls up to 4s for server validation response
   async function waitForUsernameValidation(maxMs = 4000) {
     const t0 = Date.now();
+    const errorKeywords = [
+      'username already found',
+      'already found, please',
+      'username already exists',
+      'already in use',
+      'username is not available',
+      'not available'
+    ];
     while (Date.now() - t0 < maxMs) {
       await sleep(150); // Turbo: reduced from 300
+      const bodyText = (document.body.textContent || '').toLowerCase();
+      const hasPossibleError = errorKeywords.some(kw => bodyText.includes(kw));
+      if (!hasPossibleError) continue;
+
       const taken = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
         if (!el.offsetParent || el.childElementCount > 0) return false;
         const t = (el.textContent || '').toLowerCase().trim();
-        return (
-          t.includes('username already found') ||
-          t.includes('already found, please') ||
-          t.includes('username already exists') ||
-          t.includes('already in use') ||
-          t.includes('username is not available') ||
-          t.includes('not available')
-        );
+        return errorKeywords.some(kw => t.includes(kw));
       });
       if (taken) return true;
       // FIX #6: Removed brittle CSS border-color check — it breaks whenever

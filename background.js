@@ -86,9 +86,12 @@ async function getRegistrationTabId(url) {
   }
   // Create a fresh minimized window
   const win = await chrome.windows.create({ url, state: 'minimized', focused: false });
-  const tabId = win.tabs[0].id;
-  await keepRegistrationTabAlive(tabId);
-  await chrome.storage.local.set({ currentTabId: tabId, regWindowId: win.id });
+  const tabs = win.tabs || await chrome.tabs.query({ windowId: win.id });
+  const tabId = (tabs && tabs.length > 0) ? tabs[0].id : null;
+  if (tabId) {
+    await keepRegistrationTabAlive(tabId);
+    await chrome.storage.local.set({ currentTabId: tabId, regWindowId: win.id });
+  }
   return tabId;
 }
 
@@ -355,15 +358,26 @@ async function handleMessage(msg, sender) {
       }
     });
 
+
+    // OK FIX 5: update savedCreds with the REAL finalUsername after registration
+    await chrome.storage.local.set({
+      savedCreds: {
+        name:     msg.name          || '',
+        username: msg.finalUsername || '',
+        password: msg.password      || ''
+      }
+    });
+
     // If batch mode, open next tab after delay
     await chrome.storage.local.set({ currentProcessingId: '' });
     const { isRunning, userDelay = DEFAULT_USER_DELAY, stabilityMode = DEFAULT_STABILITY_MODE } = await chrome.storage.local.get(['isRunning', 'userDelay', 'stabilityMode']);
     if (isRunning) {
       const delay = Math.max(Number(userDelay) || DEFAULT_USER_DELAY, stabilityMode ? 3 : 0);
-      await new Promise(r => setTimeout(r, delay * 1000));
-      // FIX #2: Re-check isRunning after delay — a stop command may have arrived during the wait
-      const { isRunning: stillRunning } = await chrome.storage.local.get(['isRunning']);
-      if (stillRunning) await openNextTab();
+      setTimeout(async () => {
+        // FIX #2: Re-check isRunning after delay — a stop command may have arrived during the wait
+        const { isRunning: stillRunning } = await chrome.storage.local.get(['isRunning']);
+        if (stillRunning) await openNextTab();
+      }, delay * 1000);
     } else {
       // Must be single mode, turn it off
       await chrome.storage.local.set({ singleRunning: false });

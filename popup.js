@@ -1117,7 +1117,7 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
   const url = document.getElementById('sheetUrl').value.trim();
   await chrome.storage.local.set({ sheetUrl: url });
   
-  const m = url.match(/\/d\/(.*?)\//);
+  const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
   if (!m) return showSheetError('Invalid Google Sheet URL. Make sure you copy the full link.');
   const id = m[1];
   
@@ -1217,8 +1217,15 @@ function renderSheetPreview() {
   }
 
   wrap.style.display = 'block';
-  document.getElementById('sheetStart').disabled = false;
+  const stats = validateBatchItems(items);
+  document.getElementById('sheetStart').disabled = items.length === 0 || stats.hasBlockingIssues;
   count.textContent = `${items.length} Names Found`;
+  
+  if (stats.hasBlockingIssues) {
+    showSheetError(`Sheet check: ${stats.missingEmail} missing email, ${stats.invalidEmail} invalid email.`);
+  } else {
+    showSheetError('');
+  }
 
   // Limit preview to 100 items to avoid lagging the popup
   const previewItems = items.slice(0, 100);
@@ -1289,8 +1296,24 @@ document.getElementById('sheetStart')?.addEventListener('click', async () => {
     country:        defCountry || 'Saudi Arabia'
   }));
 
+  userStopped = false;
   await sendMsg({ action: 'startQueue', items });
-  window.close();
+  if (batchBanner) batchBanner.classList.add('show');
+  
+  // Switch control button displays
+  if (bStart) bStart.style.display = 'none';
+  if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
+  if (pauseBatchBtn) pauseBatchBtn.style.display = 'block';
+  if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
+  if (batchSpinner) batchSpinner.style.display = 'block';
+  
+  const sheetMsgEl = document.getElementById('sheetMsg');
+  if (sheetMsgEl) {
+    showMessage(sheetMsgEl, 'ok', `Started ${items.length} registrations.`);
+    if (stats.exactDuplicates) {
+      showMessage(sheetMsgEl, 'ok', `Started ${items.length - stats.exactDuplicates} registrations. Removed ${stats.exactDuplicates} exact duplicate row(s).`);
+    }
+  }
 });
 
 // Build day filter checkboxes from selected column
