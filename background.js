@@ -500,30 +500,9 @@ async function handleMessage(msg, sender) {
 
 // -- Context Menu (Icon Dropdown) ---
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "pause_queue",
-    title: "Pause Registration",
-    contexts: ["action"]
-  });
-  chrome.contextMenus.create({
-    id: "resume_queue",
-    title: "Resume Registration",
-    contexts: ["action"]
-  });
-  chrome.contextMenus.create({
-    id: "stop_clear",
-    title: "Stop & Clear Queue",
-    contexts: ["action"]
-  });
-});
-
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === "pause_queue") {
-    await chrome.storage.local.set({ isRunning: false, singleRunning: false });
-    await updateBadge();
-  } else if (info.menuItemId === "resume_queue") {
-    contexts: ["action"]
-  });
+  chrome.contextMenus.create({ id: "pause_queue", title: "Pause Registration", contexts: ["action"] });
+  chrome.contextMenus.create({ id: "resume_queue", title: "Resume Registration", contexts: ["action"] });
+  chrome.contextMenus.create({ id: "stop_clear", title: "Stop & Clear Queue", contexts: ["action"] });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {

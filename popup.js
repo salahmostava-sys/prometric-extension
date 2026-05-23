@@ -6,7 +6,7 @@ if (versionBadge) versionBadge.textContent = 'v' + version;
 const DEFAULT_SETTINGS = {
   pageDelay: 1,
   userDelay: 2,
-  autoSubmit: false,
+  autoSubmit: true,   // Auto-complete without user clicking — credentials saved to popup
   autoRetry: true,
   stabilityMode: false,
   desktopNotifications: true,
