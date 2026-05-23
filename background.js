@@ -358,16 +358,6 @@ async function handleMessage(msg, sender) {
       }
     });
 
-
-    // OK FIX 5: update savedCreds with the REAL finalUsername after registration
-    await chrome.storage.local.set({
-      savedCreds: {
-        name:     msg.name          || '',
-        username: msg.finalUsername || '',
-        password: msg.password      || ''
-      }
-    });
-
     // If batch mode, open next tab after delay
     await chrome.storage.local.set({ currentProcessingId: '' });
     const { isRunning, userDelay = DEFAULT_USER_DELAY, stabilityMode = DEFAULT_STABILITY_MODE } = await chrome.storage.local.get(['isRunning', 'userDelay', 'stabilityMode']);
