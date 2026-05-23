@@ -63,6 +63,55 @@ async function keepRegistrationTabAlive(tabId) {
     await chrome.tabs.update(tabId, { autoDiscardable: false });
   } catch (_) {}
 }
+
+// -- Dedicated registration window ------------------------------------------
+// Runs in a MINIMIZED window so it stays out of the user's way.
+// Because the tab IS the active tab of that window, Chrome does NOT throttle
+// its timers — giving full speed without the user needing to watch the tab.
+async function getRegistrationTabId(url) {
+  const { regWindowId } = await chrome.storage.local.get(['regWindowId']);
+  if (regWindowId) {
+    try {
+      const win = await chrome.windows.get(regWindowId, { populate: true });
+      if (win && win.tabs && win.tabs.length > 0) {
+        const tabId = win.tabs[0].id;
+        await chrome.tabs.update(tabId, { url });
+        await keepRegistrationTabAlive(tabId);
+        await chrome.storage.local.set({ currentTabId: tabId });
+        return tabId;
+      }
+    } catch (_) {
+      await chrome.storage.local.remove('regWindowId');
+    }
+  }
+  // Create a fresh minimized window
+  const win = await chrome.windows.create({ url, state: 'minimized', focused: false });
+  const tabId = win.tabs[0].id;
+  await keepRegistrationTabAlive(tabId);
+  await chrome.storage.local.set({ currentTabId: tabId, regWindowId: win.id });
+  return tabId;
+}
+
+async function closeRegistrationWindow() {
+  const { regWindowId } = await chrome.storage.local.get(['regWindowId']);
+  if (regWindowId) {
+    try { await chrome.windows.remove(regWindowId); } catch (_) {}
+    await chrome.storage.local.remove('regWindowId');
+  }
+}
+
+// Clear regWindowId if the user closes the window manually
+chrome.windows.onRemoved.addListener(async (windowId) => {
+  const { regWindowId } = await chrome.storage.local.get(['regWindowId']);
+  if (windowId === regWindowId) {
+    await chrome.storage.local.remove('regWindowId');
+    // Also stop any running process
+    const { isRunning, singleRunning } = await chrome.storage.local.get(['isRunning', 'singleRunning']);
+    if (isRunning || singleRunning) {
+      await chrome.storage.local.set({ isRunning: false, singleRunning: false });
+    }
+  }
+});
 async function buildCredentials(item) {
   const parts = (item.name || '').trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
@@ -179,20 +228,8 @@ async function openNextTab() {
           currentProcessingId: queue[newIdx]._queueId
         });
         await addRunLog(`Processing: ${queue[newIdx].name || 'Unnamed'}`, 'running');
-        if (currentTabId) {
-          try {
-            await chrome.tabs.update(currentTabId, { url: START_URL, active: false });
-            await keepRegistrationTabAlive(currentTabId);
-          } catch (e) {
-            const tab = await chrome.tabs.create({ url: START_URL, active: false });
-            await keepRegistrationTabAlive(tab.id);
-            await chrome.storage.local.set({ currentTabId: tab.id });
-          }
-        } else {
-          const tab = await chrome.tabs.create({ url: START_URL, active: false });
-          await keepRegistrationTabAlive(tab.id);
-          await chrome.storage.local.set({ currentTabId: tab.id });
-        }
+        // Open/reuse the dedicated minimized registration window
+        await getRegistrationTabId(START_URL);
       }
     } else {
       // End of queue
@@ -385,17 +422,12 @@ async function handleMessage(msg, sender) {
       activeQueueId,
       currentProcessingId: item._queueId
     });
-    const tab = await chrome.tabs.create({ url: START_URL, active: false });
-    await keepRegistrationTabAlive(tab.id);
-    await chrome.storage.local.set({ currentTabId: tab.id });
+    await getRegistrationTabId(START_URL);
   }
 
   if (msg.action === 'startQueue') {
-    // Cleanup CLEANUP: Close existing registration tab if any
-    const { currentTabId } = await getState();
-    if (currentTabId) {
-      try { await chrome.tabs.remove(currentTabId); } catch(e) {}
-    }
+    // Close existing registration window (if any) before starting fresh
+    await closeRegistrationWindow();
     
     const { unique, skipped } = dedupeItems(msg.items);
     const activeQueueId = makeQueueId('run');
@@ -459,11 +491,8 @@ async function handleMessage(msg, sender) {
   }
 
   if (msg.action === 'clearSession') {
-    const { currentTabId } = await getState();
-    if (currentTabId) {
-      try { await chrome.tabs.remove(currentTabId); } catch(e) {}
-    }
-    await chrome.storage.local.remove(['queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'currentTabId', 'copiedCreds', 'savedCreds', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped']);
+    await closeRegistrationWindow();
+    await chrome.storage.local.remove(['queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'currentTabId', 'copiedCreds', 'savedCreds', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped', 'regWindowId']);
     await chrome.storage.local.set({ runLogs: [] });
     await updateBadge();
   }
@@ -493,14 +522,24 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     await chrome.storage.local.set({ isRunning: false, singleRunning: false });
     await updateBadge();
   } else if (info.menuItemId === "resume_queue") {
+    contexts: ["action"]
+  });
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === "pause_queue") {
+    await chrome.storage.local.set({ isRunning: false, singleRunning: false });
+    await updateBadge();
+  } else if (info.menuItemId === "resume_queue") {
     const { queue, queueIndex } = await getState();
     if (queue && queueIndex < queue.length) {
       await chrome.storage.local.set({ isRunning: true });
       await openNextTab();
     }
   } else if (info.menuItemId === "stop_clear") {
+    await closeRegistrationWindow();
     await chrome.storage.local.set({ isRunning: false, singleRunning: false, queue: [], queueIndex: 0, runLogs: [] });
-    await chrome.storage.local.remove(['currentItem', 'currentTabId', 'copiedCreds', 'savedCreds', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped']);
+    await chrome.storage.local.remove(['currentItem', 'currentTabId', 'copiedCreds', 'savedCreds', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped', 'regWindowId']);
     await updateBadge();
   }
 });
