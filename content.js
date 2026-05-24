@@ -593,49 +593,46 @@ async function handleDashboard(creds) {
   // -- Overlay ---
   const card = document.createElement('div');
   card.id = '__prom_card';
-  card.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2147483646;display:flex;align-items:center;justify-content:center';
+  card.style.cssText = 'position:fixed;inset:0;background:rgba(9, 13, 22, 0.85);backdrop-filter:blur(10px);z-index:2147483646;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
 
   // -- Box - wider & taller ---
   const box = document.createElement('div');
-  box.style.cssText = [
-    'background:#0d1117',
-    'border:2px solid #3fb950',
-    'border-radius:16px',
-    'padding:32px 36px',
-    'min-width:440px',
-    'max-width:540px',
-    'width:92vw',
-    'font-family:sans-serif',
-    'color:#e6edf3',
-    'box-shadow:0 12px 48px rgba(0,0,0,.65)'
-  ].join(';');
+  box.style.cssText = 'background:rgba(22, 27, 34, 0.8);border:1px solid rgba(240, 246, 252, 0.1);border-radius:20px;padding:32px 36px;min-width:440px;max-width:540px;width:92vw;color:#f0f6fc;box-shadow:0 24px 64px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:12px;backdrop-filter:blur(8px)';
 
   const btnLabel = isBatch ? 'Copy & Continue' : 'Copy & Finish';
 
   box.innerHTML = `
-    <div style="color:#3fb950;font-size:26px;font-weight:800;margin-bottom:22px;text-align:center;letter-spacing:-.3px">
+    <div style="color:#2ea043;font-size:26px;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:-.3px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent">
       OK Registration Complete!
     </div>
 
-    <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:12px">
-      <div style="color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Name</div>
-      <div style="font-weight:700;font-size:15px">${escapeHtml(creds.firstName)} ${escapeHtml(creds.lastName)}</div>
+    <div style="background:rgba(33, 38, 45, 0.4);border:1px solid rgba(240,246,252,0.06);border-radius:12px;padding:14px 18px">
+      <div style="color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700">Name</div>
+      <div style="font-weight:700;font-size:15px;color:#f0f6fc">${escapeHtml(creds.firstName)} ${escapeHtml(creds.lastName)}</div>
     </div>
 
-    <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:12px">
-      <div style="color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Username</div>
-      <div style="font-weight:700;color:#3fb950;font-family:monospace;font-size:16px;word-break:break-all">${escapeHtml(user)}</div>
+    <div style="background:rgba(33, 38, 45, 0.4);border:1px solid rgba(240,246,252,0.06);border-radius:12px;padding:14px 18px">
+      <div style="color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700">Username</div>
+      <div style="font-weight:700;color:#58a6ff;font-family:monospace;font-size:16px;word-break:break-all">${escapeHtml(user)}</div>
     </div>
 
-    <div style="background:#161b22;border-radius:10px;padding:16px 18px;margin-bottom:26px">
-      <div style="color:#7d8590;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Password</div>
-      <div style="font-weight:700;font-family:monospace;font-size:16px">${escapeHtml(creds.password)}</div>
+    <div style="background:rgba(33, 38, 45, 0.4);border:1px solid rgba(240,246,252,0.06);border-radius:12px;padding:14px 18px;margin-bottom:10px">
+      <div style="color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700">Password</div>
+      <div style="font-weight:700;font-family:monospace;font-size:16px;color:#f0f6fc">${escapeHtml(creds.password)}</div>
+    </div>
+
+    <div id="__prom_countdown_container" style="display:none;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;font-size:12px;color:#8b949e">
+      <svg width="18" height="18" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="8" fill="none" stroke="rgba(88,166,255,0.15)" stroke-width="2"/>
+        <circle id="__prom_countdown_circle" cx="10" cy="10" r="8" fill="none" stroke="#58a6ff" stroke-width="2" stroke-dasharray="50" stroke-dashoffset="0" stroke-linecap="round" style="transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset 0.1s linear"/>
+      </svg>
+      <span id="__prom_countdown_text">Auto-continuing in 2.0s...</span>
     </div>
 
     <button id="__prom_action"
-      style="width:100%;padding:15px;background:#2ea043;border:none;color:#fff;
-             border-radius:10px;cursor:pointer;font-weight:800;font-size:15px;
-             letter-spacing:.3px;transition:background .15s,transform .1s">
+      style="width:100%;padding:14px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);border:none;color:#fff;
+             border-radius:12px;cursor:pointer;font-weight:800;font-size:15px;
+             letter-spacing:.3px;transition:all 0.25s ease;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 12px rgba(46,160,67,0.2)">
       ${btnLabel}
     </button>
     <div id="__prom_done_msg"
@@ -649,10 +646,16 @@ async function handleDashboard(creds) {
 
   // Hover / press micro-animations
   const actionBtn = document.getElementById('__prom_action');
-  actionBtn.addEventListener('mouseenter', () => actionBtn.style.background = '#3fb950');
-  actionBtn.addEventListener('mouseleave', () => actionBtn.style.background = '#2ea043');
+  actionBtn.addEventListener('mouseenter', () => {
+    actionBtn.style.transform = 'translateY(-1px)';
+    actionBtn.style.boxShadow = '0 6px 16px rgba(46,160,67,0.3)';
+  });
+  actionBtn.addEventListener('mouseleave', () => {
+    actionBtn.style.transform = '';
+    actionBtn.style.boxShadow = '0 4px 12px rgba(46,160,67,0.2)';
+  });
   actionBtn.addEventListener('mousedown',  () => actionBtn.style.transform  = 'scale(.98)');
-  actionBtn.addEventListener('mouseup',    () => actionBtn.style.transform  = 'scale(1)');
+  actionBtn.addEventListener('mouseup',    () => actionBtn.style.transform  = 'translateY(-1px)');
 
   function doSignOut() {
     status('Signing out...');
@@ -693,8 +696,27 @@ async function handleDashboard(creds) {
   });
 
   if (AUTO_SUBMIT || isBatch) {
-    status('Auto-continuing in 2s...');
-    setTimeout(() => actionBtn.click(), 2000);
+    const container = document.getElementById('__prom_countdown_container');
+    if (container) container.style.display = 'flex';
+
+    const circle = document.getElementById('__prom_countdown_circle');
+    const textSpan = document.getElementById('__prom_countdown_text');
+    const duration = 2000; // 2 seconds
+    const t0 = Date.now();
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - t0;
+      const pct = Math.max(0, 1 - elapsed / duration);
+      const circumference = 50; // 2 * pi * r = 2 * 3.14159 * 8 approx 50.2
+      if (circle) circle.style.strokeDashoffset = circumference * (1 - pct);
+      const remainingSecs = (pct * 2).toFixed(1);
+      if (textSpan) textSpan.textContent = `Auto-continuing in ${remainingSecs}s...`;
+
+      if (elapsed >= duration) {
+        clearInterval(interval);
+        actionBtn.click();
+      }
+    }, 50);
   }
 }
 

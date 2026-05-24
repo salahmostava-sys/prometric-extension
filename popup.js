@@ -332,6 +332,109 @@ document.getElementById('resetSettings')?.addEventListener('click', async () => 
   alert('Settings reset to defaults.');
 });
 
+// -- Settings Backup & Restore ---
+document.getElementById('exportSettingsBtn')?.addEventListener('click', async () => {
+  const backupMsgEl = document.getElementById('settingsBackupMsg');
+  showMessage(backupMsgEl, '', '');
+  try {
+    const settings = await chrome.storage.local.get(SETTINGS_KEYS);
+    const fullSettings = {};
+    SETTINGS_KEYS.forEach(key => {
+      fullSettings[key] = settings[key] !== undefined ? settings[key] : DEFAULT_SETTINGS[key];
+    });
+    
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = `prometric_settings_backup_${dateStr}.json`;
+    const jsonContent = JSON.stringify(fullSettings, null, 2);
+    
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    
+    showMessage(backupMsgEl, 'ok', 'Settings exported successfully!');
+    setTimeout(() => showMessage(backupMsgEl, '', ''), 3000);
+  } catch (err) {
+    console.error(err);
+    showMessage(backupMsgEl, 'err', 'Failed to export settings.');
+  }
+});
+
+document.getElementById('importSettingsBtn')?.addEventListener('click', () => {
+  document.getElementById('importSettingsFile')?.click();
+});
+
+document.getElementById('importSettingsFile')?.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const backupMsgEl = document.getElementById('settingsBackupMsg');
+  showMessage(backupMsgEl, '', '');
+  
+  const reader = new FileReader();
+  reader.onload = async (evt) => {
+    try {
+      const parsed = JSON.parse(evt.target.result);
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Invalid JSON format.');
+      }
+      
+      const importedKeys = Object.keys(parsed);
+      const validKeys = importedKeys.filter(k => SETTINGS_KEYS.includes(k));
+      
+      if (validKeys.length === 0) {
+        throw new Error('No valid settings keys found in JSON.');
+      }
+      
+      const dataToSave = {};
+      SETTINGS_KEYS.forEach(key => {
+        if (parsed[key] !== undefined) {
+          const defaultType = typeof DEFAULT_SETTINGS[key];
+          let val = parsed[key];
+          
+          if (defaultType === 'number') {
+            val = Number(val);
+            if (isNaN(val)) return;
+          } else if (defaultType === 'boolean') {
+            val = Boolean(val);
+          } else if (defaultType === 'string') {
+            val = String(val);
+          }
+          dataToSave[key] = val;
+        }
+      });
+      
+      if (Object.keys(dataToSave).length === 0) {
+        throw new Error('Settings keys contain invalid values.');
+      }
+      
+      await chrome.storage.local.set(dataToSave);
+      await loadSettings();
+      if (typeof updateSinglePreview === 'function') {
+        updateSinglePreview();
+      }
+      
+      showMessage(backupMsgEl, 'ok', 'Settings imported successfully!');
+      setTimeout(() => showMessage(backupMsgEl, '', ''), 3000);
+    } catch (err) {
+      console.error(err);
+      showMessage(backupMsgEl, 'err', 'Import failed: ' + err.message);
+    } finally {
+      e.target.value = '';
+    }
+  };
+  
+  reader.onerror = () => {
+    showMessage(backupMsgEl, 'err', 'Failed to read file.');
+    e.target.value = '';
+  };
+  
+  reader.readAsText(file);
+});
+
 document.getElementById('clearAllData')?.addEventListener('click', async () => {
   if (!confirm('Warning Are you sure? This will delete History and Active Queues, but KEEP your Settings.')) return;
   const toClear = ['history', 'queue', 'queueIndex', 'currentItem', 'isRunning', 'singleRunning', 'savedCreds', 'copiedCreds', 'currentTabId', 'currentProcessingId', 'activeQueueId', 'lastDedupeSkipped', 'runLogs'];
@@ -984,7 +1087,9 @@ async function loadHistory() {
       <div class="hist-pass" title="${escapeHtml(h.password || '')}">${escapeHtml(h.password || '-')}</div>
       <div style="text-align:right;white-space:nowrap">
         <span class="hist-badge ${escapeHtml(h.status)}" title="${escapeHtml(h.reason || (h.date ? new Date(h.date).toLocaleString('en-GB') : ''))}">${h.status === 'done' ? 'OK' : 'Fail'}</span>
-        ${h.status === 'done' ? `<button class="hist-copy" data-index="${i}">Copy</button>` : ''}
+        ${h.status === 'done' ? `<button class="hist-copy" data-index="${i}" title="Copy Credentials">
+          <svg class="pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>` : ''}
       </div>
     </div>`).join('');
 }
@@ -1030,8 +1135,9 @@ document.addEventListener('click', async (e) => {
     const h = history[i];
     if (h) fallbackCopyPopup(`${h.finalUsername}\t${h.password}`);
     const btn = e.target;
-    btn.textContent = 'OK';
-    setTimeout(() => btn.textContent = 'Copy', 5000);
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = `<svg class="pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    setTimeout(() => btn.innerHTML = oldHtml, 2000);
   }
   
   // Handle saved creds copy
@@ -1040,8 +1146,9 @@ document.addEventListener('click', async (e) => {
     const text = document.getElementById(id)?.textContent || '';
     fallbackCopyPopup(text);
     const btn = e.target;
-    btn.textContent = 'OK';
-    setTimeout(() => btn.textContent = 'Copy', 5000);
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = `<svg class="pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    setTimeout(() => btn.innerHTML = oldHtml, 2000);
   }
 });
 
@@ -1238,14 +1345,16 @@ function renderSheetPreview() {
       <div style="font-family:monospace;color:var(--blue);font-size:11px">${escapeHtml(c ? c.username : '')}</div>
       <div style="font-family:monospace;color:var(--yellow);font-size:11px">${escapeHtml(c ? c.password : '')}</div>
       <div style="text-align:right">
-        <button class="delete-row-btn" data-idx="${item.origIndex}" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:bold;padding:0 5px" title="Exclude from batch">x</button>
+        <button class="delete-row-btn" data-idx="${item.origIndex}" style="background:transparent;border:none;color:var(--red);cursor:pointer;padding:0 5px;display:inline-flex;align-items:center;justify-content:center;transition:var(--transition)" title="Exclude from batch">
+          <svg class="pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+        </button>
       </div>
     </div>`;
   }).join('') + (items.length > 100 ? `<div style="text-align:center;padding:8px;color:var(--muted);font-size:11px">...and ${items.length - 100} more</div>` : '');
 
   list.querySelectorAll('.delete-row-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const idx = parseInt(e.target.dataset.idx);
+      const idx = parseInt(btn.dataset.idx);
       excludedSheetRows.add(idx);
       renderSheetPreview();
     });
