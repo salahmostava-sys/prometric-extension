@@ -235,11 +235,14 @@ async function openNextTab() {
         await getRegistrationTabId(START_URL);
       }
     } else {
-      // End of queue
-      const { autoRetry, queue = [] } = await chrome.storage.local.get(['autoRetry', 'queue']);
+      // End of queue — re-fetch only what isn't already in scope
+      // (queue is already known from getState() above; only autoRetry is new)
+      const { autoRetry } = await chrome.storage.local.get(['autoRetry']);
+      // Re-fetch queue to get the latest statuses after all mutations
+      const { queue: latestQueue = [] } = await chrome.storage.local.get(['queue']);
 
       // Check if we have failed items to retry
-      const failedItems = queue.filter(i =>
+      const failedItems = latestQueue.filter(i =>
         i.status === 'failed' &&
         !i.retried &&
         isRetryableFailure(i.failureReason, i.failureKind, i.retryable)
@@ -253,8 +256,8 @@ async function openNextTab() {
           i.retried = true;
         });
         // Start from the first pending item, not always index 0
-        const firstPendingIdx = queue.findIndex(i => i.status === 'pending');
-        await chrome.storage.local.set({ queue, queueIndex: firstPendingIdx >= 0 ? firstPendingIdx : 0 });
+        const firstPendingIdx = latestQueue.findIndex(i => i.status === 'pending');
+        await chrome.storage.local.set({ queue: latestQueue, queueIndex: firstPendingIdx >= 0 ? firstPendingIdx : 0 });
         openNextPending = true;
         return;
       }
@@ -264,8 +267,8 @@ async function openNextTab() {
 
       const { desktopNotifications } = await chrome.storage.local.get(['desktopNotifications']);
 
-      const done   = queue.filter(i => i.status === 'done').length;
-      const failed = queue.filter(i => i.status === 'failed').length;
+      const done   = latestQueue.filter(i => i.status === 'done').length;
+      const failed = latestQueue.filter(i => i.status === 'failed').length;
 
       // 1. Desktop Notification
       if (desktopNotifications ?? DEFAULT_DESKTOP_NOTIFICATIONS) {
@@ -456,6 +459,14 @@ async function handleMessage(msg, sender) {
     await addRunLog(`Batch started: ${items.length} items`, 'start');
     if (skipped) await addRunLog(`Skipped duplicate rows: ${skipped}`, 'warn');
     await openNextTab();
+  }
+
+  if (msg.action === 'pauseQueue') {
+    // Pause-only: freezes isRunning without touching the queue.
+    // Distinct from stopQueue which also resets singleRunning.
+    await chrome.storage.local.set({ isRunning: false });
+    await addRunLog('Registration paused', 'pause');
+    await updateBadge();
   }
 
   if (msg.action === 'stopQueue') {

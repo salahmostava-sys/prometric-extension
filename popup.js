@@ -681,21 +681,18 @@ async function handleFile(file) {
   if (fname.endsWith('.csv')) {
     const text = await file.text();
     rows = parseCSV(text);
-  } else if (fname.endsWith('.xlsx') || fname.endsWith('.xls')) {
-    // Note: parseXLSX handles the OOXML (.xlsx) ZIP/DEFLATE format.
-    // Legacy .xls (BIFF binary) is NOT supported - user will get an empty result.
-    if (fname.endsWith('.xls') && !fname.endsWith('.xlsx')) {
-      bMsg.className = 'msg err';
-      bMsg.textContent = 'Error Legacy .xls format is not supported. Please save your file as .xlsx or .csv and try again.';
-      bMsg.style.display = 'block';
-      return;
-    }
+  } else if (fname.endsWith('.xlsx')) {
+    // parseXLSX handles the OOXML (.xlsx) ZIP/DEFLATE format.
     const buf = await file.arrayBuffer();
     rows = await parseXLSX(buf);
+  } else if (fname.endsWith('.xls')) {
+    // Legacy binary .xls (BIFF format) is NOT supported by our parser.
+    // The outer check already catches .xlsx before reaching here, so this
+    // branch is exclusively for the old binary format.
+    showMessage(bMsg, 'err', 'Legacy .xls format is not supported. Please save your file as .xlsx or .csv and try again.');
+    return;
   } else {
-    bMsg.className = 'msg err';
-    bMsg.textContent = 'Error Unsupported file type. Use .csv, .xlsx or .xls';
-    bMsg.style.display = 'block';
+    showMessage(bMsg, 'err', 'Unsupported file type. Use .csv or .xlsx');
     return;
   }
 
@@ -827,7 +824,6 @@ bStart.addEventListener('click', async () => {
     postalCode:     defPostal  || '00000',
     country:        defCountry || 'Saudi Arabia'
   }));
-  userStopped = false;
   await sendMsg({ action: 'startQueue', items });
   batchBanner.classList.add('show');
   
@@ -844,15 +840,15 @@ bStart.addEventListener('click', async () => {
 });
 
 pauseBatchBtn?.addEventListener('click', async () => {
-  userStopped = true;
-  await sendMsg({ action: 'stopQueue' });
+  // pauseQueue: only sets isRunning=false, queue is preserved for resume.
+  await sendMsg({ action: 'pauseQueue' });
   pauseBatchBtn.style.display = 'none';
+  resumeBatchBtn.style.display = 'block';
   batchSpinner.style.display = 'none';
-  showMessage(bMsg, 'err', 'Execution paused.');
+  showMessage(bMsg, 'ok', 'Batch paused. Click Resume to continue.');
 });
 
 resumeBatchBtn?.addEventListener('click', async () => {
-  userStopped = false;
   await sendMsg({ action: 'resumeQueue' });
   bStart.style.display = 'none';
   resumeBatchBtn.style.display = 'none';
@@ -863,7 +859,6 @@ resumeBatchBtn?.addEventListener('click', async () => {
 });
 
 cancelBatchBtn?.addEventListener('click', async () => {
-  userStopped = true;
   await sendMsg({ action: 'clearSession' });
   if (bStart) bStart.style.display = 'block';
   if (sStart) sStart.style.display = 'block';
@@ -908,8 +903,6 @@ function renderLogs(logs = null) {
 }
 
 // -- Poll status ---
-let userStopped = false;
-
 async function pollStatus() {
   const { queue, queueIndex, isRunning, singleRunning, runLogs = [] } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning', 'singleRunning', 'runLogs']);
   renderLogs(runLogs);
@@ -937,7 +930,6 @@ async function pollStatus() {
     if (pauseBatchBtn) pauseBatchBtn.style.display = 'none';
     if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
     if (batchSpinner) batchSpinner.style.display = 'block';
-    userStopped = false;
   } else {
     if (sStart) sStart.style.display = 'block';
   }
@@ -1006,7 +998,6 @@ async function pollStatus() {
       if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
       if (batchSpinner) batchSpinner.style.display = 'block';
       if (retryFailedBtn) retryFailedBtn.style.display = 'none';
-      userStopped = false;
     } else { // Stopped/Paused batch mode
       const pendingItems = queue.slice(queueIndex).filter(it => it.status === 'pending');
       const hasPending   = pendingItems.length > 0 && queueIndex < queue.length;
@@ -1043,7 +1034,26 @@ async function pollStatus() {
   }
 }
 
-setInterval(pollStatus, 1500);
+// -- Reactive updates via storage.onChanged (replaces most of the polling) ---
+chrome.storage.onChanged.addListener((changes) => {
+  // Any queue/running state change → refresh status immediately
+  if (changes.queue || changes.queueIndex || changes.isRunning ||
+      changes.singleRunning || changes.runLogs) {
+    pollStatus();
+  }
+  // Saved credentials change → refresh panel immediately
+  if (changes.savedCreds) {
+    loadSavedCreds();
+  }
+  // History change → refresh only if the tab is visible
+  if (changes.history) {
+    const histPane = document.getElementById('pane-history');
+    if (histPane?.classList.contains('active')) loadHistory();
+  }
+});
+
+// Fallback interval (5s) catches edge-cases where onChanged misses a tick
+setInterval(pollStatus, 5000);
 pollStatus();
 
 // -- HISTORY TAB ---
@@ -1104,11 +1114,6 @@ document.querySelectorAll('.tab').forEach(tab => {
   if (tab.dataset.tab === 'history') tab.addEventListener('click', loadHistory);
 });
 
-setInterval(async () => {
-  const histPane = document.getElementById('pane-history');
-  if (histPane?.classList.contains('active')) loadHistory();
-}, 3000);
-
 loadHistory();
 
 // -- Saved Credentials Panel ---
@@ -1153,7 +1158,8 @@ document.addEventListener('click', async (e) => {
 });
 
 loadSavedCreds();
-setInterval(loadSavedCreds, 3000);
+// Fallback only — primary updates come from storage.onChanged above
+setInterval(loadSavedCreds, 10000);
 
 // -- History Export ---
 document.getElementById('exportCSV')?.addEventListener('click', async () => {
@@ -1405,7 +1411,6 @@ document.getElementById('sheetStart')?.addEventListener('click', async () => {
     country:        defCountry || 'Saudi Arabia'
   }));
 
-  userStopped = false;
   await sendMsg({ action: 'startQueue', items });
   if (batchBanner) batchBanner.classList.add('show');
   

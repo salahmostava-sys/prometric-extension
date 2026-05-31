@@ -8,7 +8,7 @@ const DEFAULT_ANSWER = 'a';
 // Send currentItem to MAIN world
 async function sendDataToPage() {
   const { currentItem, isRunning, singleRunning, pageDelay, autoSubmit, defAnswer, stabilityMode, queue, queueIndex } = await chrome.storage.local.get(['currentItem', 'isRunning', 'singleRunning', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex']);
-  const isLast = isRunning && queue && queueIndex === queue.length - 1;
+  const isLast = isRunning && queue && queueIndex >= queue.length - 1;
   window.dispatchEvent(new CustomEvent('__prom_init', {
     detail: { 
       currentItem: currentItem || null, 
@@ -112,7 +112,7 @@ chrome.storage.onChanged.addListener((changes) => {
   if (changes.currentItem || changes.isRunning || changes.singleRunning || changes.pageDelay || changes.autoSubmit || changes.defAnswer || changes.stabilityMode) {
     // FIX #8: Include queue and queueIndex so isLast stays fresh
     chrome.storage.local.get(['isRunning', 'singleRunning', 'currentItem', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex']).then(state => {
-      const isLast = state.isRunning && state.queue && state.queueIndex === state.queue.length - 1;
+      const isLast = state.isRunning && state.queue && state.queueIndex >= state.queue.length - 1;
       window.dispatchEvent(new CustomEvent('__prom_init', {
         detail: { 
           currentItem: state.currentItem || null, 
