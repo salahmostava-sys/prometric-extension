@@ -1,7 +1,6 @@
 // bridge.js - runs in ISOLATED world
 // Handles chrome APIs and passes data to/from MAIN world content.js
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 const DEFAULT_PAGE_DELAY = 1;
 const DEFAULT_ANSWER = 'a';
 

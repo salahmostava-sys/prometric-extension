@@ -477,7 +477,10 @@ async function handleMessage(msg, sender) {
 
   if (msg.action === 'resumeQueue') {
     const { queue, queueIndex } = await getState();
-    if (!queue || queueIndex >= queue.length) return;
+    if (!queue || queueIndex >= queue.length) {
+      await addRunLog('Queue already completed — nothing to resume', 'warn');
+      return;
+    }
     await chrome.storage.local.set({ isRunning: true });
     await addRunLog('Queue resumed', 'resume');
     await openNextTab();
@@ -522,7 +525,10 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "pause_queue") {
-    await chrome.storage.local.set({ isRunning: false, singleRunning: false });
+    // Pause-only: same semantics as pauseQueue handler — only freezes isRunning.
+    // Do NOT touch singleRunning here; that would incorrectly kill single-mode sessions.
+    await chrome.storage.local.set({ isRunning: false });
+    await addRunLog('Registration paused via context menu', 'pause');
     await updateBadge();
   } else if (info.menuItemId === "resume_queue") {
     const { queue, queueIndex } = await getState();
