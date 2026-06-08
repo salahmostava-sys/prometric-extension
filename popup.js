@@ -88,7 +88,7 @@ function fallbackCopyPopup(text) {
   document.body.appendChild(ta);
   ta.focus();
   ta.select();
-  try { document.execCommand('copy'); } catch(_) {}
+  try { document.execCommand('copy'); } catch(e) { console.warn(e); }
   document.body.removeChild(ta);
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).catch(() => {});
@@ -191,7 +191,7 @@ async function sendMsg(payload) {
     if (e?.message?.includes('Receiving end does not exist')) {
       // Service worker was asleep — wait briefly and retry once
       await new Promise(r => setTimeout(r, 300));
-      try { return await chrome.runtime.sendMessage(payload); } catch (_) {}
+      try { return await chrome.runtime.sendMessage(payload); } catch (e) { console.warn(e); }
     }
   }
 }
@@ -587,7 +587,7 @@ async function extractZipEntries(buffer) {
           const out = new Uint8Array(chunks.reduce((a, b) => a + b.length, 0));
           let off = 0; for (const c of chunks) { out.set(c, off); off += c.length; }
           entries[name] = dec.decode(out);
-        } catch (e) { /* skip */ }
+        } catch (e) { console.warn(e); }
       }
       pos = dataStart + compSize;
     } else pos++;
@@ -641,6 +641,7 @@ async function parseXLSX(buffer) {
     if (rows[0] && (rows[0][0].toLowerCase().includes('name') || rows[0][1]?.toLowerCase().includes('email'))) start = 1;
     return rows.slice(start).filter(r => r[0]);
   } catch (e) {
+    console.warn(e);
     return [];
   }
 }
@@ -666,6 +667,15 @@ const batchValidationBody = document.getElementById('batchValidationBody');
 const batchValidationStatus = document.getElementById('batchValidationStatus');
 const batchLogPanel = document.getElementById('batchLogPanel');
 const batchLogs = document.getElementById('batchLogs');
+
+function setBatchControlsState(state) {
+  if (bStart) bStart.style.display = state === 'idle' ? 'block' : 'none';
+  if (pauseBatchBtn) pauseBatchBtn.style.display = state === 'running' ? 'block' : 'none';
+  if (resumeBatchBtn) resumeBatchBtn.style.display = state === 'paused' ? 'block' : 'none';
+  if (cancelBatchBtn) cancelBatchBtn.style.display = (state === 'running' || state === 'paused') ? 'block' : 'none';
+  if (batchSpinner) batchSpinner.style.display = state === 'running' ? 'block' : 'none';
+  if (batchBanner && state === 'idle') batchBanner.classList.remove('show');
+}
 
 uploadArea.addEventListener('dragover',  e => { e.preventDefault(); uploadArea.classList.add('drag'); });
 uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag'));
@@ -727,12 +737,7 @@ async function handleFile(file) {
     showMessage(bMsg, 'err', 'Fix missing or invalid emails before starting the batch.');
   }
   
-  // Show Start button, hide others
-  bStart.style.display = 'block';
-  pauseBatchBtn.style.display = 'none';
-  resumeBatchBtn.style.display = 'none';
-  cancelBatchBtn.style.display = 'none';
-  batchBanner.classList.remove('show');
+  setBatchControlsState('idle');
 }
 
 function renderQueue() {
@@ -772,11 +777,7 @@ document.getElementById('clearQueue').addEventListener('click', () => {
   fileInput.value = '';
   if (batchValidation) batchValidation.classList.remove('show');
   
-  bStart.style.display = 'block';
-  pauseBatchBtn.style.display = 'none';
-  resumeBatchBtn.style.display = 'none';
-  cancelBatchBtn.style.display = 'none';
-  batchBanner.classList.remove('show');
+  setBatchControlsState('idle');
   bMsg.style.display = 'none';
 });
 
@@ -827,11 +828,7 @@ bStart.addEventListener('click', async () => {
   await sendMsg({ action: 'startQueue', items });
   batchBanner.classList.add('show');
   
-  bStart.style.display = 'none';
-  resumeBatchBtn.style.display = 'none';
-  pauseBatchBtn.style.display = 'block';
-  cancelBatchBtn.style.display = 'block';
-  batchSpinner.style.display = 'block';
+  setBatchControlsState('running');
   
   showMessage(bMsg, 'ok', `Started ${batchItems.length} registrations.`);
   if (stats.exactDuplicates) {
@@ -842,31 +839,20 @@ bStart.addEventListener('click', async () => {
 pauseBatchBtn?.addEventListener('click', async () => {
   // pauseQueue: only sets isRunning=false, queue is preserved for resume.
   await sendMsg({ action: 'pauseQueue' });
-  pauseBatchBtn.style.display = 'none';
-  resumeBatchBtn.style.display = 'block';
-  batchSpinner.style.display = 'none';
+  setBatchControlsState('paused');
   showMessage(bMsg, 'ok', 'Batch paused. Click Resume to continue.');
 });
 
 resumeBatchBtn?.addEventListener('click', async () => {
   await sendMsg({ action: 'resumeQueue' });
-  bStart.style.display = 'none';
-  resumeBatchBtn.style.display = 'none';
-  pauseBatchBtn.style.display = 'block';
-  cancelBatchBtn.style.display = 'block';
-  batchSpinner.style.display = 'block';
+  setBatchControlsState('running');
   showMessage(bMsg, 'ok', 'Resuming batch registration.');
 });
 
 cancelBatchBtn?.addEventListener('click', async () => {
   await sendMsg({ action: 'clearSession' });
-  if (bStart) bStart.style.display = 'block';
+  setBatchControlsState('idle');
   if (sStart) sStart.style.display = 'block';
-  if (pauseBatchBtn) pauseBatchBtn.style.display = 'none';
-  if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
-  if (cancelBatchBtn) cancelBatchBtn.style.display = 'none';
-  if (batchSpinner) batchSpinner.style.display = 'none';
-  if (batchBanner) batchBanner.style.display = 'none';
   showMessage(bMsg, 'err', 'Execution stopped and queue cleared.');
 });
 
@@ -1428,12 +1414,7 @@ async function processSheetStart() {
   await sendMsg({ action: 'startQueue', items });
   if (batchBanner) batchBanner.classList.add('show');
   
-  // Switch control button displays
-  if (bStart) bStart.style.display = 'none';
-  if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
-  if (pauseBatchBtn) pauseBatchBtn.style.display = 'block';
-  if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
-  if (batchSpinner) batchSpinner.style.display = 'block';
+  setBatchControlsState('running');
   
   const sheetMsgEl = document.getElementById('sheetMsg');
   if (sheetMsgEl) {
