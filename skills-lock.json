@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "test-guard": {
+      "source": "amelnagdy/guard-skills",
+      "sourceType": "github",
+      "skillPath": "skills/test-guard/SKILL.md",
+      "computedHash": "9c5a639c9405cd5833958e5705ddb1762424356072ad157f9542efb8a6392ec8"
+    }
+  }
+}
