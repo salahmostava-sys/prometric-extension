@@ -307,28 +307,6 @@ async function processBackgroundQueue() {
   try {
     await handleMessage(msg, sender);
   } catch (e) {
-
-// -- Message Routing ---
-// background.js handles:  startSingle | startQueue | stopQueue | resumeQueue | stepDone | stepFailed
-// bridge.js handles:      pauseBatch | resumeBatch | stopBatch | updateItem | saveCopied
-// (bridge.js runs in the ISOLATED world and writes directly to chrome.storage -
-//  no round-trip through background.js is needed for those actions.)
-let isMsgProcessing = false;
-const backgroundMsgQueue = [];
-
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  backgroundMsgQueue.push({ msg, sender });
-  processBackgroundQueue();
-  return false;
-});
-
-async function processBackgroundQueue() {
-  if (isMsgProcessing || backgroundMsgQueue.length === 0) return;
-  isMsgProcessing = true;
-  const { msg, sender } = backgroundMsgQueue.shift();
-  try {
-    await handleMessage(msg, sender);
-  } catch (e) {
     console.error('Error handling message:', e);
   }
   isMsgProcessing = false;
