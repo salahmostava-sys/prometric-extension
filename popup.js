@@ -163,11 +163,24 @@ function validateBatchItems(items) {
   return stats;
 }
 
+function renderValidationRow(label, value, cls) {
+  const div = document.createElement('div');
+  div.className = `validation-row ${cls || ''}`.trim();
+  const span = document.createElement('span');
+  span.textContent = String(label);
+  const strong = document.createElement('strong');
+  strong.textContent = String(value);
+  div.appendChild(span);
+  div.appendChild(strong);
+  return div;
+}
+
 function renderValidation(panel, body, statusEl, stats) {
   if (!panel || !body || !statusEl) return;
   panel.classList.add('show');
   statusEl.textContent = stats.hasBlockingIssues ? 'Needs review' : 'Ready';
-  body.innerHTML = [
+  body.textContent = '';
+  const rows = [
     ['Total rows', stats.total],
     ['Valid rows', stats.valid],
     ['Missing email', stats.missingEmail, stats.missingEmail ? 'errline' : ''],
@@ -176,11 +189,10 @@ function renderValidation(panel, body, statusEl, stats) {
     ['Duplicate emails', stats.duplicateEmails, stats.duplicateEmails ? 'warn' : ''],
     ['Exact duplicates removed', stats.exactDuplicates, stats.exactDuplicates ? 'warn' : ''],
     ['Long names', stats.longNames, stats.longNames ? 'warn' : '']
-  ].map(([label, value, cls]) => `
-    <div class="validation-row ${cls || ''}">
-      <span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>
-    </div>
-  `).join('');
+  ];
+  for (const [label, value, cls] of rows) {
+    body.appendChild(renderValidationRow(label, value, cls));
+  }
 }
 
 // -- sendMsg: retry once if service worker was sleeping (MV3) ---
@@ -766,15 +778,35 @@ async function handleFile(file) {
 
 function renderQueue() {
   qCount.textContent = `${batchItems.length} people`;
-  queueList.innerHTML = batchItems.map((item, i) => `
-    <div class="queue-item" id="qi-${i}">
-      <div class="q-dot ${item.status}" id="qd-${i}"></div>
-      <div style="flex:1;min-width:0">
-        <div class="q-name">${escapeHtml(item.name)}</div>
-        <div class="q-email">${escapeHtml(item.failureReason || item.email)}</div>
-      </div>
-      <div class="q-status ${item.status}" id="qs-${i}">${statusLabel(item.status)}</div>
-    </div>`).join('');
+  queueList.textContent = '';
+  for (let i = 0; i < batchItems.length; i++) {
+    const item = batchItems[i];
+    const div = document.createElement('div');
+    div.className = 'queue-item';
+    div.id = `qi-${i}`;
+    const dot = document.createElement('div');
+    dot.className = `q-dot ${item.status}`;
+    dot.id = `qd-${i}`;
+    div.appendChild(dot);
+    const textContainer = document.createElement('div');
+    textContainer.style.flex = '1';
+    textContainer.style.minWidth = '0';
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'q-name';
+    nameDiv.textContent = item.name;
+    textContainer.appendChild(nameDiv);
+    const emailDiv = document.createElement('div');
+    emailDiv.className = 'q-email';
+    emailDiv.textContent = item.failureReason || item.email;
+    textContainer.appendChild(emailDiv);
+    div.appendChild(textContainer);
+    const statusDiv = document.createElement('div');
+    statusDiv.className = `q-status ${item.status}`;
+    statusDiv.id = `qs-${i}`;
+    statusDiv.textContent = statusLabel(item.status);
+    div.appendChild(statusDiv);
+    queueList.appendChild(div);
+  }
 }
 
 function statusLabel(s) {
@@ -897,19 +929,27 @@ function renderLogs(logs = null) {
   if (!batchLogPanel || !batchLogs) return;
   if (!logs || logs.length === 0) {
     batchLogPanel.classList.remove('show');
-    batchLogs.innerHTML = '';
+    batchLogs.textContent = '';
     return;
   }
   batchLogPanel.classList.add('show');
-  batchLogs.innerHTML = logs.slice(0, 50).map(log => {
+  batchLogs.textContent = '';
+  const items = logs.slice(0, 50);
+  for (const log of items) {
     const t = log.date ? new Date(log.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-    return `
-      <div class="log-item">
-        <div class="log-time">${escapeHtml(t)}</div>
-        <div class="log-text" title="${escapeHtml(log.message || '')}">${escapeHtml(log.message || '')}</div>
-      </div>
-    `;
-  }).join('');
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'log-item';
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'log-time';
+    timeDiv.textContent = t;
+    itemDiv.appendChild(timeDiv);
+    const textDiv = document.createElement('div');
+    textDiv.className = 'log-text';
+    textDiv.title = log.message || '';
+    textDiv.textContent = log.message || '';
+    itemDiv.appendChild(textDiv);
+    batchLogs.appendChild(itemDiv);
+  }
 }
 
 // -- Poll status ---

@@ -162,7 +162,10 @@ function fillSelect(sel, text) {
 }
 
 function querySelectorAny(...sels) {
-  for (const s of sels) { try { const e = document.querySelector(s); if (e) return e; } catch (_) { } }
+  for (const s of sels) {
+    const e = document.querySelector(s);
+    if (e) return e;
+  }
   return null;
 }
 
@@ -170,10 +173,25 @@ async function waitFor(sels, timeout = 10000) {
   const arr = Array.isArray(sels) ? sels : [sels];
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) {
-    for (const s of arr) { try { const e = document.querySelector(s); if (e) return e; } catch (err) { console.warn(err); } }
+    for (const s of arr) {
+      const e = document.querySelector(s);
+      if (e) return e;
+    }
     await sleep(150);
   }
   return null;
+}
+
+function forceClick(btn) {
+  btn.focus();
+  btn.click();
+  ['mousedown', 'mouseup', 'click'].forEach(type => {
+    try {
+      btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: globalThis }));
+    } catch(err) { 
+      // Ignore simulated event dispatch errors as native click() already fired
+    }
+  });
 }
 
 function clickContinue() {
@@ -197,21 +215,14 @@ function clickContinue() {
   });
 
   if (btn) {
-    btn.focus();
-    btn.click();
-    ['mousedown', 'mouseup', 'click'].forEach(type => {
-      try {
-        btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: globalThis }));
-      } catch(err) { console.warn(err); }
-    });
+    forceClick(btn);
     return true;
   }
 
   // Fallback: search by ID
   const aspBtn = document.querySelector('input[id*="Continue" i], button[id*="Continue" i], input[id*="Submit" i], button[id*="Submit" i], a[id*="Continue" i]');
   if (aspBtn?.offsetParent) {
-    aspBtn.focus();
-    aspBtn.click();
+    forceClick(aspBtn);
     return true;
   }
   return false;
@@ -548,13 +559,7 @@ function findReadyContinue() {
 }
 
 function clickReadyContinue(btn) {
-  btn.focus();
-  btn.click();
-  ['mousedown', 'mouseup', 'click'].forEach(type => {
-    try {
-      btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: globalThis }));
-    } catch (err) { console.warn(err); }
-  });
+  forceClick(btn);
 }
 
 async function fillStep4(creds) {
@@ -596,45 +601,68 @@ function createDashboardOverlay(user, creds, isBatch) {
 
   const btnLabel = isBatch ? 'Copy & Continue' : 'Copy & Finish';
 
-  box.innerHTML = `
-    <div style="color:#2ea043;font-size:26px;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:-.3px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent">
-      OK Registration Complete!
-    </div>
+  const titleEl = document.createElement('div');
+  titleEl.style.cssText = 'color:#2ea043;font-size:26px;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:-.3px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent';
+  titleEl.textContent = 'OK Registration Complete!';
+  box.appendChild(titleEl);
 
-    <div style="background:rgba(33, 38, 45, 0.4);border:1px solid rgba(240,246,252,0.06);border-radius:12px;padding:14px 18px">
-      <div style="color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700">Name</div>
-      <div style="font-weight:700;font-size:15px;color:#f0f6fc">${escapeHtml(creds.firstName)} ${escapeHtml(creds.lastName)}</div>
-    </div>
+  const mkRow = (label, val, valStyle, addMargin) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'background:rgba(33, 38, 45, 0.4);border:1px solid rgba(240,246,252,0.06);border-radius:12px;padding:14px 18px' + (addMargin ? ';margin-bottom:10px' : '');
+    const l = document.createElement('div');
+    l.style.cssText = 'color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700';
+    l.textContent = label;
+    const v = document.createElement('div');
+    v.style.cssText = valStyle;
+    v.textContent = val;
+    row.appendChild(l);
+    row.appendChild(v);
+    return row;
+  };
 
-    <div style="background:rgba(33, 38, 45, 0.4);border:1px solid rgba(240,246,252,0.06);border-radius:12px;padding:14px 18px">
-      <div style="color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700">Username</div>
-      <div style="font-weight:700;color:#58a6ff;font-family:monospace;font-size:16px;word-break:break-all">${escapeHtml(user)}</div>
-    </div>
+  box.appendChild(mkRow('Name', `${creds.firstName} ${creds.lastName}`, 'font-weight:700;font-size:15px;color:#f0f6fc', false));
+  box.appendChild(mkRow('Username', user, 'font-weight:700;color:#58a6ff;font-family:monospace;font-size:16px;word-break:break-all', false));
+  box.appendChild(mkRow('Password', creds.password, 'font-weight:700;font-family:monospace;font-size:16px;color:#f0f6fc', true));
 
-    <div style="background:rgba(33, 38, 45, 0.4);border:1px solid rgba(240,246,252,0.06);border-radius:12px;padding:14px 18px;margin-bottom:10px">
-      <div style="color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700">Password</div>
-      <div style="font-weight:700;font-family:monospace;font-size:16px;color:#f0f6fc">${escapeHtml(creds.password)}</div>
-    </div>
+  const countdownContainer = document.createElement('div');
+  countdownContainer.id = '__prom_countdown_container';
+  countdownContainer.style.cssText = 'display:none;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;font-size:12px;color:#8b949e';
+  
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width', '18'); svg.setAttribute('height', '18'); svg.setAttribute('viewBox', '0 0 20 20');
+  
+  const circle1 = document.createElementNS(svgNS, 'circle');
+  circle1.setAttribute('cx', '10'); circle1.setAttribute('cy', '10'); circle1.setAttribute('r', '8');
+  circle1.setAttribute('fill', 'none'); circle1.setAttribute('stroke', 'rgba(88,166,255,0.15)'); circle1.setAttribute('stroke-width', '2');
+  
+  const circle2 = document.createElementNS(svgNS, 'circle');
+  circle2.id = '__prom_countdown_circle';
+  circle2.setAttribute('cx', '10'); circle2.setAttribute('cy', '10'); circle2.setAttribute('r', '8');
+  circle2.setAttribute('fill', 'none'); circle2.setAttribute('stroke', '#58a6ff'); circle2.setAttribute('stroke-width', '2');
+  circle2.setAttribute('stroke-dasharray', '50'); circle2.setAttribute('stroke-dashoffset', '0'); circle2.setAttribute('stroke-linecap', 'round');
+  circle2.style.cssText = 'transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset 0.1s linear';
+  
+  svg.appendChild(circle1); svg.appendChild(circle2);
+  countdownContainer.appendChild(svg);
 
-    <div id="__prom_countdown_container" style="display:none;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;font-size:12px;color:#8b949e">
-      <svg width="18" height="18" viewBox="0 0 20 20">
-        <circle cx="10" cy="10" r="8" fill="none" stroke="rgba(88,166,255,0.15)" stroke-width="2"/>
-        <circle id="__prom_countdown_circle" cx="10" cy="10" r="8" fill="none" stroke="#58a6ff" stroke-width="2" stroke-dasharray="50" stroke-dashoffset="0" stroke-linecap="round" style="transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset 0.1s linear"/>
-      </svg>
-      <span id="__prom_countdown_text">Auto-continuing in 2.0s...</span>
-    </div>
+  const countdownText = document.createElement('span');
+  countdownText.id = '__prom_countdown_text';
+  countdownText.textContent = 'Auto-continuing in 2.0s...';
+  countdownContainer.appendChild(countdownText);
+  box.appendChild(countdownContainer);
 
-    <button id="__prom_action"
-      style="width:100%;padding:14px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);border:none;color:#fff;
-             border-radius:12px;cursor:pointer;font-weight:800;font-size:15px;
-             letter-spacing:.3px;transition:all 0.25s ease;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 12px rgba(46,160,67,0.2)">
-      ${btnLabel}
-    </button>
-    <div id="__prom_done_msg"
-      style="margin-top:10px;text-align:center;font-size:12px;color:#7d8590;display:none">
-      OK Copied - ${isBatch ? 'signing out...' : 'finishing...'}
-    </div>
-  `;
+  const actionBtn = document.createElement('button');
+  actionBtn.id = '__prom_action';
+  actionBtn.style.cssText = 'width:100%;padding:14px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);border:none;color:#fff;border-radius:12px;cursor:pointer;font-weight:800;font-size:15px;letter-spacing:.3px;transition:all 0.25s ease;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 12px rgba(46,160,67,0.2)';
+  actionBtn.textContent = btnLabel;
+  box.appendChild(actionBtn);
+
+  const doneMsg = document.createElement('div');
+  doneMsg.id = '__prom_done_msg';
+  doneMsg.style.cssText = 'margin-top:10px;text-align:center;font-size:12px;color:#7d8590;display:none';
+  doneMsg.textContent = `OK Copied - ${isBatch ? 'signing out...' : 'finishing...'}`;
+  box.appendChild(doneMsg);
 
   card.appendChild(box);
   document.body.appendChild(card);
