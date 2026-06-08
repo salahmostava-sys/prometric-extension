@@ -8,7 +8,7 @@ const DEFAULT_ANSWER = 'a';
 async function sendDataToPage() {
   const { currentItem, isRunning, singleRunning, pageDelay, autoSubmit, defAnswer, stabilityMode, queue, queueIndex } = await chrome.storage.local.get(['currentItem', 'isRunning', 'singleRunning', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex']);
   const isLast = isRunning && queue && queueIndex >= queue.length - 1;
-  window.dispatchEvent(new CustomEvent('__prom_init', {
+  globalThis.dispatchEvent(new CustomEvent('__prom_init', {
     detail: { 
       currentItem: currentItem || null, 
       isRunning, 
@@ -29,13 +29,13 @@ async function sendToBackground(payload) {
   } catch (e) {
     if (e?.message?.includes('Receiving end does not exist')) {
       await new Promise(r => setTimeout(r, 300));
-      try { return await chrome.runtime.sendMessage(payload); } catch (_) {}
+      try { return await chrome.runtime.sendMessage(payload); } catch (err) { console.warn(err); }
     }
   }
 }
 
 // Listen for messages FROM MAIN world content.js
-window.addEventListener('__prom_msg', async (e) => {
+globalThis.addEventListener('__prom_msg', async (e) => {
   const { action, payload } = e.detail || {};
 
   if (action === 'stepDone') {
@@ -102,7 +102,7 @@ window.addEventListener('__prom_msg', async (e) => {
 setTimeout(sendDataToPage, 250);
 setTimeout(sendDataToPage, 1000);
 
-window.addEventListener('__prom_ready', () => {
+globalThis.addEventListener('__prom_ready', () => {
   sendDataToPage();
 });
 
@@ -112,7 +112,7 @@ chrome.storage.onChanged.addListener((changes) => {
     // FIX #8: Include queue and queueIndex so isLast stays fresh
     chrome.storage.local.get(['isRunning', 'singleRunning', 'currentItem', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex']).then(state => {
       const isLast = state.isRunning && state.queue && state.queueIndex >= state.queue.length - 1;
-      window.dispatchEvent(new CustomEvent('__prom_init', {
+      globalThis.dispatchEvent(new CustomEvent('__prom_init', {
         detail: { 
           currentItem: state.currentItem || null, 
           isRunning: state.isRunning, 

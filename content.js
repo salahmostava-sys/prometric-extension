@@ -15,11 +15,13 @@ let GLOBAL_SINGLE = false;
 let STABILITY_MODE = false;
 
 // -- Status indicator ---
-function status(msg, color = '#2ea043') {
+function updateStatus(msg, color = '#2ea043') {
   let el = document.getElementById('__prom__');
   let txtEl = document.getElementById('__prom_txt__');
 
-  if (!el) {
+  if (el) {
+    el.style.background = color;
+  } else {
     el = document.createElement('div');
     el.id = '__prom__';
     el.style.cssText = 'position:fixed;top:10px;right:10px;z-index:2147483647;background:#2ea043;color:#fff;padding:8px 14px;border-radius:8px;font:bold 13px/1.4 sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35);max-width:320px;display:flex;align-items:center;gap:12px';
@@ -30,7 +32,7 @@ function status(msg, color = '#2ea043') {
     el.appendChild(txtEl);
 
     // Add inline Pause for Batch mode
-    if (window.__isBatch) {
+    if (globalThis.__isBatch) {
       const pauseBtn = document.createElement('button');
       pauseBtn.textContent = 'Pause';
       pauseBtn.style.cssText = 'background:rgba(0,0,0,0.2);border:none;color:#fff;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:11px;font-weight:bold';
@@ -52,14 +54,12 @@ function status(msg, color = '#2ea043') {
     el.appendChild(stopBtn);
 
     document.body?.appendChild(el);
-  } else {
-    el.style.background = color;
   }
   txtEl.textContent = 'Turbo ' + msg;
 }
 
 function send(action, payload) {
-  window.dispatchEvent(new CustomEvent('__prom_msg', { detail: { action, payload } }));
+  globalThis.dispatchEvent(new CustomEvent('__prom_msg', { detail: { action, payload } }));
 }
 
 function pageSnippet() {
@@ -71,13 +71,13 @@ function pageSnippet() {
 
 function failStep(reason, failureKind = 'page', retryable = true) {
   const name = currentItem ? `${currentItem.firstName || ''} ${currentItem.lastName || ''}`.trim() : '';
-  status(`Error ${reason}`, '#d73a49');
+  updateStatus(`Error ${reason}`, '#d73a49');
   send('stepFailed', {
     name,
     reason,
     failureKind,
     retryable,
-    url: window.location.href,
+    url: globalThis.location.href,
     step: detectStep() || '',
     pageSnippet: pageSnippet(),
     queueId: currentItem?._queueId
@@ -87,13 +87,13 @@ function failStep(reason, failureKind = 'page', retryable = true) {
 // -- Copy helper: reliable copy + saves to storage for 30s cross-tab access --
 function copyText(text, label) {
   // 1. Try modern clipboard API
-  if (navigator.clipboard && window.isSecureContext) {
+  if (navigator.clipboard && globalThis.isSecureContext) {
     navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
   } else {
     fallbackCopy(text);
   }
   // 2. Save to chrome storage with 30-second expiry so popup can show it
-  window.dispatchEvent(new CustomEvent('__prom_msg', {
+  globalThis.dispatchEvent(new CustomEvent('__prom_msg', {
     detail: {
       action: 'saveCopied',
       payload: { text, label: label || '', expiresAt: Date.now() + 30000 }
@@ -108,7 +108,7 @@ function fallbackCopy(text) {
   document.body.appendChild(ta);
   ta.focus();
   ta.select();
-  try { document.execCommand('copy'); } catch(_) {}
+  try { document.execCommand('copy', false, null); } catch(err) { console.warn(err); }
   ta.remove();
 }
 
@@ -163,7 +163,7 @@ async function waitFor(sels, timeout = 10000) {
   const arr = Array.isArray(sels) ? sels : [sels];
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) {
-    for (const s of arr) { try { const e = document.querySelector(s); if (e) return e; } catch (_) { } }
+    for (const s of arr) { try { const e = document.querySelector(s); if (e) return e; } catch (err) { console.warn(err); } }
     await sleep(150);
   }
   return null;
@@ -194,8 +194,8 @@ function clickContinue() {
     btn.click();
     ['mousedown', 'mouseup', 'click'].forEach(type => {
       try {
-        btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
-      } catch(_) {}
+        btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: globalThis }));
+      } catch(err) { console.warn(err); }
     });
     return true;
   }
@@ -221,8 +221,8 @@ function nextSuffix(s) {
   let carry = true;
   for (let i = s.length - 1; i >= 0; i--) {
     if (carry) {
-      if (s.charCodeAt(i) < 122) {
-        res = String.fromCharCode(s.charCodeAt(i) + 1) + res;
+      if (s.codePointAt(i) < 122) {
+        res = String.fromCodePoint(s.codePointAt(i) + 1) + res;
         carry = false;
       } else {
         res = 'a' + res;
@@ -252,7 +252,7 @@ function detectStep() {
 
 // -- STEP 1 - Prometric Info ---
 async function fillStep1() {
-  status('Step 1: Selecting IBTA MEA...');
+  updateStatus('Step 1: Selecting IBTA MEA...');
   const sel = await waitFor(['select']);
   if (!sel) { failStep('Prometric select not found', 'missing-field', true); return; }
   
@@ -364,17 +364,17 @@ async function fillUsernameWithRetry(creds, userEl) {
   let suffix = '';
   while (true) {
     const tryName = creds.username + suffix;
-    status(`Trying username: ${tryName}`);
+    updateStatus(`Trying username: ${tryName}`);
 
     const taken = await tryFillUsername(tryName, userEl);
 
     if (!taken) {
       creds.finalUsername = tryName;
       send('updateItem', creds);
-      status('Username OK');
+      updateStatus('Username OK');
       return true;
     }
-    status(`Warning "${tryName}" taken, trying next...`, '#d29922');
+    updateStatus(`Warning "${tryName}" taken, trying next...`, '#d29922');
     const next = nextSuffix(suffix);
     if (!next) { 
       failStep('Username exhausted', 'validation', false); 
@@ -385,7 +385,7 @@ async function fillUsernameWithRetry(creds, userEl) {
 }
 
 async function fillPasswords(password) {
-  status('Step 2: Password...');
+  updateStatus('Step 2: Password...');
   const pwAll = [...document.querySelectorAll('input[type="password"]')];
   for (let i = 0; i < Math.min(pwAll.length, 2); i++) {
     pwAll[i].focus();
@@ -396,7 +396,7 @@ async function fillPasswords(password) {
 }
 
 async function fillSecurityQuestions() {
-  status('Step 2: Security questions...');
+  updateStatus('Step 2: Security questions...');
   const qDropdown = q('select[id*="Question" i]', 'select[name*="Question" i]');
   if (qDropdown) {
     qDropdown.focus();
@@ -436,7 +436,7 @@ async function verifyPasswords(pwAll, password) {
 
 // -- STEP 2 - Sign In Info ---
 async function fillStep2(creds) {
-  status('Step 2: Username...');
+  updateStatus('Step 2: Username...');
   const userEl = await waitFor([
     'input[id*="Username" i]',
     'input[placeholder*="Username" i]',
@@ -452,13 +452,13 @@ async function fillStep2(creds) {
   await verifyPasswords(pwAll, creds.password);
 
   await sleep(300);
-  status('Step 2: Submitting...');
+  updateStatus('Step 2: Submitting...');
   clickContinue();
 }
 
 // -- STEP 3 - Profile Info ---
 async function fillStep3(creds) {
-  status('Step 3: Profile Info...');
+  updateStatus('Step 3: Profile Info...');
   const fnEl = await waitFor([
     'input[placeholder="First Name"]',
     'input[id*="FirstName" i]',
@@ -469,7 +469,7 @@ async function fillStep3(creds) {
   const lnEl = q('input[placeholder="Last Name"]', 'input[id*="LastName" i]');
   
   if (creds.needsBypass || (creds.firstName && creds.firstName.length > 20) || (creds.lastName && creds.lastName.length > 20)) {
-    status('Smart Mode: Bypassing site character limit...');
+    updateStatus('Smart Mode: Bypassing site character limit...');
     if (fnEl) fnEl.removeAttribute('maxlength');
     if (lnEl) lnEl.removeAttribute('maxlength');
     await sleep(100);
@@ -490,7 +490,7 @@ async function fillStep3(creds) {
   [...document.querySelectorAll('input,select')].forEach(el => { if (el.offsetParent) blurEl(el); });
 
   await sleep(300); // Turbo: reduced from 2000
-  status('Step 3: Submitting...');
+  updateStatus('Step 3: Submitting...');
   clickContinue();
   // BUG FIX: only ONE clickContinue here - MutationObserver picks up Step 4
 }
@@ -540,7 +540,7 @@ function findReadyContinue() {
     if (!el.offsetParent || el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
     const text = (el.value || el.textContent || el.getAttribute('aria-label') || '').trim().toLowerCase();
     if (!(text === 'continue' || text.startsWith('continue') || text === 'next' || text.includes('continue'))) return false;
-    const style = window.getComputedStyle(el);
+    const style = globalThis.getComputedStyle(el);
     return style.visibility !== 'hidden' && style.display !== 'none' && style.pointerEvents !== 'none';
   });
 }
@@ -550,30 +550,30 @@ function clickReadyContinue(btn) {
   btn.click();
   ['mousedown', 'mouseup', 'click'].forEach(type => {
     try {
-      btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
-    } catch (_) {}
+      btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: globalThis }));
+    } catch (err) { console.warn(err); }
   });
 }
 
 async function fillStep4(creds) {
-  status('Step 4: Confirm Policy...');
+  updateStatus('Step 4: Confirm Policy...');
 
   const deadline = Date.now() + (STABILITY_MODE ? 60000 : 30000);
   let attempts = 0;
 
   while (Date.now() < deadline) {
     attempts++;
-    status(`Step 4: Waiting for Continue...`);
+    updateStatus(`Step 4: Waiting for Continue...`);
     await ensureSelected();
 
     const btn = findReadyContinue();
     if (btn) {
-      status(`Step 4: Continue found, submitting...`);
+      updateStatus(`Step 4: Continue found, submitting...`);
       clickReadyContinue(btn);
       await wait(2500);
       if (detectStep() !== 'policy') return; 
       if (attempts % 4 === 0) {
-        status('Step 4: Still on policy, retrying...', '#d29922');
+        updateStatus('Step 4: Still on policy, retrying...', '#d29922');
       }
     }
 
@@ -588,10 +588,10 @@ async function handleDashboard(creds) {
   // If we already showed it, don't do it again
   if (document.getElementById('__prom_card')) return;
 
-  status('OK Registration Complete!');
+  updateStatus('OK Registration Complete!');
 
   const user    = creds.finalUsername || creds.username;
-  const isBatch = window.__isBatch;
+  const isBatch = globalThis.__isBatch;
 
   // -- Overlay ---
   const card = document.createElement('div');
@@ -661,11 +661,11 @@ async function handleDashboard(creds) {
   actionBtn.addEventListener('mouseup',    () => actionBtn.style.transform  = 'translateY(-1px)');
 
   function doSignOut() {
-    status('Signing out...');
+    updateStatus('Signing out...');
     const signOut = [...document.querySelectorAll('a,span,div,button')]
       .find(e => (e.textContent||'').trim() === 'Sign Out' && e.tagName !== 'SCRIPT');
     if (signOut) signOut.click();
-    else window.location.href = LOGIN_URL;
+    else globalThis.location.href = LOGIN_URL;
   }
 
   actionBtn.addEventListener('click', async () => {
@@ -692,7 +692,7 @@ async function handleDashboard(creds) {
       password:      creds.password,
       name:          creds.firstName + ' ' + creds.lastName,
       email:         creds.email,
-      url:           window.location.href,
+      url:           globalThis.location.href,
       step:          detectStep() || 'dashboard',
       queueId:       creds._queueId
     });
@@ -725,18 +725,18 @@ async function handleDashboard(creds) {
 
 // -- Navigation ---
 async function handleInvalidHostHeader() {
-  if (document.readyState !== 'complete') await new Promise(r => window.addEventListener('load', r, { once: true }));
+  if (document.readyState !== 'complete') await new Promise(r => globalThis.addEventListener('load', r, { once: true }));
   await sleep(300);
-  window.location.href = LOGIN_URL;
+  globalThis.location.href = LOGIN_URL;
 }
 
 async function handleLoginPage() {
-  if (document.readyState !== 'complete') await new Promise(r => window.addEventListener('load', r, { once: true }));
+  if (document.readyState !== 'complete') await new Promise(r => globalThis.addEventListener('load', r, { once: true }));
   await sleep(500);
   const link = [...document.querySelectorAll('a,button,input[type=submit]')]
     .find(el => { const t = (el.textContent || el.value || '').toLowerCase(); return t.includes('register') || t.includes('new user') || t.includes('first time'); });
   if (link) link.click();
-  else window.location.href = REGISTER_URL;
+  else globalThis.location.href = REGISTER_URL;
 }
 
 // -- MAIN ---
@@ -756,9 +756,9 @@ async function handleStep(step) {
   }
 
   if (filling || step === filledStep) return;
-  if (!currentItem) { status('Warning No data', '#d73a49'); return; }
+  if (!currentItem) { updateStatus('Warning No data', '#d73a49'); return; }
   if (!GLOBAL_RUNNING && !GLOBAL_SINGLE) {
-    status('Paused/Stopped', '#6e7681');
+    updateStatus('Paused/Stopped', '#6e7681');
     return;
   }
   
@@ -794,12 +794,12 @@ async function handleStep(step) {
 }
 
 async function run() {
-  const url = window.location.href;
+  const url = globalThis.location.href;
 
   // Wait for state from bridge.js
   const state = await new Promise(resolve => {
-    window.addEventListener('__prom_init', e => resolve(e.detail), { once: true });
-    window.dispatchEvent(new CustomEvent('__prom_ready'));
+    globalThis.addEventListener('__prom_init', e => resolve(e.detail), { once: true });
+    globalThis.dispatchEvent(new CustomEvent('__prom_ready'));
     setTimeout(() => resolve(null), 1500);
   });
 
@@ -808,16 +808,16 @@ async function run() {
     return;
   }
 
-  window.__isBatch = state.isRunning;
+  globalThis.__isBatch = state.isRunning;
   GLOBAL_RUNNING = state.isRunning;
   GLOBAL_SINGLE = state.singleRunning;
-  status('Active...', '#0969da');
+  updateStatus('Active...', '#0969da');
   currentItem = state.currentItem;
 
   if (url.includes('InvalidHostHeader')) { await handleInvalidHostHeader(); return; }
   if (url.includes('Login.aspx')) { await handleLoginPage(); return; }
 
-  if (document.readyState !== 'complete') await new Promise(r => window.addEventListener('load', r, { once: true }));
+  if (document.readyState !== 'complete') await new Promise(r => globalThis.addEventListener('load', r, { once: true }));
   await sleep(800);
 
   if (!currentItem) { failStep('No active data for page', 'state', true); return; }
@@ -844,7 +844,7 @@ async function run() {
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-window.addEventListener('__prom_init', e => { 
+globalThis.addEventListener('__prom_init', e => { 
   if (e.detail?.currentItem) currentItem = e.detail.currentItem; 
   if (e.detail?.pageDelay !== undefined) PAGE_DELAY = e.detail.pageDelay * 1000;
   if (e.detail?.autoSubmit !== undefined) AUTO_SUBMIT = e.detail.autoSubmit;
@@ -857,4 +857,4 @@ window.addEventListener('__prom_init', e => {
   // (the page wouldn't react to DOM changes after resumption).
   // The observer callback already has a GLOBAL_RUNNING/GLOBAL_SINGLE guard.
 });
-(async () => { try { await run(); } catch (e) { status('Error ' + e.message, '#d73a49'); } })();
+(async () => { try { await run(); } catch (e) { updateStatus('Error ' + e.message, '#d73a49'); } })();
