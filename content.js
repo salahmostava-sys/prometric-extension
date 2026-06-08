@@ -109,7 +109,7 @@ function fallbackCopy(text) {
   ta.focus();
   ta.select();
   try { document.execCommand('copy'); } catch(_) {}
-  document.body.removeChild(ta);
+  ta.remove();
 }
 
 // -- Fill field (native setter + events) ---
@@ -202,7 +202,7 @@ function clickContinue() {
 
   // Fallback: search by ID
   const aspBtn = document.querySelector('input[id*="Continue" i], button[id*="Continue" i], input[id*="Submit" i], button[id*="Submit" i], a[id*="Continue" i]');
-  if (aspBtn && aspBtn.offsetParent) {
+  if (aspBtn?.offsetParent) {
     aspBtn.focus();
     aspBtn.click();
     return true;
@@ -212,8 +212,8 @@ function clickContinue() {
 
 function nextSuffix(s) {
   if (s === '') return '1';
-  const n = parseInt(s, 10);
-  if (!isNaN(n)) {
+  const n = Number.parseInt(s, 10);
+  if (!Number.isNaN(n)) {
     if (n < 99) return String(n + 1);
     return 'a';
   }
@@ -496,66 +496,67 @@ async function fillStep3(creds) {
 }
 
 // -- STEP 4 - Confirm Policy ---
+
+async function ensureSelected() {
+  const agreeChk = q(
+    'input[type="checkbox"][id*="Agree" i]',
+    'input[type="checkbox"][id*="agree" i]',
+    'input[type="checkbox"]'
+  );
+  if (agreeChk && !agreeChk.checked) {
+    agreeChk.click();
+    agreeChk.dispatchEvent(new Event('change', { bubbles: true }));
+    agreeChk.dispatchEvent(new Event('input', { bubbles: true }));
+    await wait(500);
+  }
+
+  const allRadios = [...document.querySelectorAll('input[type="radio"]')];
+  const consentRadio = allRadios.find(r => {
+    const text = (
+      r.closest('label')?.textContent ||
+      (r.id ? document.querySelector(`label[for="${r.id}"]`)?.textContent : '') ||
+      r.labels?.[0]?.textContent ||
+      r.nextElementSibling?.textContent ||
+      r.nextSibling?.textContent ||
+      ''
+    ).trim().toLowerCase();
+    return (text === 'i consent' || text.startsWith('i consent')) && !text.includes('do not');
+  });
+  if (consentRadio && !consentRadio.checked) {
+    consentRadio.click();
+    consentRadio.dispatchEvent(new Event('change', { bubbles: true }));
+    consentRadio.dispatchEvent(new Event('input', { bubbles: true }));
+    await wait(500);
+  }
+}
+
+function findReadyContinue() {
+  const candidates = [
+    ...document.querySelectorAll('input[id*="Continue" i], button[id*="Continue" i], a[id*="Continue" i]'),
+    ...document.querySelectorAll('input[type="submit"], button, input[type="button"], a, [role="button"]')
+  ];
+
+  return candidates.find(el => {
+    if (!el.offsetParent || el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
+    const text = (el.value || el.textContent || el.getAttribute('aria-label') || '').trim().toLowerCase();
+    if (!(text === 'continue' || text.startsWith('continue') || text === 'next' || text.includes('continue'))) return false;
+    const style = window.getComputedStyle(el);
+    return style.visibility !== 'hidden' && style.display !== 'none' && style.pointerEvents !== 'none';
+  });
+}
+
+function clickReadyContinue(btn) {
+  btn.focus();
+  btn.click();
+  ['mousedown', 'mouseup', 'click'].forEach(type => {
+    try {
+      btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+    } catch (_) {}
+  });
+}
+
 async function fillStep4(creds) {
   status('Step 4: Confirm Policy...');
-
-  async function ensureSelected() {
-    const agreeChk = q(
-      'input[type="checkbox"][id*="Agree" i]',
-      'input[type="checkbox"][id*="agree" i]',
-      'input[type="checkbox"]'
-    );
-    if (agreeChk && !agreeChk.checked) {
-      agreeChk.click();
-      agreeChk.dispatchEvent(new Event('change', { bubbles: true }));
-      agreeChk.dispatchEvent(new Event('input', { bubbles: true }));
-      await wait(500);
-    }
-
-    const allRadios = [...document.querySelectorAll('input[type="radio"]')];
-    const consentRadio = allRadios.find(r => {
-      const text = (
-        r.closest('label')?.textContent ||
-        (r.id ? document.querySelector(`label[for="${r.id}"]`)?.textContent : '') ||
-        r.labels?.[0]?.textContent ||
-        r.nextElementSibling?.textContent ||
-        r.nextSibling?.textContent ||
-        ''
-      ).trim().toLowerCase();
-      return (text === 'i consent' || text.startsWith('i consent')) && !text.includes('do not');
-    });
-    if (consentRadio && !consentRadio.checked) {
-      consentRadio.click();
-      consentRadio.dispatchEvent(new Event('change', { bubbles: true }));
-      consentRadio.dispatchEvent(new Event('input', { bubbles: true }));
-      await wait(500);
-    }
-  }
-
-  function findReadyContinue() {
-    const candidates = [
-      ...document.querySelectorAll('input[id*="Continue" i], button[id*="Continue" i], a[id*="Continue" i]'),
-      ...document.querySelectorAll('input[type="submit"], button, input[type="button"], a, [role="button"]')
-    ];
-
-    return candidates.find(el => {
-      if (!el.offsetParent || el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
-      const text = (el.value || el.textContent || el.getAttribute('aria-label') || '').trim().toLowerCase();
-      if (!(text === 'continue' || text.startsWith('continue') || text === 'next' || text.includes('continue'))) return false;
-      const style = window.getComputedStyle(el);
-      return style.visibility !== 'hidden' && style.display !== 'none' && style.pointerEvents !== 'none';
-    });
-  }
-
-  function clickReadyContinue(btn) {
-    btn.focus();
-    btn.click();
-    ['mousedown', 'mouseup', 'click'].forEach(type => {
-      try {
-        btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
-      } catch (_) {}
-    });
-  }
 
   const deadline = Date.now() + (STABILITY_MODE ? 60000 : 30000);
   let attempts = 0;
@@ -822,7 +823,11 @@ async function run() {
   if (!currentItem) { failStep('No active data for page', 'state', true); return; }
 
   let step = null;
-  for (let i = 0; i < 20; i++) { step = detectStep(); if (step) break; await sleep(150); }
+  for (let i = 0; i < 20; i++) {
+    step = detectStep();
+    if (step) break;
+    await sleep(150);
+  }
   if (step) await handleStep(step);
   else failStep('Could not detect registration step', 'page', true);
 
@@ -840,16 +845,16 @@ async function run() {
 }
 
 window.addEventListener('__prom_init', e => { 
-  if (e.detail && e.detail.currentItem) currentItem = e.detail.currentItem; 
-  if (e.detail && e.detail.pageDelay !== undefined) PAGE_DELAY = e.detail.pageDelay * 1000;
-  if (e.detail && e.detail.autoSubmit !== undefined) AUTO_SUBMIT = e.detail.autoSubmit;
-  if (e.detail && e.detail.stabilityMode !== undefined) STABILITY_MODE = e.detail.stabilityMode;
-  if (e.detail && e.detail.defAnswer !== undefined) DEFAULT_ANSWER = e.detail.defAnswer;
-  if (e.detail && e.detail.isRunning !== undefined) GLOBAL_RUNNING = e.detail.isRunning;
-  if (e.detail && e.detail.singleRunning !== undefined) GLOBAL_SINGLE = e.detail.singleRunning;
+  if (e.detail?.currentItem) currentItem = e.detail.currentItem; 
+  if (e.detail?.pageDelay !== undefined) PAGE_DELAY = e.detail.pageDelay * 1000;
+  if (e.detail?.autoSubmit !== undefined) AUTO_SUBMIT = e.detail.autoSubmit;
+  if (e.detail?.stabilityMode !== undefined) STABILITY_MODE = e.detail.stabilityMode;
+  if (e.detail?.defAnswer !== undefined) DEFAULT_ANSWER = e.detail.defAnswer;
+  if (e.detail?.isRunning !== undefined) GLOBAL_RUNNING = e.detail.isRunning;
+  if (e.detail?.singleRunning !== undefined) GLOBAL_SINGLE = e.detail.singleRunning;
   // NOTE: We intentionally do NOT disconnect the observer here — this event
   // fires on Pause too, and disconnecting would prevent Resume from working
   // (the page wouldn't react to DOM changes after resumption).
   // The observer callback already has a GLOBAL_RUNNING/GLOBAL_SINGLE guard.
 });
-run().catch(e => { status('Error ' + e.message, '#d73a49'); });
+try { await run(); } catch (e) { status('Error ' + e.message, '#d73a49'); }

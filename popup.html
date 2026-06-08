@@ -209,7 +209,6 @@ body{
 .sc-copy:hover{border-color:var(--text);color:var(--text);background:var(--surface2)}
 
 /* -- History Tab -- */
-.tabs{display:flex}
 #pane-history{padding:0}
 .hist-toolbar{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface)}
 .hist-toolbar span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
@@ -292,11 +291,11 @@ body{
 <div class="pane active" id="pane-single">
 
   <div class="field">
-    <label>Full Name</label>
+    <label for="sName">Full Name</label>
     <input type="text" id="sName" placeholder="e.g. ABDULLAH MOHAMMED S AL OTHAYMIN"/>
   </div>
   <div class="field">
-    <label>Email Address</label>
+    <label for="sEmail">Email Address</label>
     <input type="email" id="sEmail" placeholder="example@email.com"/>
   </div>
 
@@ -380,7 +379,7 @@ body{
 <!-- -- PANE 3: Google Sheet -- -->
 <div class="pane" id="pane-sheet">
   <div class="field">
-    <label>Google Sheet URL</label>
+    <label for="sheetUrl">Google Sheet URL</label>
     <div style="display:flex;gap:8px">
       <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..."/>
       <button class="btn" id="sheetFetch" style="width:auto;white-space:nowrap;padding:8px 12px">Load Columns</button>
@@ -390,15 +389,15 @@ body{
   <div id="sheetCols" style="display:none;background:var(--surface2);padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
       <div class="field" style="margin-bottom:0">
-        <label style="font-size:10px;margin-bottom:2px">Name Column</label>
+        <label for="sheetNameCol" style="font-size:10px;margin-bottom:2px">Name Column</label>
         <select id="sheetNameCol" style="width:100%;padding:5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;outline:none"></select>
       </div>
       <div class="field" style="margin-bottom:0">
-        <label style="font-size:10px;margin-bottom:2px">Email Column</label>
+        <label for="sheetEmailCol" style="font-size:10px;margin-bottom:2px">Email Column</label>
         <select id="sheetEmailCol" style="width:100%;padding:5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;outline:none"></select>
       </div>
       <div class="field" style="margin-bottom:0">
-        <label style="font-size:10px;margin-bottom:2px">Day <span style="font-weight:400;color:var(--muted)">(opt)</span></label>
+        <label for="sheetDayCol" style="font-size:10px;margin-bottom:2px">Day <span style="font-weight:400;color:var(--muted)">(opt)</span></label>
         <select id="sheetDayCol" style="width:100%;padding:5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;outline:none">
           <option value="-1">- None -</option>
         </select>
@@ -464,12 +463,12 @@ body{
     <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Settings Automation Control</div>
     <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
       <div class="field" style="margin:0">
-        <label>Page Delay (Seconds)</label>
+        <label for="pageDelay">Page Delay (Seconds)</label>
         <input type="number" id="pageDelay" value="2" min="0.5" max="15" step="0.5"/>
         <div style="font-size:10px;color:var(--muted);margin-top:4px">Wait time between pages/steps.</div>
       </div>
       <div class="field" style="margin:0">
-        <label>Next User Delay (Seconds)</label>
+        <label for="userDelay">Next User Delay (Seconds)</label>
         <input type="number" id="userDelay" value="5" min="0.5" max="60" step="0.5"/>
         <div style="font-size:10px;color:var(--muted);margin-top:4px">Wait time between users in batch.</div>
       </div>
@@ -502,26 +501,26 @@ body{
     <div style="font-weight:700;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Data Default Personal Data</div>
     <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
       <div class="field" style="margin:0">
-        <label>Mailing Address</label>
+        <label for="defAddress">Mailing Address</label>
         <input type="text" id="defAddress" value="Al-Alameya"/>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="field" style="margin:0">
-          <label>City</label>
+          <label for="defCity">City</label>
           <input type="text" id="defCity" value="JEDDAH"/>
         </div>
         <div class="field" style="margin:0">
-          <label>State</label>
+          <label for="defState">State</label>
           <input type="text" id="defState" value="JEDDAH"/>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:12px">
         <div class="field" style="margin:0">
-          <label>Postal Code</label>
+          <label for="defPostal">Postal Code</label>
           <input type="text" id="defPostal" value="00000"/>
         </div>
         <div class="field" style="margin:0">
-          <label>Country</label>
+          <label for="defCountry">Country</label>
           <input type="text" id="defCountry" value="Saudi Arabia"/>
         </div>
       </div>
@@ -533,11 +532,11 @@ body{
     <div style="font-weight:700;font-size:11px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Security Account & Security</div>
     <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
       <div class="field" style="margin:0">
-        <label>Security Answer</label>
+        <label for="defAnswer">Security Answer</label>
         <input type="text" id="defAnswer" value="a"/>
       </div>
       <div class="field" style="margin:0">
-        <label>Password Pattern</label>
+        <label for="passPattern">Password Pattern</label>
         <input type="text" id="passPattern" value="{F}@{f}#$1970"/>
         <div style="font-size:10px;color:var(--muted);margin-top:4px">Tags: {F}, {f}, {L}, {l}</div>
       </div>
