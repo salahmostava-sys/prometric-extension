@@ -1,0 +1,25 @@
+{
+  "name": "prometric-extension",
+  "version": "1.0.0",
+  "description": "> **الإصدار:** v3.0 · **المنصة:** Chrome / Chromium · **Manifest:** V3",
+  "main": "background.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/salahmostava-sys/prometric-extension.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/salahmostava-sys/prometric-extension/issues"
+  },
+  "homepage": "https://github.com/salahmostava-sys/prometric-extension#readme",
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1"
+  }
+}

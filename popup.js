@@ -1503,3 +1503,13 @@ async function checkClipboard() {
 setInterval(checkClipboard, 1000);
 checkClipboard();
 loadSettings();
+
+// -- Export for Testing ---
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    genCreds,
+    isValidEmail,
+    validateBatchItems,
+    parseDelimitedRows
+  };
+}
