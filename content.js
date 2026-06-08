@@ -123,6 +123,16 @@ function escapeHtml(value) {
   }[ch]));
 }
 
+function triggerEvents(el, eventTypes) {
+  for (const type of eventTypes) {
+    if (type === 'keydown' || type === 'keyup') {
+      el.dispatchEvent(new KeyboardEvent(type, { bubbles: true }));
+    } else {
+      el.dispatchEvent(new Event(type, { bubbles: true }));
+    }
+  }
+}
+
 function setVal(el, value) {
   if (!el) return;
   try {
@@ -131,10 +141,7 @@ function setVal(el, value) {
     if (setter) setter.call(el, String(value));
     else el.value = String(value);
   } catch (_) { el.value = String(value); }
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
-  el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-  el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+  triggerEvents(el, ['input', 'change', 'keydown', 'keyup']);
 }
 
 function blurEl(el) {
@@ -147,14 +154,14 @@ function fillSelect(sel, text) {
   for (let i = 0; i < sel.options.length; i++) {
     if (sel.options[i].text.toLowerCase().includes(text.toLowerCase())) {
       sel.selectedIndex = i;
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      triggerEvents(sel, ['change']);
       return true;
     }
   }
   return false;
 }
 
-function q(...sels) {
+function querySelectorAny(...sels) {
   for (const s of sels) { try { const e = document.querySelector(s); if (e) return e; } catch (_) { } }
   return null;
 }
@@ -244,9 +251,9 @@ function detectStep() {
   if (text.includes('I AGREE') && document.querySelector('input[type="checkbox"]')) return 'policy';
   if (text.includes('PERSONAL DATA PRIVACY') || text.includes('I Consent')) return 'policy';
 
-  if (q('input[placeholder="First Name"]', 'input[id*="FirstName" i]')) return 'profile';
-  if (q('input[id*="Username" i]', 'input[placeholder*="Username" i]')) return 'signin';
-  if (q('select') && (text.includes('Prometric Info') || text.includes('Test Provider') || text.includes('Test Provider or Program'))) return 'prometric';
+  if (querySelectorAny('input[placeholder="First Name"]', 'input[id*="FirstName" i]')) return 'profile';
+  if (querySelectorAny('input[id*="Username" i]', 'input[placeholder*="Username" i]')) return 'signin';
+  if (querySelectorAny('select') && (text.includes('Prometric Info') || text.includes('Test Provider') || text.includes('Test Provider or Program'))) return 'prometric';
   return null;
 }
 
@@ -313,8 +320,7 @@ async function tryFillUsername(tryName, userEl) {
   el.focus();
   el.select();
   setVal(el, '');
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
+  triggerEvents(el, ['input', 'change']);
   await sleep(400);
 
   const t_clear = Date.now();
@@ -338,7 +344,7 @@ async function tryFillUsername(tryName, userEl) {
   if (nativeSetter) nativeSetter.call(el, tryName);
   else el.value = tryName;
   el.dispatchEvent(new InputEvent('input', { bubbles: true, data: tryName, inputType: 'insertText' }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
+  triggerEvents(el, ['change']);
   await sleep(100);
 
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -350,9 +356,7 @@ async function tryFillUsername(tryName, userEl) {
     if (nativeSetter) nativeSetter.call(checkEl, tryName);
     else checkEl.value = tryName;
     checkEl.dispatchEvent(new InputEvent('input', { bubbles: true, data: tryName, inputType: 'insertText' }));
-    checkEl.dispatchEvent(new Event('change', { bubbles: true }));
-    checkEl.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-    checkEl.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    triggerEvents(checkEl, ['change', 'keydown', 'keyup']);
     await sleep(200);
   }
 
@@ -397,10 +401,10 @@ async function fillPasswords(password) {
 
 async function fillSecurityQuestions() {
   updateStatus('Step 2: Security questions...');
-  const qDropdown = q('select[id*="Question" i]', 'select[name*="Question" i]');
+  const qDropdown = querySelectorAny('select[id*="Question" i]', 'select[name*="Question" i]');
   if (qDropdown) {
     qDropdown.focus();
-    qDropdown.dispatchEvent(new Event('change', { bubbles: true }));
+    triggerEvents(qDropdown, ['change']);
     await sleep(400);
   }
 
@@ -466,7 +470,7 @@ async function fillStep3(creds) {
   ]);
   if (!fnEl) { failStep('First Name field not found', 'missing-field', true); return; }
 
-  const lnEl = q('input[placeholder="Last Name"]', 'input[id*="LastName" i]');
+  const lnEl = querySelectorAny('input[placeholder="Last Name"]', 'input[id*="LastName" i]');
   
   if (creds.needsBypass || (creds.firstName && creds.firstName.length > 20) || (creds.lastName && creds.lastName.length > 20)) {
     updateStatus('Smart Mode: Bypassing site character limit...');
@@ -478,13 +482,13 @@ async function fillStep3(creds) {
   await sleep(200);
   setVal(fnEl, creds.firstName);
   setVal(lnEl, creds.lastName);
-  setVal(q('input[placeholder="Mailing Address"]', 'input[id*="Address1" i]'), creds.mailingAddress || 'Al-Alameya');
-  setVal(q('input[placeholder="City"]', 'input[id*="City" i]'), creds.city || 'JEDDAH');
-  setVal(q('input[placeholder="State/Province"]', 'input[id*="State" i]'), creds.state || 'JEDDAH');
-  setVal(q('input[placeholder="Postal Code"]', 'input[id*="Postal" i]', 'input[id*="Zip" i]'), creds.postalCode || '00000');
-  fillSelect(q('select[id*="Country" i]', 'select[name*="Country" i]'), creds.country || 'Saudi Arabia');
+  setVal(querySelectorAny('input[placeholder="Mailing Address"]', 'input[id*="Address1" i]'), creds.mailingAddress || 'Al-Alameya');
+  setVal(querySelectorAny('input[placeholder="City"]', 'input[id*="City" i]'), creds.city || 'JEDDAH');
+  setVal(querySelectorAny('input[placeholder="State/Province"]', 'input[id*="State" i]'), creds.state || 'JEDDAH');
+  setVal(querySelectorAny('input[placeholder="Postal Code"]', 'input[id*="Postal" i]', 'input[id*="Zip" i]'), creds.postalCode || '00000');
+  fillSelect(querySelectorAny('select[id*="Country" i]', 'select[name*="Country" i]'), creds.country || 'Saudi Arabia');
   await sleep(100);
-  setVal(q('input[type="email"]', 'input[placeholder="Email Address"]', 'input[id*="Email" i]', 'input[name*="Email" i]'), creds.email);
+  setVal(querySelectorAny('input[type="email"]', 'input[placeholder="Email Address"]', 'input[id*="Email" i]', 'input[name*="Email" i]'), creds.email);
 
   // Blur all to trigger validators
   [...document.querySelectorAll('input,select')].forEach(el => { if (el.offsetParent) blurEl(el); });
@@ -498,15 +502,14 @@ async function fillStep3(creds) {
 // -- STEP 4 - Confirm Policy ---
 
 async function ensureSelected() {
-  const agreeChk = q(
+  const agreeChk = querySelectorAny(
     'input[type="checkbox"][id*="Agree" i]',
     'input[type="checkbox"][id*="agree" i]',
     'input[type="checkbox"]'
   );
   if (agreeChk && !agreeChk.checked) {
     agreeChk.click();
-    agreeChk.dispatchEvent(new Event('change', { bubbles: true }));
-    agreeChk.dispatchEvent(new Event('input', { bubbles: true }));
+    triggerEvents(agreeChk, ['change', 'input']);
     await wait(500);
   }
 
@@ -524,8 +527,7 @@ async function ensureSelected() {
   });
   if (consentRadio && !consentRadio.checked) {
     consentRadio.click();
-    consentRadio.dispatchEvent(new Event('change', { bubbles: true }));
-    consentRadio.dispatchEvent(new Event('input', { bubbles: true }));
+    triggerEvents(consentRadio, ['change', 'input']);
     await wait(500);
   }
 }
@@ -584,21 +586,11 @@ async function fillStep4(creds) {
 }
 
 // -- FINAL STEP - Dashboard ---
-async function handleDashboard(creds) {
-  // If we already showed it, don't do it again
-  if (document.getElementById('__prom_card')) return;
-
-  updateStatus('OK Registration Complete!');
-
-  const user    = creds.finalUsername || creds.username;
-  const isBatch = globalThis.__isBatch;
-
-  // -- Overlay ---
+function createDashboardOverlay(user, creds, isBatch) {
   const card = document.createElement('div');
   card.id = '__prom_card';
   card.style.cssText = 'position:fixed;inset:0;background:rgba(9, 13, 22, 0.85);backdrop-filter:blur(10px);z-index:2147483646;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
 
-  // -- Box - wider & taller ---
   const box = document.createElement('div');
   box.style.cssText = 'background:rgba(22, 27, 34, 0.8);border:1px solid rgba(240, 246, 252, 0.1);border-radius:20px;padding:32px 36px;min-width:440px;max-width:540px;width:92vw;color:#f0f6fc;box-shadow:0 24px 64px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:12px;backdrop-filter:blur(8px)';
 
@@ -647,7 +639,6 @@ async function handleDashboard(creds) {
   card.appendChild(box);
   document.body.appendChild(card);
 
-  // Hover / press micro-animations
   const actionBtn = document.getElementById('__prom_action');
   actionBtn.addEventListener('mouseenter', () => {
     actionBtn.style.transform = 'translateY(-1px)';
@@ -660,33 +651,65 @@ async function handleDashboard(creds) {
   actionBtn.addEventListener('mousedown',  () => actionBtn.style.transform  = 'scale(.98)');
   actionBtn.addEventListener('mouseup',    () => actionBtn.style.transform  = 'translateY(-1px)');
 
-  function doSignOut() {
-    updateStatus('Signing out...');
-    const signOut = [...document.querySelectorAll('a,span,div,button')]
-      .find(e => (e.textContent||'').trim() === 'Sign Out' && e.tagName !== 'SCRIPT');
-    if (signOut) signOut.click();
-    else globalThis.location.href = LOGIN_URL;
-  }
+  return { card, actionBtn };
+}
+
+function startDashboardCountdown(actionBtn) {
+  const container = document.getElementById('__prom_countdown_container');
+  if (container) container.style.display = 'flex';
+
+  const circle = document.getElementById('__prom_countdown_circle');
+  const textSpan = document.getElementById('__prom_countdown_text');
+  const duration = 2000;
+  const t0 = Date.now();
+
+  const interval = setInterval(() => {
+    const elapsed = Date.now() - t0;
+    const pct = Math.max(0, 1 - elapsed / duration);
+    if (circle) circle.style.strokeDashoffset = 50 * (1 - pct);
+    const remainingSecs = (pct * 2).toFixed(1);
+    if (textSpan) textSpan.textContent = \`Auto-continuing in \${remainingSecs}s...\`;
+
+    if (elapsed >= duration) {
+      clearInterval(interval);
+      actionBtn.click();
+    }
+  }, 50);
+}
+
+function performSignOut() {
+  updateStatus('Signing out...');
+  const signOut = [...document.querySelectorAll('a,span,div,button')]
+    .find(e => (e.textContent||'').trim() === 'Sign Out' && e.tagName !== 'SCRIPT');
+  if (signOut) signOut.click();
+  else globalThis.location.href = LOGIN_URL;
+}
+
+async function handleDashboard(creds) {
+  if (document.getElementById('__prom_card')) return;
+
+  updateStatus('OK Registration Complete!');
+
+  const user    = creds.finalUsername || creds.username;
+  const isBatch = globalThis.__isBatch;
+
+  const { card, actionBtn } = createDashboardOverlay(user, creds, isBatch);
 
   actionBtn.addEventListener('click', async () => {
-    // 1. Prevent double-click
     actionBtn.disabled = true;
     actionBtn.style.background = '#238636';
     actionBtn.textContent = 'OK Copied!';
     document.getElementById('__prom_done_msg').style.display = 'block';
 
-    // 2. Copy credentials to clipboard
-    copyText(`${user}\t${creds.password}`, `${user} / ${creds.password}`);
+    copyText(\`\${user}\t\${creds.password}\`, \`\${user} / \${creds.password}\`);
 
-    // 3. Brief visual pause, then close overlay + sign out
     await sleep(900);
     card.remove();
     if (isBatch) {
-      doSignOut();
-      await sleep(500); // small buffer for sign-out to initiate
+      performSignOut();
+      await sleep(500);
     }
 
-    // 4. Notify background - triggers openNextTab() internally after userDelay
     send('stepDone', {
       finalUsername: user,
       password:      creds.password,
@@ -699,27 +722,7 @@ async function handleDashboard(creds) {
   });
 
   if (AUTO_SUBMIT || isBatch) {
-    const container = document.getElementById('__prom_countdown_container');
-    if (container) container.style.display = 'flex';
-
-    const circle = document.getElementById('__prom_countdown_circle');
-    const textSpan = document.getElementById('__prom_countdown_text');
-    const duration = 2000; // 2 seconds
-    const t0 = Date.now();
-
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - t0;
-      const pct = Math.max(0, 1 - elapsed / duration);
-      const circumference = 50; // 2 * pi * r = 2 * 3.14159 * 8 approx 50.2
-      if (circle) circle.style.strokeDashoffset = circumference * (1 - pct);
-      const remainingSecs = (pct * 2).toFixed(1);
-      if (textSpan) textSpan.textContent = `Auto-continuing in ${remainingSecs}s...`;
-
-      if (elapsed >= duration) {
-        clearInterval(interval);
-        actionBtn.click();
-      }
-    }, 50);
+    startDashboardCountdown(actionBtn);
   }
 }
 
