@@ -857,4 +857,4 @@ window.addEventListener('__prom_init', e => {
   // (the page wouldn't react to DOM changes after resumption).
   // The observer callback already has a GLOBAL_RUNNING/GLOBAL_SINGLE guard.
 });
-try { await run(); } catch (e) { status('Error ' + e.message, '#d73a49'); }
+(async () => { try { await run(); } catch (e) { status('Error ' + e.message, '#d73a49'); } })();

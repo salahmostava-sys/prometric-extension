@@ -98,7 +98,7 @@ window.addEventListener('__prom_msg', async (e) => {
 
 // Send data when page loads. MAIN world may not have attached its listener yet,
 // so also respond to an explicit ready signal and do a couple of short retries.
-await sendDataToPage();
+(async () => { await sendDataToPage(); })();
 setTimeout(sendDataToPage, 250);
 setTimeout(sendDataToPage, 1000);
 
