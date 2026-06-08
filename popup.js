@@ -498,40 +498,26 @@ function parseDelimitedRows(text) {
   let row = [], cur = '', inQ = false;
   const src = String(text || '').replace(/^\uFEFF/, '');
 
+  const pushCell = () => { row.push(cur.trim()); cur = ''; };
+  const pushRow = () => { pushCell(); if (row.some(Boolean)) rows.push(row); row = []; };
+
   for (let i = 0; i < src.length; i++) {
     const ch = src[i];
     const next = src[i + 1];
 
     if (ch === '"') {
-      if (inQ && next === '"') {
-        cur += '"';
-        i++;
-      } else {
-        inQ = !inQ;
-      }
-      continue;
-    }
-
-    if (ch === ',' && !inQ) {
-      row.push(cur.trim());
-      cur = '';
-      continue;
-    }
-
-    if ((ch === '\n' || ch === '\r') && !inQ) {
+      if (inQ && next === '"') { cur += '"'; i++; }
+      else { inQ = !inQ; }
+    } else if (ch === ',' && !inQ) {
+      pushCell();
+    } else if ((ch === '\n' || ch === '\r') && !inQ) {
       if (ch === '\r' && next === '\n') i++;
-      row.push(cur.trim());
-      if (row.some(Boolean)) rows.push(row);
-      row = [];
-      cur = '';
-      continue;
+      pushRow();
+    } else {
+      cur += ch;
     }
-
-    cur += ch;
   }
-
-  row.push(cur.trim());
-  if (row.some(Boolean)) rows.push(row);
+  pushRow();
   return rows;
 }
 
@@ -566,76 +552,89 @@ function textFromCellXml(cellXml) {
   return parts.join('');
 }
 
+async function extractZipEntries(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const dec   = new TextDecoder('utf-8', { fatal: false });
+  const entries = {};
+  let pos = 0;
+  while (pos < bytes.length - 4) {
+    if (bytes[pos] === 0x50 && bytes[pos+1] === 0x4B && bytes[pos+2] === 0x03 && bytes[pos+3] === 0x04) {
+      const compression = bytes[pos+8]  | (bytes[pos+9]  << 8);
+      const compSize    = bytes[pos+18] | (bytes[pos+19] << 8) | (bytes[pos+20] << 16) | (bytes[pos+21] << 24);
+      const fnLen       = bytes[pos+26] | (bytes[pos+27] << 8);
+      const extraLen    = bytes[pos+28] | (bytes[pos+29] << 8);
+      const nameStart   = pos + 30;
+      const name        = dec.decode(bytes.slice(nameStart, nameStart + fnLen));
+      const dataStart   = nameStart + fnLen + extraLen;
+      const compData    = bytes.slice(dataStart, dataStart + compSize);
+
+      if (compression === 0) {
+        entries[name] = dec.decode(compData);
+      } else if (compression === 8) {
+        try {
+          const ds     = new DecompressionStream('deflate-raw');
+          const writer = ds.writable.getWriter();
+          const reader = ds.readable.getReader();
+          writer.write(compData);
+          writer.close();
+          const chunks = [];
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+          const out = new Uint8Array(chunks.reduce((a, b) => a + b.length, 0));
+          let off = 0; for (const c of chunks) { out.set(c, off); off += c.length; }
+          entries[name] = dec.decode(out);
+        } catch (e) { /* skip */ }
+      }
+      pos = dataStart + compSize;
+    } else pos++;
+  }
+  return entries;
+}
+
+function parseSharedStrings(entries) {
+  const shared = [];
+  if (entries['xl/sharedStrings.xml']) {
+    const items = entries['xl/sharedStrings.xml'].matchAll(/<si[^>]*>([\s\S]*?)<\/si>/g);
+    for (const item of items) shared.push(textFromCellXml(item[1]));
+  }
+  return shared;
+}
+
+function parseSheetData(sheetXML, shared) {
+  const rows = [];
+  const rowMatches = sheetXML.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g);
+  for (const rm of rowMatches) {
+    const cells = [];
+    const cellMatches = rm[1].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g);
+    for (const cm of cellMatches) {
+      const attrs = cm[1];
+      const body = cm[2];
+      const ref = attrs.match(/\br="([A-Z]+)\d+"/);
+      const type = attrs.match(/\bt="([^"]*)"/)?.[1] || '';
+      const value = body.match(/<v>([\s\S]*?)<\/v>/)?.[1] || '';
+      const idx = ref ? colIndex(ref[1]) : cells.length;
+      let cellValue = '';
+
+      if (type === 's') cellValue = shared[parseInt(value, 10)] || '';
+      else if (type === 'inlineStr') cellValue = textFromCellXml(body);
+      else cellValue = decodeXml(value || textFromCellXml(body));
+
+      cells[idx] = cellValue;
+    }
+    if (cells.length > 0) rows.push(cells);
+  }
+  return rows;
+}
+
 async function parseXLSX(buffer) {
   try {
-    const bytes = new Uint8Array(buffer);
-    const dec   = new TextDecoder('utf-8', { fatal: false });
-    const entries = {};
-    let pos = 0;
-    while (pos < bytes.length - 4) {
-      if (bytes[pos] === 0x50 && bytes[pos+1] === 0x4B && bytes[pos+2] === 0x03 && bytes[pos+3] === 0x04) {
-        const compression = bytes[pos+8]  | (bytes[pos+9]  << 8);
-        const compSize    = bytes[pos+18] | (bytes[pos+19] << 8) | (bytes[pos+20] << 16) | (bytes[pos+21] << 24);
-        const fnLen       = bytes[pos+26] | (bytes[pos+27] << 8);
-        const extraLen    = bytes[pos+28] | (bytes[pos+29] << 8);
-        const nameStart   = pos + 30;
-        const name        = dec.decode(bytes.slice(nameStart, nameStart + fnLen));
-        const dataStart   = nameStart + fnLen + extraLen;
-        const compData    = bytes.slice(dataStart, dataStart + compSize);
-
-        if (compression === 0) {
-          entries[name] = dec.decode(compData);
-        } else if (compression === 8) {
-          try {
-            const ds     = new DecompressionStream('deflate-raw');
-            const writer = ds.writable.getWriter();
-            const reader = ds.readable.getReader();
-            writer.write(compData);
-            writer.close();
-            const chunks = [];
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              chunks.push(value);
-            }
-            const out = new Uint8Array(chunks.reduce((a, b) => a + b.length, 0));
-            let off = 0; for (const c of chunks) { out.set(c, off); off += c.length; }
-            entries[name] = dec.decode(out);
-          } catch (e) { /* skip */ }
-        }
-        pos = dataStart + compSize;
-      } else pos++;
-    }
-
-    const shared = [];
-    if (entries['xl/sharedStrings.xml']) {
-      const items = entries['xl/sharedStrings.xml'].matchAll(/<si[^>]*>([\s\S]*?)<\/si>/g);
-      for (const item of items) shared.push(textFromCellXml(item[1]));
-    }
-
-    const sheetXML  = entries['xl/worksheets/sheet1.xml'] || '';
-    const rows      = [];
-    const rowMatches = sheetXML.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g);
-    for (const rm of rowMatches) {
-      const cells = [];
-      const cellMatches = rm[1].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g);
-      for (const cm of cellMatches) {
-        const attrs = cm[1];
-        const body = cm[2];
-        const ref = attrs.match(/\br="([A-Z]+)\d+"/);
-        const type = attrs.match(/\bt="([^"]*)"/)?.[1] || '';
-        const value = body.match(/<v>([\s\S]*?)<\/v>/)?.[1] || '';
-        const idx = ref ? colIndex(ref[1]) : cells.length;
-        let cellValue = '';
-
-        if (type === 's') cellValue = shared[parseInt(value, 10)] || '';
-        else if (type === 'inlineStr') cellValue = textFromCellXml(body);
-        else cellValue = decodeXml(value || textFromCellXml(body));
-
-        cells[idx] = cellValue;
-      }
-      if (cells.length > 0) rows.push(cells);
-    }
+    const entries = await extractZipEntries(buffer);
+    const shared = parseSharedStrings(entries);
+    const sheetXML = entries['xl/worksheets/sheet1.xml'] || '';
+    const rows = parseSheetData(sheetXML, shared);
 
     let start = 0;
     if (rows[0] && (rows[0][0].toLowerCase().includes('name') || rows[0][1]?.toLowerCase().includes('email'))) start = 1;
@@ -903,13 +902,8 @@ function renderLogs(logs = null) {
 }
 
 // -- Poll status ---
-async function pollStatus() {
-  const { queue, queueIndex, isRunning, singleRunning, runLogs = [] } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning', 'singleRunning', 'runLogs']);
-  renderLogs(runLogs);
-
+function updateSingleModeUI(singleRunning) {
   const titleEl = document.getElementById('globalBatchTitle');
-  
-  // Single Mode UI updates
   if (singleRunning) {
     if (batchBanner) {
       batchBanner.style.display = 'flex';
@@ -933,8 +927,94 @@ async function pollStatus() {
   } else {
     if (sStart) sStart.style.display = 'block';
   }
+}
 
-  // Batch Mode UI updates
+function updateQueueItemsUI(queue, queueIndex, isRunning) {
+  queue.forEach((item, i) => {
+    const dot  = document.getElementById(`qd-${i}`);
+    const stat = document.getElementById(`qs-${i}`);
+    if (!dot || !stat) return;
+    let s;
+    if (item.status === 'done' || item.status === 'failed') {
+      s = item.status;
+    } else if (i === queueIndex && isRunning) {
+      s = 'running';
+    } else if (i < queueIndex) {
+      s = item.status || 'done';
+    } else {
+      s = 'pending';
+    }
+    dot.className  = `q-dot ${s}`;
+    stat.className = `q-status ${s}`;
+    stat.textContent = statusLabel(s);
+  });
+}
+
+function updateBatchModeRunningUI(queueLength, queueIndex) {
+  const titleEl = document.getElementById('globalBatchTitle');
+  if (batchBanner) {
+    batchBanner.style.display = 'flex';
+    batchBanner.style.background = 'rgba(210,153,34,.1)';
+    batchBanner.style.borderColor = 'rgba(210,153,34,.3)';
+  }
+  if (titleEl) {
+    titleEl.textContent = 'Batch Registration Running...';
+    titleEl.style.color = 'var(--green)';
+  }
+  if (batchProgress) {
+    batchProgress.style.color = 'var(--yellow)';
+    batchProgress.textContent = `Processing ${Math.min(queueIndex + 1, queueLength)} of ${queueLength}...`;
+  }
+  
+  bStart.style.display = 'none';
+  if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
+  if (pauseBatchBtn) pauseBatchBtn.style.display = 'block';
+  if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
+  if (batchSpinner) batchSpinner.style.display = 'block';
+  if (retryFailedBtn) retryFailedBtn.style.display = 'none';
+}
+
+function updateBatchModePausedUI(queue, queueIndex, isRunning) {
+  const titleEl = document.getElementById('globalBatchTitle');
+  const pendingItems = queue.slice(queueIndex).filter(it => it.status === 'pending');
+  const hasPending   = pendingItems.length > 0 && queueIndex < queue.length;
+  
+  bStart.style.display = 'none';
+  if (pauseBatchBtn) pauseBatchBtn.style.display = 'none';
+  if (batchSpinner) batchSpinner.style.display = 'none';
+  
+  if (hasPending) {
+    if (batchBanner) {
+      batchBanner.style.display = 'flex';
+      batchBanner.style.background = 'rgba(56,139,253,.08)';
+      batchBanner.style.borderColor = 'rgba(56,139,253,.3)';
+    }
+    if (titleEl) {
+      titleEl.textContent = 'Batch Paused';
+      titleEl.style.color = 'var(--yellow)';
+    }
+    if (batchProgress) {
+      batchProgress.style.color = 'var(--blue)';
+      batchProgress.textContent = `Queue paused - ${pendingItems.length} remaining`;
+    }
+    if (resumeBatchBtn) resumeBatchBtn.style.display = 'block';
+    if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
+  } else {
+    if (batchBanner) batchBanner.style.display = 'none';
+    if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
+    if (cancelBatchBtn) cancelBatchBtn.style.display = 'none';
+    bStart.style.display = 'block';
+  }
+  const failedCount = queue.filter(it => it.status === 'failed').length;
+  if (retryFailedBtn) retryFailedBtn.style.display = failedCount > 0 && !isRunning ? 'block' : 'none';
+}
+
+async function pollStatus() {
+  const { queue, queueIndex, isRunning, singleRunning, runLogs = [] } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning', 'singleRunning', 'runLogs']);
+  renderLogs(runLogs);
+
+  updateSingleModeUI(singleRunning);
+
   if (!queue || queue.length === 0) {
     if (retryFailedBtn) retryFailedBtn.style.display = 'none';
     if (clearSessionBtn) clearSessionBtn.style.display = 'none';
@@ -947,6 +1027,7 @@ async function pollStatus() {
     it.finalUsername !== batchItems[i]?.finalUsername ||
     it.failureReason !== batchItems[i]?.failureReason
   );
+  
   if (isRunning || singleRunning || batchItems.length === 0 || queueChanged) {
     batchItems = queue;
     renderQueue();
@@ -956,80 +1037,12 @@ async function pollStatus() {
   if (clearSessionBtn) clearSessionBtn.style.display = queue.length > 0 ? 'block' : 'none';
 
   if (queue.length > 0 && !singleRunning) {
-    queue.forEach((item, i) => {
-      const dot  = document.getElementById(`qd-${i}`);
-      const stat = document.getElementById(`qs-${i}`);
-      if (!dot || !stat) return;
-      // FIX #5: Prioritise the stored item.status so 'failed'/'done' items
-      // are never re-labelled as 'running' just because of queue index position.
-      let s;
-      if (item.status === 'done' || item.status === 'failed') {
-        s = item.status;
-      } else if (i === queueIndex && isRunning) {
-        s = 'running';
-      } else if (i < queueIndex) {
-        s = item.status || 'done';
-      } else {
-        s = 'pending';
-      }
-      dot.className  = `q-dot ${s}`;
-      stat.className = `q-status ${s}`;
-      stat.textContent = statusLabel(s);
-    });
+    updateQueueItemsUI(queue, queueIndex, isRunning);
 
     if (isRunning) {
-      if (batchBanner) {
-        batchBanner.style.display = 'flex';
-        batchBanner.style.background = 'rgba(210,153,34,.1)';
-        batchBanner.style.borderColor = 'rgba(210,153,34,.3)';
-      }
-      if (titleEl) {
-        titleEl.textContent = 'Batch Registration Running...';
-        titleEl.style.color = 'var(--green)';
-      }
-      if (batchProgress) {
-        batchProgress.style.color = 'var(--yellow)';
-        batchProgress.textContent = `Processing ${Math.min(queueIndex + 1, queue.length)} of ${queue.length}...`;
-      }
-      
-      bStart.style.display = 'none';
-      if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
-      if (pauseBatchBtn) pauseBatchBtn.style.display = 'block';
-      if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
-      if (batchSpinner) batchSpinner.style.display = 'block';
-      if (retryFailedBtn) retryFailedBtn.style.display = 'none';
-    } else { // Stopped/Paused batch mode
-      const pendingItems = queue.slice(queueIndex).filter(it => it.status === 'pending');
-      const hasPending   = pendingItems.length > 0 && queueIndex < queue.length;
-      
-      bStart.style.display = 'none';
-      if (pauseBatchBtn) pauseBatchBtn.style.display = 'none';
-      if (batchSpinner) batchSpinner.style.display = 'none';
-      
-      if (hasPending) {
-        if (batchBanner) {
-          batchBanner.style.display = 'flex';
-          batchBanner.style.background = 'rgba(56,139,253,.08)';
-          batchBanner.style.borderColor = 'rgba(56,139,253,.3)';
-        }
-        if (titleEl) {
-          titleEl.textContent = 'Batch Paused';
-          titleEl.style.color = 'var(--yellow)';
-        }
-        if (batchProgress) {
-          batchProgress.style.color = 'var(--blue)';
-          batchProgress.textContent = `Queue paused - ${pendingItems.length} remaining`;
-        }
-        if (resumeBatchBtn) resumeBatchBtn.style.display = 'block';
-        if (cancelBatchBtn) cancelBatchBtn.style.display = 'block';
-      } else {
-        if (batchBanner) batchBanner.style.display = 'none';
-        if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
-        if (cancelBatchBtn) cancelBatchBtn.style.display = 'none';
-        bStart.style.display = 'block';
-      }
-      const failedCount = queue.filter(it => it.status === 'failed').length;
-      if (retryFailedBtn) retryFailedBtn.style.display = failedCount > 0 && !isRunning ? 'block' : 'none';
+      updateBatchModeRunningUI(queue.length, queueIndex);
+    } else {
+      updateBatchModePausedUI(queue, queueIndex, isRunning);
     }
   }
 }
@@ -1135,7 +1148,7 @@ async function loadSavedCreds() {
 document.addEventListener('click', async (e) => {
   // Handle history copy
   if (e.target.classList.contains('hist-copy')) {
-    const i = e.target.getAttribute('data-index');
+    const i = e.target.dataset.index;
     const { history = [] } = await chrome.storage.local.get(['history']);
     const h = history[i];
     if (h) fallbackCopyPopup(`${h.finalUsername}\t${h.password}`);
@@ -1147,7 +1160,7 @@ document.addEventListener('click', async (e) => {
   
   // Handle saved creds copy
   if (e.target.classList.contains('sc-copy')) {
-    const id = e.target.getAttribute('data-copy');
+    const id = e.target.dataset.copy;
     const text = document.getElementById(id)?.textContent || '';
     fallbackCopyPopup(text);
     const btn = e.target;
@@ -1370,7 +1383,7 @@ function renderSheetPreview() {
 document.getElementById('sheetNameCol')?.addEventListener('change', renderSheetPreview);
 document.getElementById('sheetEmailCol')?.addEventListener('change', renderSheetPreview);
 
-document.getElementById('sheetStart')?.addEventListener('click', async () => {
+async function processSheetStart() {
   if (!(await confirmReplaceRunning())) return;
   const nIdx = parseInt(document.getElementById('sheetNameCol').value);
   const eIdx = parseInt(document.getElementById('sheetEmailCol').value);
@@ -1428,7 +1441,9 @@ document.getElementById('sheetStart')?.addEventListener('click', async () => {
       showMessage(sheetMsgEl, 'ok', `Started ${items.length - stats.exactDuplicates} registrations. Removed ${stats.exactDuplicates} exact duplicate row(s).`);
     }
   }
-});
+}
+
+document.getElementById('sheetStart')?.addEventListener('click', processSheetStart);
 
 // Build day filter checkboxes from selected column
 function buildDayFilter(dIdx) {

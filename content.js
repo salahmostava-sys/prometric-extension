@@ -275,140 +275,127 @@ async function fillStep1() {
   clickContinue();
 }
 
-// -- STEP 2 - Sign In Info ---
-async function fillStep2(creds) {
-  status('Step 2: Username...');
-  const userEl = await waitFor([
-    'input[id*="Username" i]',
-    'input[placeholder*="Username" i]',
-    'input[name*="Username" i]'
-  ]);
-  if (!userEl) { failStep('Username field not found', 'missing-field', true); return; }
+async function waitForUsernameValidation(maxMs = 4000) {
+  const t0 = Date.now();
+  const errorKeywords = [
+    'username already found',
+    'already found, please',
+    'username already exists',
+    'already in use',
+    'username is not available',
+    'not available'
+  ];
+  while (Date.now() - t0 < maxMs) {
+    await sleep(150);
+    const bodyText = (document.body.textContent || '').toLowerCase();
+    const hasPossibleError = errorKeywords.some(kw => bodyText.includes(kw));
+    if (!hasPossibleError) continue;
 
-  // Username + retry if taken
-  // Dynamic wait: polls up to 4s for server validation response
-  async function waitForUsernameValidation(maxMs = 4000) {
-    const t0 = Date.now();
-    const errorKeywords = [
-      'username already found',
-      'already found, please',
-      'username already exists',
-      'already in use',
-      'username is not available',
-      'not available'
-    ];
-    while (Date.now() - t0 < maxMs) {
-      await sleep(150); // Turbo: reduced from 300
-      const bodyText = (document.body.textContent || '').toLowerCase();
-      const hasPossibleError = errorKeywords.some(kw => bodyText.includes(kw));
-      if (!hasPossibleError) continue;
+    const taken = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
+      if (!el.offsetParent || el.childElementCount > 0) return false;
+      const t = (el.textContent || '').toLowerCase().trim();
+      return errorKeywords.some(kw => t.includes(kw));
+    });
+    if (taken) return true;
+  }
+  return false;
+}
 
-      const taken = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
-        if (!el.offsetParent || el.childElementCount > 0) return false;
-        const t = (el.textContent || '').toLowerCase().trim();
-        return errorKeywords.some(kw => t.includes(kw));
-      });
-      if (taken) return true;
-      // FIX #6: Removed brittle CSS border-color check — it breaks whenever
-      // Prometric updates their stylesheet. Text-based detection above is reliable.
-    }
-    return false; // no error found -> name is available
+async function tryFillUsername(tryName, userEl) {
+  function getField() {
+    return document.querySelector('input[id*="Username" i]') ||
+           document.querySelector('input[placeholder*="Username" i]') ||
+           document.querySelector('input[name*="Username" i]') ||
+           userEl;
   }
 
+  let el = getField();
+  el.focus();
+  el.select();
+  setVal(el, '');
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  await sleep(400);
+
+  const t_clear = Date.now();
+  while (Date.now() - t_clear < 2500) {
+    const stillOld = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
+      if (!el.offsetParent || el.childElementCount > 0) return false;
+      const t = (el.textContent || '').toLowerCase().trim();
+      return t.includes('username already found') || t.includes('already found, please');
+    });
+    if (!stillOld) break;
+    await sleep(150);
+  }
+
+  el = getField();
+  el.focus();
+  el.select();
+  setVal(el, '');
+  await sleep(100);
+
+  const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+  if (nativeSetter) nativeSetter.call(el, tryName);
+  else el.value = tryName;
+  el.dispatchEvent(new InputEvent('input', { bubbles: true, data: tryName, inputType: 'insertText' }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  await sleep(100);
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const checkEl = getField();
+    if (checkEl.value === tryName) break;
+    
+    checkEl.focus();
+    checkEl.select();
+    if (nativeSetter) nativeSetter.call(checkEl, tryName);
+    else checkEl.value = tryName;
+    checkEl.dispatchEvent(new InputEvent('input', { bubbles: true, data: tryName, inputType: 'insertText' }));
+    checkEl.dispatchEvent(new Event('change', { bubbles: true }));
+    checkEl.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+    checkEl.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    await sleep(200);
+  }
+
+  blurEl(getField());
+  return await waitForUsernameValidation(3000);
+}
+
+async function fillUsernameWithRetry(creds, userEl) {
   let suffix = '';
   while (true) {
     const tryName = creds.username + suffix;
     status(`Trying username: ${tryName}`);
 
-    // -- Step 1: Query the field fresh every iteration ---
-    function getField() {
-      return document.querySelector('input[id*="Username" i]') ||
-             document.querySelector('input[placeholder*="Username" i]') ||
-             document.querySelector('input[name*="Username" i]') ||
-             userEl;
-    }
-
-    // -- Step 2: Clear the field ---
-    let el = getField();
-    el.focus();
-    el.select();
-    setVal(el, '');
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(400);
-
-    // -- Step 3: Wait until error disappears (UpdatePanel will refresh DOM) ---
-    const t_clear = Date.now();
-    while (Date.now() - t_clear < 2500) {
-      const stillOld = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
-        if (!el.offsetParent || el.childElementCount > 0) return false;
-        const t = (el.textContent || '').toLowerCase().trim();
-        return t.includes('username already found') || t.includes('already found, please');
-      });
-      if (!stillOld) break;
-      await sleep(150);
-    }
-
-    // -- Step 4: Re-query AFTER UpdatePanel may have replaced the element ---
-    el = getField();
-    el.focus();
-
-    // Clear any leftover value first
-    el.select();
-    setVal(el, '');
-    await sleep(100);
-
-    // Write the new username using native setter
-    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-    if (nativeSetter) nativeSetter.call(el, tryName);
-    else el.value = tryName;
-    el.dispatchEvent(new InputEvent('input', { bubbles: true, data: tryName, inputType: 'insertText' }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(100);
-
-    // -- Step 5: Verify value actually appears in the field ---
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const checkEl = getField();
-      if (checkEl.value === tryName) break;
-      
-      checkEl.focus();
-      checkEl.select();
-      if (nativeSetter) nativeSetter.call(checkEl, tryName);
-      else checkEl.value = tryName;
-      checkEl.dispatchEvent(new InputEvent('input', { bubbles: true, data: tryName, inputType: 'insertText' }));
-      checkEl.dispatchEvent(new Event('change', { bubbles: true }));
-      checkEl.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-      checkEl.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-      await sleep(200);
-    }
-
-    blurEl(getField());
-
-    // -- Step 6: Wait for server validation (dynamic, up to 4s) ---
-    const taken = await waitForUsernameValidation(3000);
+    const taken = await tryFillUsername(tryName, userEl);
 
     if (!taken) {
       creds.finalUsername = tryName;
       send('updateItem', creds);
       status('Username OK');
-      break;
+      return true;
     }
     status(`Warning "${tryName}" taken, trying next...`, '#d29922');
     const next = nextSuffix(suffix);
-    if (!next) { failStep('Username exhausted', 'validation', false); return; }
+    if (!next) { 
+      failStep('Username exhausted', 'validation', false); 
+      return false; 
+    }
     suffix = next;
   }
+}
 
-  // Password (first 2 password inputs)
+async function fillPasswords(password) {
   status('Step 2: Password...');
   const pwAll = [...document.querySelectorAll('input[type="password"]')];
   for (let i = 0; i < Math.min(pwAll.length, 2); i++) {
     pwAll[i].focus();
-    setVal(pwAll[i], creds.password);
-    await sleep(10); // Turbo: reduced from 80
+    setVal(pwAll[i], password);
+    await sleep(10);
   }
+  return pwAll;
+}
 
-  // Security questions: trigger dropdown then fill text inputs
+async function fillSecurityQuestions() {
   status('Step 2: Security questions...');
   const qDropdown = q('select[id*="Question" i]', 'select[name*="Question" i]');
   if (qDropdown) {
@@ -417,7 +404,6 @@ async function fillStep2(creds) {
     await sleep(400);
   }
 
-  // Fill all visible text inputs (not username)
   const textInputs = [...document.querySelectorAll('input')].filter(inp => {
     if (!inp.offsetParent) return false;
     const t = (inp.type || 'text').toLowerCase();
@@ -428,30 +414,46 @@ async function fillStep2(creds) {
   for (const inp of textInputs) {
     inp.focus();
     setVal(inp, DEFAULT_ANSWER);
-    await sleep(10); // Turbo: reduced from 60
+    await sleep(10);
   }
 
-  // Also target Question Answered fields directly
   document.querySelectorAll('input[placeholder*="Question Answered" i],input[id*="Answer" i],input[name*="Answer" i]')
     .forEach(inp => { if (inp.offsetParent) { inp.focus(); setVal(inp, DEFAULT_ANSWER); } });
 
-  // Blur all to trigger validators
   [...document.querySelectorAll('input,select')].forEach(el => { if (el.offsetParent) blurEl(el); });
+}
 
-  // Re-verify passwords not cleared
+async function verifyPasswords(pwAll, password) {
   await sleep(150);
   for (let i = 0; i < Math.min(pwAll.length, 2); i++) {
     if (!pwAll[i].value) {
       pwAll[i].focus();
-      setVal(pwAll[i], creds.password);
+      setVal(pwAll[i], password);
       blurEl(pwAll[i]);
     }
   }
+}
 
-  await sleep(300); // Turbo: reduced from 2000
+// -- STEP 2 - Sign In Info ---
+async function fillStep2(creds) {
+  status('Step 2: Username...');
+  const userEl = await waitFor([
+    'input[id*="Username" i]',
+    'input[placeholder*="Username" i]',
+    'input[name*="Username" i]'
+  ]);
+  if (!userEl) { failStep('Username field not found', 'missing-field', true); return; }
+
+  const success = await fillUsernameWithRetry(creds, userEl);
+  if (!success) return;
+
+  const pwAll = await fillPasswords(creds.password);
+  await fillSecurityQuestions();
+  await verifyPasswords(pwAll, creds.password);
+
+  await sleep(300);
   status('Step 2: Submitting...');
   clickContinue();
-  // No second click here - MutationObserver handles next step
 }
 
 // -- STEP 3 - Profile Info ---
@@ -748,8 +750,8 @@ async function handleStep(step) {
                    pageText.includes('is required') ||
                    !!document.querySelector('.error, .errorMessage, [id*="Error" i], [class*="Error" i]');
   
-  if (hasError) {
-    if (filledStep === step) filledStep = null; // Allow retry
+  if (hasError && filledStep === step) {
+    filledStep = null; // Allow retry
   }
 
   if (filling || step === filledStep) return;
@@ -758,23 +760,31 @@ async function handleStep(step) {
     status('Paused/Stopped', '#6e7681');
     return;
   }
+  
   filling = true;
   filledStep = step;
   await sleep(PAGE_DELAY);
+  
   if (!GLOBAL_RUNNING && !GLOBAL_SINGLE) { filling = false; return; }
+  
+  const stepHandlers = {
+    dashboard: () => handleDashboard(currentItem),
+    policy: () => fillStep4(currentItem),
+    profile: () => fillStep3(currentItem),
+    signin: () => fillStep2(currentItem),
+    prometric: () => fillStep1()
+  };
+
   try {
-    if (step === 'dashboard') await handleDashboard(currentItem);
-    else if (step === 'policy') await fillStep4(currentItem);
-    else if (step === 'profile') await fillStep3(currentItem);
-    else if (step === 'signin') await fillStep2(currentItem);
-    else if (step === 'prometric') await fillStep1();
+    if (stepHandlers[step]) {
+      await stepHandlers[step]();
+    }
   } catch (e) {
     failStep(e.message || 'Unhandled content error', 'exception', true);
     console.error('[Prometric]', e);
   }
   filling = false;
 
-  // If we are on policy step, allow retrying after a while if we're still here
   if (step === 'policy') {
     setTimeout(() => {
       if (detectStep() === 'policy') filledStep = null;
