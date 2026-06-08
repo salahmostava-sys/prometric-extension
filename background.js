@@ -19,7 +19,7 @@ function isCurrentQueueMessage(queue, queueIndex, msg, currentProcessingId = '')
   return current.name === msg.name || !msg.name;
 }
 
-function isRetryableFailure(reason = '', failureKind = '', retryable) {
+function isRetryableFailure(retryable, reason = '', failureKind = '') {
   if (retryable === false) return false;
   if (retryable === true) return true;
   const text = `${failureKind} ${reason}`.toLowerCase();
@@ -74,7 +74,7 @@ async function getRegistrationTabId(url) {
   if (regWindowId) {
     try {
       const win = await chrome.windows.get(regWindowId, { populate: true });
-      if (win && win.tabs && win.tabs.length > 0) {
+      if (win?.tabs?.length > 0) {
         const tabId = win.tabs[0].id;
         await chrome.tabs.update(tabId, { url });
         await keepRegistrationTabAlive(tabId);
@@ -201,7 +201,7 @@ async function processEndOfQueue() {
   const failedItems = latestQueue.filter(i =>
     i.status === 'failed' &&
     !i.retried &&
-    isRetryableFailure(i.failureReason, i.failureKind, i.retryable)
+    isRetryableFailure(i.retryable, i.failureReason, i.failureKind)
   );
 
   if ((autoRetry ?? DEFAULT_AUTO_RETRY) && failedItems.length > 0) {
@@ -385,7 +385,7 @@ async function handleStepFailed(msg, state) {
     queue[queueIndex].status = 'failed';
     queue[queueIndex].failureReason = entry.reason;
     queue[queueIndex].failureKind = entry.failureKind;
-    queue[queueIndex].retryable = isRetryableFailure(entry.reason, entry.failureKind, entry.retryable);
+    queue[queueIndex].retryable = isRetryableFailure(entry.retryable, entry.reason, entry.failureKind);
     queue[queueIndex].failureUrl = entry.url;
     queue[queueIndex].failureStep = entry.step;
     queue[queueIndex].pageSnippet = entry.pageSnippet;

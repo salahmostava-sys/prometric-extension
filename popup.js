@@ -89,7 +89,7 @@ function fallbackCopyPopup(text) {
   ta.focus();
   ta.select();
   try { document.execCommand('copy'); } catch(e) { console.warn(e); }
-  document.body.removeChild(ta);
+  ta.remove();
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).catch(() => {});
   }
@@ -398,7 +398,7 @@ document.getElementById('importSettingsFile')?.addEventListener('change', (e) =>
           
           if (defaultType === 'number') {
             val = Number(val);
-            if (isNaN(val)) return;
+            if (Number.isNaN(val)) return;
           } else if (defaultType === 'boolean') {
             val = Boolean(val);
           } else if (defaultType === 'string') {
@@ -545,8 +545,8 @@ function decodeXml(value) {
   return String(value || '').replace(/&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-f]+);/gi, entity => {
     const named = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'" };
     if (named[entity]) return named[entity];
-    if (entity.startsWith('&#x')) return String.fromCodePoint(parseInt(entity.slice(3, -1), 16));
-    if (entity.startsWith('&#')) return String.fromCodePoint(parseInt(entity.slice(2, -1), 10));
+    if (entity.startsWith('&#x')) return String.fromCodePoint(Number.parseInt(entity.slice(3, -1), 16));
+    if (entity.startsWith('&#')) return String.fromCodePoint(Number.parseInt(entity.slice(2, -1), 10));
     return entity;
   });
 }
@@ -581,8 +581,7 @@ async function decompressDeflate(compData, dec) {
     for (const c of chunks) { out.set(c, off); off += c.length; }
     return dec.decode(out);
   } catch (e) {
-    console.warn(e);
-    return '';
+    throw new Error('Failed to decompress ZIP entry: ' + e.message);
   }
 }
 
@@ -643,7 +642,7 @@ function parseSheetData(sheetXML, shared) {
       const idx = ref ? colIndex(ref[1]) : cells.length;
       let cellValue = '';
 
-      if (type === 's') cellValue = shared[parseInt(value, 10)] || '';
+      if (type === 's') cellValue = shared[Number.parseInt(value, 10)] || '';
       else if (type === 'inlineStr') cellValue = textFromCellXml(body);
       else cellValue = decodeXml(value || textFromCellXml(body));
 
@@ -665,8 +664,7 @@ async function parseXLSX(buffer) {
     if (rows[0] && (rows[0][0].toLowerCase().includes('name') || rows[0][1]?.toLowerCase().includes('email'))) start = 1;
     return rows.slice(start).filter(r => r[0]);
   } catch (e) {
-    console.warn(e);
-    return [];
+    throw new Error('Failed to parse XLSX file: ' + e.message);
   }
 }
 
