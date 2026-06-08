@@ -7,7 +7,8 @@ let openNextInProgress = false;
 let openNextPending = false;
 
 function makeQueueId(prefix = 'q') {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const rand = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+  return `${prefix}_${Date.now()}_${rand}`;
 }
 
 function isCurrentQueueMessage(queue, queueIndex, msg, currentProcessingId = '') {

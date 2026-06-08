@@ -107,7 +107,8 @@ function escapeHtml(value) {
 }
 
 function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+  // Safe email regex avoiding super-linear runtime
+  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(String(email || '').trim());
 }
 
 function showMessage(el, type, text) {
