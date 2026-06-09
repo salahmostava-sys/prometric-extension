@@ -1,11 +1,21 @@
 // content.js - MAIN world
 const LOGIN_URL = 'https://tcnet1.prometric.com/Login.aspx?ibt=785937226&ClientNameSingleSite=ibtamea';
 const REGISTER_URL = 'https://tcnet1.prometric.com/Registration.aspx';
-const sleep = ms => {
+let ABORT_CURRENT_STEP = false;
+
+function checkRunning() {
+  if (ABORT_CURRENT_STEP) throw new Error('STOPPED');
+}
+
+const sleep = async ms => {
   const scaledMs = Math.round(ms * (PAGE_DELAY / 2000));
-  return new Promise(r => setTimeout(r, Math.max(10, scaledMs)));
+  await new Promise(r => setTimeout(r, Math.max(10, scaledMs)));
+  checkRunning();
 };
-const wait = ms => new Promise(r => setTimeout(r, ms));
+const wait = async ms => {
+  await new Promise(r => setTimeout(r, ms));
+  checkRunning();
+};
 
 let PAGE_DELAY = 2000;
 let AUTO_SUBMIT = false;
@@ -16,20 +26,20 @@ let STABILITY_MODE = false;
 
 // -- Status indicator ---
 function updateStatus(msg, color = '#2ea043') {
-  let el = document.getElementById('__prom__');
-  let txtEl = document.getElementById('__prom_txt__');
+  let statusContainer = document.getElementById('__prom__');
+  let statusTextElement = document.getElementById('__prom_txt__');
 
-  if (el) {
-    el.style.background = color;
+  if (statusContainer) {
+    statusContainer.style.background = color;
   } else {
-    el = document.createElement('div');
-    el.id = '__prom__';
-    el.style.cssText = 'position:fixed;top:10px;right:10px;z-index:2147483647;background:#2ea043;color:#fff;padding:8px 14px;border-radius:8px;font:bold 13px/1.4 sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35);max-width:320px;display:flex;align-items:center;gap:12px';
+    statusContainer = document.createElement('div');
+    statusContainer.id = '__prom__';
+    statusContainer.style.cssText = 'position:fixed;top:10px;right:10px;z-index:2147483647;background:#2ea043;color:#fff;padding:8px 14px;border-radius:8px;font:bold 13px/1.4 sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35);max-width:320px;display:flex;align-items:center;gap:12px';
     
-    txtEl = document.createElement('div');
-    txtEl.id = '__prom_txt__';
-    txtEl.style.flex = '1';
-    el.appendChild(txtEl);
+    statusTextElement = document.createElement('div');
+    statusTextElement.id = '__prom_txt__';
+    statusTextElement.style.flex = '1';
+    statusContainer.appendChild(statusTextElement);
 
     // Add inline Pause for Batch mode
     if (globalThis.__isBatch) {
@@ -43,19 +53,23 @@ function updateStatus(msg, color = '#2ea043') {
           send('resumeBatch'); pauseBtn.textContent = 'Pause'; pauseBtn.style.background = 'rgba(0,0,0,0.2)';
         }
       };
-      el.appendChild(pauseBtn);
+      statusContainer.appendChild(pauseBtn);
     }
     
     // Stop button always available if active
     const stopBtn = document.createElement('button');
     stopBtn.textContent = 'Stop';
     stopBtn.style.cssText = 'background:rgba(255,0,0,0.5);border:none;color:#fff;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:11px;font-weight:bold';
-    stopBtn.onclick = () => { send('stopBatch'); el.remove(); };
-    el.appendChild(stopBtn);
+    stopBtn.onclick = () => { 
+      ABORT_CURRENT_STEP = true;
+      send('stopBatch'); 
+      statusContainer.remove(); 
+    };
+    statusContainer.appendChild(stopBtn);
 
-    document.body?.appendChild(el);
+    document.body?.appendChild(statusContainer);
   }
-  txtEl.textContent = 'Turbo ' + msg;
+  statusTextElement.textContent = 'Turbo ' + msg;
 }
 
 function send(action, payload) {
@@ -113,61 +127,7 @@ function fallbackCopy(text) {
 }
 
 // -- Fill field (native setter + events) ---
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, ch => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[ch]));
-}
-
-function triggerEvents(el, eventTypes) {
-  for (const type of eventTypes) {
-    if (type === 'keydown' || type === 'keyup') {
-      el.dispatchEvent(new KeyboardEvent(type, { bubbles: true }));
-    } else {
-      el.dispatchEvent(new Event(type, { bubbles: true }));
-    }
-  }
-}
-
-function setVal(el, value) {
-  if (!el) return;
-  try {
-    const setter = (Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value') || 
-                   Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value'))?.set;
-    if (setter) setter.call(el, String(value));
-    else el.value = String(value);
-  } catch (_) { el.value = String(value); }
-  triggerEvents(el, ['input', 'change', 'keydown', 'keyup']);
-}
-
-function blurEl(el) {
-  if (!el) return;
-  el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
-}
-
-function fillSelect(sel, text) {
-  if (!sel) return false;
-  for (let i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].text.toLowerCase().includes(text.toLowerCase())) {
-      sel.selectedIndex = i;
-      triggerEvents(sel, ['change']);
-      return true;
-    }
-  }
-  return false;
-}
-
-function querySelectorAny(...sels) {
-  for (const s of sels) {
-    const e = document.querySelector(s);
-    if (e) return e;
-  }
-  return null;
-}
+// DOM utilities have been moved to dom-utils.js
 
 async function waitFor(sels, timeout = 10000) {
   const arr = Array.isArray(sels) ? sels : [sels];
@@ -182,51 +142,7 @@ async function waitFor(sels, timeout = 10000) {
   return null;
 }
 
-function forceClick(btn) {
-  btn.focus();
-  btn.click();
-  ['mousedown', 'mouseup', 'click'].forEach(type => {
-    try {
-      btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: globalThis }));
-    } catch(err) { 
-      // Ignore simulated event dispatch errors as native click() already fired
-    }
-  });
-}
-
-function clickContinue() {
-  const selectors = [
-    'input[type="submit"]', 'button', 'input[type="button"]', 'a', 'input[type="image"]', 
-    '[role="button"]', '.btn', '.button'
-  ];
-  const candidates = [...document.querySelectorAll(selectors.join(','))];
-  
-  // Also check divs/spans that might be styled as buttons or contain the text
-  document.querySelectorAll('div, span, b, strong').forEach(el => {
-    if (el.childElementCount === 0 && (el.textContent || '').trim().toLowerCase().includes('continue')) {
-      candidates.push(el);
-    }
-  });
-
-  const btn = candidates.find(e => {
-    if (!e.offsetParent) return false;
-    const val = (e.value || e.textContent || '').trim().toLowerCase();
-    return val === 'continue' || val.startsWith('continue') || val === 'next' || val === 'submit' || val.includes('continue');
-  });
-
-  if (btn) {
-    forceClick(btn);
-    return true;
-  }
-
-  // Fallback: search by ID
-  const aspBtn = document.querySelector('input[id*="Continue" i], button[id*="Continue" i], input[id*="Submit" i], button[id*="Submit" i], a[id*="Continue" i]');
-  if (aspBtn?.offsetParent) {
-    forceClick(aspBtn);
-    return true;
-  }
-  return false;
-}
+// forceClick and clickContinue moved to dom-utils.js
 
 function nextSuffix(s) {
   if (s === '') return '1';
@@ -591,93 +507,58 @@ async function fillStep4(creds) {
 }
 
 // -- FINAL STEP - Dashboard ---
+function injectDashboardStyles() {
+  if (document.getElementById('__prom_styles')) return;
+  const style = document.createElement('style');
+  style.id = '__prom_styles';
+  style.textContent = `
+    #__prom_card { position:fixed;inset:0;background:rgba(9, 13, 22, 0.85);backdrop-filter:blur(10px);z-index:2147483646;display:flex;align-items:center;justify-content:center;font-family:sans-serif }
+    #__prom_box { background:rgba(22, 27, 34, 0.8);border:1px solid rgba(240, 246, 252, 0.1);border-radius:20px;padding:32px 36px;min-width:440px;max-width:540px;width:92vw;color:#f0f6fc;box-shadow:0 24px 64px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:12px;backdrop-filter:blur(8px) }
+    .__prom_title { color:#2ea043;font-size:26px;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:-.3px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent }
+    .__prom_row { background:rgba(33, 38, 45, 0.4);border:1px solid rgba(240,246,252,0.06);border-radius:12px;padding:14px 18px }
+    .__prom_row_label { color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700 }
+    .__prom_countdown { display:none;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;font-size:12px;color:#8b949e }
+    #__prom_action { width:100%;padding:14px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);border:none;color:#fff;border-radius:12px;cursor:pointer;font-weight:800;font-size:15px;letter-spacing:.3px;transition:all 0.25s ease;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 12px rgba(46,160,67,0.2) }
+    #__prom_action:hover { transform:translateY(-1px);box-shadow:0 6px 16px rgba(46,160,67,0.3) }
+    #__prom_action:active { transform:scale(.98) }
+    #__prom_done_msg { margin-top:10px;text-align:center;font-size:12px;color:#7d8590;display:none }
+    #__prom_countdown_circle { transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset 0.1s linear }
+  `;
+  document.head.appendChild(style);
+}
+
 function createDashboardOverlay(user, creds, isBatch) {
+  injectDashboardStyles();
   const card = document.createElement('div');
   card.id = '__prom_card';
-  card.style.cssText = 'position:fixed;inset:0;background:rgba(9, 13, 22, 0.85);backdrop-filter:blur(10px);z-index:2147483646;display:flex;align-items:center;justify-content:center;font-family:sans-serif';
-
-  const box = document.createElement('div');
-  box.style.cssText = 'background:rgba(22, 27, 34, 0.8);border:1px solid rgba(240, 246, 252, 0.1);border-radius:20px;padding:32px 36px;min-width:440px;max-width:540px;width:92vw;color:#f0f6fc;box-shadow:0 24px 64px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:12px;backdrop-filter:blur(8px)';
-
-  const btnLabel = isBatch ? 'Copy & Continue' : 'Copy & Finish';
-
-  const titleEl = document.createElement('div');
-  titleEl.style.cssText = 'color:#2ea043;font-size:26px;font-weight:800;margin-bottom:12px;text-align:center;letter-spacing:-.3px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent';
-  titleEl.textContent = 'OK Registration Complete!';
-  box.appendChild(titleEl);
-
-  const mkRow = (label, val, valStyle, addMargin) => {
-    const row = document.createElement('div');
-    row.style.cssText = 'background:rgba(33, 38, 45, 0.4);border:1px solid rgba(240,246,252,0.06);border-radius:12px;padding:14px 18px' + (addMargin ? ';margin-bottom:10px' : '');
-    const l = document.createElement('div');
-    l.style.cssText = 'color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700';
-    l.textContent = label;
-    const v = document.createElement('div');
-    v.style.cssText = valStyle;
-    v.textContent = val;
-    row.appendChild(l);
-    row.appendChild(v);
-    return row;
-  };
-
-  box.appendChild(mkRow('Name', `${creds.firstName} ${creds.lastName}`, 'font-weight:700;font-size:15px;color:#f0f6fc', false));
-  box.appendChild(mkRow('Username', user, 'font-weight:700;color:#58a6ff;font-family:monospace;font-size:16px;word-break:break-all', false));
-  box.appendChild(mkRow('Password', creds.password, 'font-weight:700;font-family:monospace;font-size:16px;color:#f0f6fc', true));
-
-  const countdownContainer = document.createElement('div');
-  countdownContainer.id = '__prom_countdown_container';
-  countdownContainer.style.cssText = 'display:none;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;font-size:12px;color:#8b949e';
-  
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('width', '18'); svg.setAttribute('height', '18'); svg.setAttribute('viewBox', '0 0 20 20');
-  
-  const circle1 = document.createElementNS(svgNS, 'circle');
-  circle1.setAttribute('cx', '10'); circle1.setAttribute('cy', '10'); circle1.setAttribute('r', '8');
-  circle1.setAttribute('fill', 'none'); circle1.setAttribute('stroke', 'rgba(88,166,255,0.15)'); circle1.setAttribute('stroke-width', '2');
-  
-  const circle2 = document.createElementNS(svgNS, 'circle');
-  circle2.id = '__prom_countdown_circle';
-  circle2.setAttribute('cx', '10'); circle2.setAttribute('cy', '10'); circle2.setAttribute('r', '8');
-  circle2.setAttribute('fill', 'none'); circle2.setAttribute('stroke', '#58a6ff'); circle2.setAttribute('stroke-width', '2');
-  circle2.setAttribute('stroke-dasharray', '50'); circle2.setAttribute('stroke-dashoffset', '0'); circle2.setAttribute('stroke-linecap', 'round');
-  circle2.style.cssText = 'transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset 0.1s linear';
-  
-  svg.appendChild(circle1); svg.appendChild(circle2);
-  countdownContainer.appendChild(svg);
-
-  const countdownText = document.createElement('span');
-  countdownText.id = '__prom_countdown_text';
-  countdownText.textContent = 'Auto-continuing in 2.0s...';
-  countdownContainer.appendChild(countdownText);
-  box.appendChild(countdownContainer);
-
-  const actionBtn = document.createElement('button');
-  actionBtn.id = '__prom_action';
-  actionBtn.style.cssText = 'width:100%;padding:14px;background:linear-gradient(135deg, #2ea043 0%, #3fb950 100%);border:none;color:#fff;border-radius:12px;cursor:pointer;font-weight:800;font-size:15px;letter-spacing:.3px;transition:all 0.25s ease;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 12px rgba(46,160,67,0.2)';
-  actionBtn.textContent = btnLabel;
-  box.appendChild(actionBtn);
-
-  const doneMsg = document.createElement('div');
-  doneMsg.id = '__prom_done_msg';
-  doneMsg.style.cssText = 'margin-top:10px;text-align:center;font-size:12px;color:#7d8590;display:none';
-  doneMsg.textContent = `OK Copied - ${isBatch ? 'signing out...' : 'finishing...'}`;
-  box.appendChild(doneMsg);
-
-  card.appendChild(box);
+  card.innerHTML = `
+    <div id="__prom_box">
+      <div class="__prom_title">OK Registration Complete!</div>
+      <div class="__prom_row">
+        <div class="__prom_row_label">Name</div>
+        <div style="font-weight:700;font-size:15px;color:#f0f6fc">${creds.firstName} ${creds.lastName}</div>
+      </div>
+      <div class="__prom_row">
+        <div class="__prom_row_label">Username</div>
+        <div style="font-weight:700;color:#58a6ff;font-family:monospace;font-size:16px;word-break:break-all">${user}</div>
+      </div>
+      <div class="__prom_row" style="margin-bottom:10px">
+        <div class="__prom_row_label">Password</div>
+        <div style="font-weight:700;font-family:monospace;font-size:16px;color:#f0f6fc">${creds.password}</div>
+      </div>
+      <div id="__prom_countdown_container" class="__prom_countdown">
+        <svg width="18" height="18" viewBox="0 0 20 20">
+          <circle cx="10" cy="10" r="8" fill="none" stroke="rgba(88,166,255,0.15)" stroke-width="2"/>
+          <circle id="__prom_countdown_circle" cx="10" cy="10" r="8" fill="none" stroke="#58a6ff" stroke-width="2" stroke-dasharray="50" stroke-dashoffset="0" stroke-linecap="round"/>
+        </svg>
+        <span id="__prom_countdown_text">Auto-continuing in 2.0s...</span>
+      </div>
+      <button id="__prom_action">${isBatch ? 'Copy & Continue' : 'Copy & Finish'}</button>
+      <div id="__prom_done_msg">OK Copied - ${isBatch ? 'signing out...' : 'finishing...'}</div>
+    </div>
+  `;
   document.body.appendChild(card);
-
-  actionBtn.addEventListener('mouseenter', () => {
-    actionBtn.style.transform = 'translateY(-1px)';
-    actionBtn.style.boxShadow = '0 6px 16px rgba(46,160,67,0.3)';
-  });
-  actionBtn.addEventListener('mouseleave', () => {
-    actionBtn.style.transform = '';
-    actionBtn.style.boxShadow = '0 4px 12px rgba(46,160,67,0.2)';
-  });
-  actionBtn.addEventListener('mousedown',  () => actionBtn.style.transform  = 'scale(.98)');
-  actionBtn.addEventListener('mouseup',    () => actionBtn.style.transform  = 'translateY(-1px)');
-
+  const actionBtn = document.getElementById('__prom_action');
   return { card, actionBtn };
 }
 
@@ -691,6 +572,10 @@ function startDashboardCountdown(actionBtn) {
   const t0 = Date.now();
 
   const interval = setInterval(() => {
+    if (ABORT_CURRENT_STEP) {
+      clearInterval(interval);
+      return;
+    }
     const elapsed = Date.now() - t0;
     const pct = Math.max(0, 1 - elapsed / duration);
     if (circle) circle.style.strokeDashoffset = 50 * (1 - pct);
@@ -811,8 +696,10 @@ async function handleStep(step) {
       await stepHandlers[step]();
     }
   } catch (e) {
+    if (e.message === 'STOPPED') return;
     failStep(e.message || 'Unhandled content error', 'exception', true);
     console.error('[Prometric]', e);
+    throw e; // Do not swallow exceptions completely
   }
   filling = false;
 
@@ -887,4 +774,4 @@ globalThis.addEventListener('__prom_init', e => {
   // (the page wouldn't react to DOM changes after resumption).
   // The observer callback already has a GLOBAL_RUNNING/GLOBAL_SINGLE guard.
 });
-(async () => { try { await run(); } catch (e) { updateStatus('Error ' + e.message, '#d73a49'); } })();
+(async () => { try { await run(); } catch (e) { if (e.message !== 'STOPPED') updateStatus('Error ' + e.message, '#d73a49'); } })();

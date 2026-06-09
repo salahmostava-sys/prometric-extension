@@ -1,3 +1,5 @@
+importScripts('utils.js');
+
 const START_URL = 'https://tcnet1.prometric.com/InvalidHostHeader.aspx';
 const DEFAULT_AUTO_RETRY = true;
 const DEFAULT_DESKTOP_NOTIFICATIONS = true;
@@ -117,42 +119,8 @@ chrome.windows.onRemoved.addListener(async (windowId) => {
   }
 });
 async function buildCredentials(item) {
-  const parts = (item.name || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 1) return null;
-  
-  // Clean parts to keep only alphabetical letters for the username
-  const cleanedParts = parts.map(p => p.replace(/[^A-Za-z]/g, '')).filter(Boolean);
-  const uPart1 = cleanedParts[0] || 'USER';
-  const uPart2 = cleanedParts[1] || uPart1;
-  const username = (uPart1 + uPart2).toUpperCase();
-  
   const { passPattern = '{F}@{f}#$1970' } = await chrome.storage.local.get(['passPattern']);
-  
-  const F = parts[0][0].toUpperCase();
-  const f = F.toLowerCase();
-  const L = parts[parts.length-1][0].toUpperCase();
-  const l = L.toLowerCase();
-
-  const password = passPattern
-    .replace(/{F}/g, F)
-    .replace(/{f}/g, f)
-    .replace(/{L}/g, L)
-    .replace(/{l}/g, l);
-  
-  let firstName = parts[0];
-  let idx = 1;
-  // Fill first name greedily, leaving exactly one last word for last name
-  while (idx < parts.length - 1) {
-    firstName += ' ' + parts[idx];
-    idx++;
-  }
-  
-  let lastName = parts.slice(idx).join(' ');
-  
-  // Zero truncation! Both names remain 100% complete.
-  const needsBypass = (firstName.length > 20 || lastName.length > 20);
-
-  return { username, password, firstName, lastName, needsBypass };
+  return generateCredentials(item.name, passPattern);
 }
 
 // Automatically stop the extension if the user closes the active registration tab

@@ -19,7 +19,7 @@
     },
     {
       "matches": ["https://tcnet1.prometric.com/*"],
-      "js": ["content.js"],
+      "js": ["utils.js", "dom-utils.js", "content.js"],
       "run_at": "document_idle",
       "world": "MAIN"
     }
