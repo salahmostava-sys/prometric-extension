@@ -667,7 +667,6 @@ function createDashboardOverlay(user, creds, isBatch) {
   card.appendChild(box);
   document.body.appendChild(card);
 
-  const actionBtn = document.getElementById('__prom_action');
   actionBtn.addEventListener('mouseenter', () => {
     actionBtn.style.transform = 'translateY(-1px)';
     actionBtn.style.boxShadow = '0 6px 16px rgba(46,160,67,0.3)';
