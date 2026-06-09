@@ -695,7 +695,7 @@ function startDashboardCountdown(actionBtn) {
     const pct = Math.max(0, 1 - elapsed / duration);
     if (circle) circle.style.strokeDashoffset = 50 * (1 - pct);
     const remainingSecs = (pct * 2).toFixed(1);
-    if (textSpan) textSpan.textContent = \`Auto-continuing in \${remainingSecs}s...\`;
+    if (textSpan) textSpan.textContent = `Auto-continuing in ${remainingSecs}s...`;
 
     if (elapsed >= duration) {
       clearInterval(interval);
@@ -728,7 +728,7 @@ async function handleDashboard(creds) {
     actionBtn.textContent = 'OK Copied!';
     document.getElementById('__prom_done_msg').style.display = 'block';
 
-    copyText(\`\${user}\t\${creds.password}\`, \`\${user} / \${creds.password}\`);
+    copyText(`${user}\t${creds.password}`, `${user} / ${creds.password}`);
 
     await sleep(900);
     card.remove();
