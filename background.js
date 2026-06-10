@@ -1,4 +1,50 @@
-importScripts('utils.js');
+// Inlined utils.js to avoid MV3 importScripts NetworkError bug
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function isValidEmail(email) {
+  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(String(email || '').trim());
+}
+
+function generateCredentials(name, passPattern = '{F}@{f}#$1970') {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 1) return null;
+  
+  const cleanedParts = parts.map(p => p.replace(/[^A-Za-z]/g, '')).filter(Boolean);
+  const uPart1 = cleanedParts[0] || 'USER';
+  const uPart2 = cleanedParts[1] || uPart1;
+  const username = (uPart1 + uPart2).toUpperCase();
+  
+  const F = parts[0][0].toUpperCase();
+  const f = F.toLowerCase();
+  const L = parts[parts.length-1][0].toUpperCase();
+  const l = L.toLowerCase();
+
+  const password = passPattern
+    .replace(/{F}/g, F)
+    .replace(/{f}/g, f)
+    .replace(/{L}/g, L)
+    .replace(/{l}/g, l);
+  
+  let firstName = parts[0];
+  let idx = 1;
+  while (idx < parts.length - 1) {
+    firstName += ' ' + parts[idx];
+    idx++;
+  }
+  
+  let lastName = parts.slice(idx).join(' ');
+  const needsBypass = (firstName.length > 20 || lastName.length > 20);
+
+  return { username, password, firstName, lastName, needsBypass };
+}
 
 const START_URL = 'https://tcnet1.prometric.com/InvalidHostHeader.aspx';
 const DEFAULT_AUTO_RETRY = true;

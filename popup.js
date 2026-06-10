@@ -218,6 +218,11 @@ async function clearCurrentSession() {
 }
 
 // genCreds has been moved to utils.js as generateCredentials
+function genCreds(name) {
+  const patternInput = document.getElementById('passPattern');
+  let pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
+  return generateCredentials(name, pattern);
+}
 
 // -- Tabs ---
 document.querySelectorAll('.tab').forEach(tab => {
@@ -1348,6 +1353,11 @@ loadSettings();
 
 // -- Export for Testing ---
 if (typeof module !== 'undefined' && module.exports) {
+  if (typeof isValidEmail === 'undefined') {
+    const fs = require('fs');
+    eval(fs.readFileSync(__dirname + '/utils.js', 'utf8'));
+    eval(fs.readFileSync(__dirname + '/parsers.js', 'utf8'));
+  }
   module.exports = {
     genCreds,
     isValidEmail,
