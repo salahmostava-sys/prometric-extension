@@ -57,6 +57,8 @@ function decodeXml(value) {
   });
 }
 
+// Excel column labels (A=1, Z=26, AA=27…) are base-26 numbers.
+// Subtract 64 to map 'A'→1…'Z'→26, accumulate with *26, then subtract 1 for 0-based index.
 function colIndex(col) {
   return [...col].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1;
 }
@@ -93,7 +95,7 @@ async function decompressDeflate(compData, dec) {
 
 function parseZipHeader(bytes, pos, dec) {
   const compression = bytes[pos+8] | (bytes[pos+9] << 8);
-  const compSize = bytes[pos+18] | (bytes[pos+19] << 8) | (bytes[pos+20] << 21) | (bytes[pos+21] << 24);
+  const compSize = bytes[pos+18] | (bytes[pos+19] << 8) | (bytes[pos+20] << 16) | (bytes[pos+21] << 24);
   const fnLen = bytes[pos+26] | (bytes[pos+27] << 8);
   const extraLen = bytes[pos+28] | (bytes[pos+29] << 8);
   const nameStart = pos + 30;

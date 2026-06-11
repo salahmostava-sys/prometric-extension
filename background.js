@@ -13,6 +13,9 @@ function isValidEmail(email) {
   return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(String(email || '').trim());
 }
 
+// KNOWN DRY VIOLATION: MV3 service workers cannot use importScripts() reliably
+// across all Chromium builds (NetworkError on cold start). Keep this copy in
+// sync with utils.js:generateCredentials manually whenever that function changes.
 function generateCredentials(name, passPattern = '{F}@{f}#$1970') {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
@@ -110,60 +113,43 @@ async function keepRegistrationTabAlive(tabId) {
   if (!tabId) return;
   try {
     await chrome.tabs.update(tabId, { autoDiscardable: false });
-  } catch (_) {}
+  } catch (_) {
+    // autoDiscardable is best-effort; not supported in all Chrome builds.
+  }
 }
 
-// -- Dedicated registration window ------------------------------------------
-// Runs in a MINIMIZED window so it stays out of the user's way.
-// Because the tab IS the active tab of that window, Chrome does NOT throttle
-// its timers — giving full speed without the user needing to watch the tab.
+// -- Dedicated registration tab ------------------------------------------
 async function getRegistrationTabId(url) {
-  const { regWindowId } = await chrome.storage.local.get(['regWindowId']);
-  if (regWindowId) {
+  const { currentTabId } = await chrome.storage.local.get(['currentTabId']);
+  if (currentTabId) {
     try {
-      const win = await chrome.windows.get(regWindowId, { populate: true });
-      if (win?.tabs?.length > 0) {
-        const tabId = win.tabs[0].id;
-        await chrome.tabs.update(tabId, { url });
-        await keepRegistrationTabAlive(tabId);
-        await chrome.storage.local.set({ currentTabId: tabId });
-        return tabId;
+      const tab = await chrome.tabs.get(currentTabId);
+      if (tab) {
+        await chrome.tabs.update(currentTabId, { url, active: true });
+        await keepRegistrationTabAlive(currentTabId);
+        return currentTabId;
       }
     } catch (_) {
-      await chrome.storage.local.remove('regWindowId');
+      // Tab closed or doesn't exist
     }
   }
-  // Create a fresh minimized window
-  const win = await chrome.windows.create({ url, state: 'minimized', focused: false });
-  const tabs = win.tabs || await chrome.tabs.query({ windowId: win.id });
-  const tabId = (tabs && tabs.length > 0) ? tabs[0].id : null;
-  if (tabId) {
-    await keepRegistrationTabAlive(tabId);
-    await chrome.storage.local.set({ currentTabId: tabId, regWindowId: win.id });
+  // Create a fresh tab in the current window
+  const tab = await chrome.tabs.create({ url, active: true });
+  if (tab) {
+    await keepRegistrationTabAlive(tab.id);
+    await chrome.storage.local.set({ currentTabId: tab.id });
+    return tab.id;
   }
-  return tabId;
+  return null;
 }
 
 async function closeRegistrationWindow() {
-  const { regWindowId } = await chrome.storage.local.get(['regWindowId']);
-  if (regWindowId) {
-    try { await chrome.windows.remove(regWindowId); } catch (_) {}
-    await chrome.storage.local.remove('regWindowId');
+  const { currentTabId } = await chrome.storage.local.get(['currentTabId']);
+  if (currentTabId) {
+    try { await chrome.tabs.remove(currentTabId); } catch (_) {}
+    await chrome.storage.local.remove('currentTabId');
   }
 }
-
-// Clear regWindowId if the user closes the window manually
-chrome.windows.onRemoved.addListener(async (windowId) => {
-  const { regWindowId } = await chrome.storage.local.get(['regWindowId']);
-  if (windowId === regWindowId) {
-    await chrome.storage.local.remove('regWindowId');
-    // Also stop any running process
-    const { isRunning, singleRunning } = await chrome.storage.local.get(['isRunning', 'singleRunning']);
-    if (isRunning || singleRunning) {
-      await chrome.storage.local.set({ isRunning: false, singleRunning: false });
-    }
-  }
-});
 async function buildCredentials(item) {
   const { passPattern = '{F}@{f}#$1970' } = await chrome.storage.local.get(['passPattern']);
   return generateCredentials(item.name, passPattern);
@@ -183,7 +169,6 @@ async function getState() {
   return chrome.storage.local.get(['queue','queueIndex','isRunning','currentTabId','currentProcessingId','activeQueueId']);
 }
 
-// Save to history
 async function saveToHistory(entry) {
   const { history = [] } = await chrome.storage.local.get(['history']);
   history.unshift({ ...entry, date: new Date().toISOString() });
@@ -194,6 +179,11 @@ async function addRunLog(message, type = 'info') {
   const { runLogs = [] } = await chrome.storage.local.get(['runLogs']);
   runLogs.unshift({ message, type, date: new Date().toISOString() });
   await chrome.storage.local.set({ runLogs: runLogs.slice(0, 200) });
+}
+
+// Clears the in-flight processing lock shared between handleStepDone and handleStepFailed.
+async function clearCurrentProcessingId() {
+  await chrome.storage.local.set({ currentProcessingId: '' });
 }
 
 // -- Progress Badge ---
@@ -207,7 +197,8 @@ async function updateBadge() {
   }
 }
 
-// OK FIX 2: replaced recursion with iterative loop to prevent stack overflow
+// Iterative loop instead of recursion to prevent call-stack overflow when
+// processEndOfQueue re-triggers openNextTab after a retry sweep.
 async function processEndOfQueue() {
   const { autoRetry } = await chrome.storage.local.get(['autoRetry']);
   const { queue: latestQueue = [] } = await chrome.storage.local.get(['queue']);
@@ -368,7 +359,7 @@ async function handleStepDone(msg, state) {
     }
   });
 
-  await chrome.storage.local.set({ currentProcessingId: '' });
+  await clearCurrentProcessingId();
   const { isRunning, userDelay = DEFAULT_USER_DELAY, stabilityMode = DEFAULT_STABILITY_MODE } = await chrome.storage.local.get(['isRunning', 'userDelay', 'stabilityMode']);
   if (isRunning) {
     const delay = Math.max(Number(userDelay) || DEFAULT_USER_DELAY, stabilityMode ? 3 : 0);
@@ -412,7 +403,7 @@ async function handleStepFailed(msg, state) {
   }
   await saveToHistory(entry);
   await addRunLog(`Failed: ${entry.name || 'Current item'} - ${entry.reason}`, 'failed');
-  await chrome.storage.local.set({ currentProcessingId: '' });
+  await clearCurrentProcessingId();
   const { isRunning } = await getState();
   if (isRunning) {
     await openNextTab();

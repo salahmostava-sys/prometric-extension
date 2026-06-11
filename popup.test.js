@@ -23,7 +23,7 @@ const path = require('path');
 const html = fs.readFileSync(path.resolve(__dirname, './popup.html'), 'utf8');
 document.documentElement.innerHTML = html;
 
-const { genCreds, isValidEmail, validateBatchItems, parseDelimitedRows } = require('./popup.js');
+const { generateCredsFromCurrentPattern, isValidEmail, validateBatchItems, parseDelimitedRows } = require('./popup.js');
 
 describe('isValidEmail', () => {
   // Rule 3: Data-driven for variants
@@ -43,9 +43,9 @@ describe('isValidEmail', () => {
   });
 });
 
-describe('genCreds', () => {
+describe('generateCredsFromCurrentPattern', () => {
   beforeEach(() => {
-    // Setup necessary DOM element for genCreds
+    // Setup necessary DOM element for generateCredsFromCurrentPattern
     document.body.innerHTML = '<input id="passPattern" value="{F}@{f}#$1970" />';
   });
 
@@ -55,7 +55,7 @@ describe('genCreds', () => {
     ['SingleName', 'SINGLENAMESINGLENAME', 'S@s#$1970', 'SingleName', ''],
     ['  Trimmed   Spaces  ', 'TRIMMEDSPACES', 'T@t#$1970', 'Trimmed', 'Spaces']
   ])('test_name_format_%s_generates_correct_credentials', (input, expectedUser, expectedPass, expectedFirst, expectedLast) => {
-    const creds = genCreds(input);
+    const creds = generateCredsFromCurrentPattern(input);
     expect(creds.username).toBe(expectedUser);
     expect(creds.password).toBe(expectedPass);
     expect(creds.firstName).toBe(expectedFirst);

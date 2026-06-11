@@ -217,8 +217,10 @@ async function clearCurrentSession() {
   location.reload();
 }
 
-// genCreds has been moved to utils.js as generateCredentials
-function genCreds(name) {
+// Reads the password pattern from the current DOM input so callers don't
+// need to pass it explicitly. Use generateCredentials() directly when the
+// pattern is already known (e.g. in background.js).
+function generateCredsFromCurrentPattern(name) {
   const patternInput = document.getElementById('passPattern');
   let pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
   return generateCredentials(name, pattern);
@@ -629,7 +631,7 @@ exportQueueBtn?.addEventListener('click', async () => {
   const rows = [
     ['Name', 'Email', 'Username', 'Password', 'Status', 'Reason', 'Failure Kind', 'Retryable', 'URL', 'Step', 'Snippet'],
     ...source.map(item => {
-      const creds = genCreds(item.name || '');
+      const creds = generateCredsFromCurrentPattern(item.name || '');
       return [
         item.name || '',
         item.email || '',
@@ -836,7 +838,7 @@ function updateBatchModePausedUI(queue, queueIndex, isRunning) {
 }
 
 function hasQueueChanged(queue, oldQueue) {
-  if (queue.length !== oldQueue.length) return false;
+  if (queue.length !== oldQueue.length) return true;
   return queue.some((it, i) =>
     it.status !== oldQueue[i]?.status ||
     it.finalUsername !== oldQueue[i]?.finalUsername ||
@@ -1190,7 +1192,7 @@ function renderSheetPreview() {
   // Limit preview to 100 items to avoid lagging the popup
   const previewItems = items.slice(0, 100);
   list.innerHTML = previewItems.map((item, i) => {
-    const c = genCreds(item.name);
+    const c = generateCredsFromCurrentPattern(item.name);
     return `
     <div class="sheet-grid" style="padding:6px 12px;border-bottom:1px solid var(--border)">
       <div style="font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
@@ -1359,7 +1361,7 @@ if (typeof module !== 'undefined' && module.exports) {
     eval(fs.readFileSync(__dirname + '/parsers.js', 'utf8'));
   }
   module.exports = {
-    genCreds,
+    generateCredsFromCurrentPattern,
     isValidEmail,
     validateBatchItems,
     parseDelimitedRows

@@ -127,7 +127,6 @@ function fallbackCopy(text) {
 }
 
 // -- Fill field (native setter + events) ---
-// DOM utilities have been moved to dom-utils.js
 
 async function waitFor(sels, timeout = 10000) {
   const arr = Array.isArray(sels) ? sels : [sels];
@@ -142,7 +141,6 @@ async function waitFor(sels, timeout = 10000) {
   return null;
 }
 
-// forceClick and clickContinue moved to dom-utils.js
 
 function nextSuffix(s) {
   if (s === '') return '1';
@@ -250,8 +248,8 @@ async function tryFillUsername(tryName, userEl) {
   triggerEvents(el, ['input', 'change']);
   await sleep(400);
 
-  const t_clear = Date.now();
-  while (Date.now() - t_clear < 2500) {
+  const waitForErrorClearStart = Date.now();
+  while (Date.now() - waitForErrorClearStart < 2500) {
     const stillOld = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
       if (!el.offsetParent || el.childElementCount > 0) return false;
       const t = (el.textContent || '').toLowerCase().trim();
@@ -423,7 +421,8 @@ async function fillStep3(creds) {
   await sleep(300); // Turbo: reduced from 2000
   updateStatus('Step 3: Submitting...');
   clickContinue();
-  // BUG FIX: only ONE clickContinue here - MutationObserver picks up Step 4
+  // One submit only — the MutationObserver in run() detects the AJAX transition
+  // to Step 4 and calls fillStep4 automatically; a second click here would double-submit.
 }
 
 // -- STEP 4 - Confirm Policy ---
@@ -474,10 +473,6 @@ function findReadyContinue() {
   });
 }
 
-function clickReadyContinue(btn) {
-  forceClick(btn);
-}
-
 async function fillStep4(creds) {
   updateStatus('Step 4: Confirm Policy...');
 
@@ -492,7 +487,7 @@ async function fillStep4(creds) {
     const btn = findReadyContinue();
     if (btn) {
       updateStatus(`Step 4: Continue found, submitting...`);
-      clickReadyContinue(btn);
+      forceClick(btn);
       await wait(2500);
       if (detectStep() !== 'policy') return; 
       if (attempts % 4 === 0) {
@@ -696,10 +691,16 @@ async function handleStep(step) {
       await stepHandlers[step]();
     }
   } catch (e) {
+    // Always reset filling before any early-return so that a Resume after Stop
+    // doesn't get permanently blocked by a stale filling=true.
+    filling = false;
     if (e.message === 'STOPPED') return;
     failStep(e.message || 'Unhandled content error', 'exception', true);
     console.error('[Prometric]', e);
-    throw e; // Do not swallow exceptions completely
+    // Do not re-throw: handleStep is called from MutationObserver async callbacks
+    // which have no surrounding catch, so re-throwing produces unhandled rejections.
+    // The error is fully reported via failStep() and console.error above.
+    return;
   }
   filling = false;
 
@@ -748,8 +749,9 @@ async function run() {
   if (step) await handleStep(step);
   else failStep('Could not detect registration step', 'page', true);
 
-  // Watch for UpdatePanel (AJAX) step changes
-  // FIX #9: Disconnect any previous observer before creating a new one
+  // Watch for UpdatePanel (AJAX) step changes.
+  // Disconnect any stale observer before creating a fresh one — prevents duplicate
+  // handlers if run() is somehow called twice on the same page.
   if (observer) { observer.disconnect(); observer = null; }
   observer = new MutationObserver(async () => {
     if (filling) return;
