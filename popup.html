@@ -8,253 +8,297 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#090d16;
-  --surface:rgba(22, 27, 34, 0.6);
-  --surface2:rgba(33, 38, 45, 0.4);
-  --border:rgba(240, 246, 252, 0.1);
-  --green:#3fb950;
-  --green2:#2ea043;
-  --green-glow:rgba(63, 185, 80, 0.15);
-  --text:#f0f6fc;
-  --muted:#8b949e;
-  --red:#ff7b72;
-  --red-glow:rgba(255, 123, 114, 0.15);
-  --yellow:#d29922;
-  --yellow-glow:rgba(210, 153, 34, 0.15);
-  --blue:#58a6ff;
-  --blue-glow:rgba(88, 166, 255, 0.15);
+  --surface:rgba(22,27,34,0.6);
+  --surface2:rgba(33,38,45,0.4);
+  --border:rgba(240,246,252,0.1);
+  --green:#3fb950;--green2:#2ea043;--green-glow:rgba(63,185,80,0.15);
+  --text:#f0f6fc;--muted:#8b949e;
+  --red:#ff7b72;--red-glow:rgba(255,123,114,0.15);
+  --yellow:#d29922;--yellow-glow:rgba(210,153,34,0.15);
+  --blue:#58a6ff;--blue-glow:rgba(88,166,255,0.15);
   --radius:12px;
-  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --glass: blur(12px);
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --grad-green: linear-gradient(135deg, #2ea043 0%, #3fb950 100%);
-  --grad-blue: linear-gradient(135deg, #1f6feb 0%, #58a6ff 100%);
-  --grad-red: linear-gradient(135deg, #da3633 0%, #f85149 100%);
+  --transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+  --glass:blur(12px);
+  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
+  --grad-green:linear-gradient(135deg,#2ea043 0%,#3fb950 100%);
+  --grad-blue:linear-gradient(135deg,#1f6feb 0%,#58a6ff 100%);
+  --grad-red:linear-gradient(135deg,#da3633 0%,#f85149 100%);
 }
-body.light-mode {
-  --bg:#f4f6f9;
-  --surface:rgba(255, 255, 255, 0.7);
-  --surface2:rgba(235, 240, 245, 0.5);
-  --border:rgba(0, 0, 0, 0.08);
-  --green:#1a7f37;
-  --green2:#2da44e;
-  --green-glow:rgba(26, 127, 55, 0.12);
-  --text:#1f2328;
-  --muted:#57606a;
-  --red:#cf222e;
-  --red-glow:rgba(207, 34, 46, 0.12);
-  --yellow:#9a6700;
-  --yellow-glow:rgba(154, 103, 0, 0.12);
-  --blue:#0969da;
-  --blue-glow:rgba(9, 105, 218, 0.12);
-  --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
-  --grad-green: linear-gradient(135deg, #2da44e 0%, #1a7f37 100%);
-  --grad-blue: linear-gradient(135deg, #0969da 0%, #2b85e4 100%);
-  --grad-red: linear-gradient(135deg, #cf222e 0%, #e04b4f 100%);
+body.light-mode{
+  --bg:#f4f6f9;--surface:rgba(255,255,255,0.7);--surface2:rgba(235,240,245,0.5);
+  --border:rgba(0,0,0,0.08);--green:#1a7f37;--green2:#2da44e;
+  --green-glow:rgba(26,127,55,0.12);--text:#1f2328;--muted:#57606a;
+  --red:#cf222e;--red-glow:rgba(207,34,46,0.12);
+  --yellow:#9a6700;--yellow-glow:rgba(154,103,0,0.12);
+  --blue:#0969da;--blue-glow:rgba(9,105,218,0.12);
+  --card-shadow:0 8px 32px 0 rgba(31,38,135,0.08);
+  --grad-green:linear-gradient(135deg,#2da44e 0%,#1a7f37 100%);
+  --grad-blue:linear-gradient(135deg,#0969da 0%,#2b85e4 100%);
+  --grad-red:linear-gradient(135deg,#cf222e 0%,#e04b4f 100%);
 }
 body{
-  width:550px;
-  min-height:560px;
+  width:560px;min-height:560px;
   background:var(--bg);
-  background-image: radial-gradient(circle at 50% 0%, var(--blue-glow), transparent 60%);
-  color:var(--text);
-  font-family:'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size:13px;
-  overflow-x:hidden;
-  display:flex;
-  flex-direction:column;
-  backdrop-filter: var(--glass);
-  transition: var(--transition);
+  background-image:radial-gradient(circle at 50% 0%,var(--blue-glow),transparent 60%);
+  color:var(--text);font-family:'Outfit',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:13px;overflow-x:hidden;display:flex;flex-direction:column;
+  backdrop-filter:var(--glass);transition:var(--transition);
 }
 
 /* Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
-}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 
-/* -- Header -- */
-.hdr{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface);backdrop-filter:var(--glass)}
-.hdr-icon{width:36px;height:36px;background:#fff url('icon.png') center/contain no-repeat;border-radius:10px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.1);transition:var(--transition)}
-.hdr-icon:hover{transform:scale(1.05)}
-.hdr-title{font-weight:700;font-size:14px;color:var(--text)}
-.hdr-sub{font-size:11px;color:var(--muted)}
-.theme-toggle{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;margin-left:auto;transition:var(--transition);font-family:inherit}
+/* ═══ HEADER ═══ */
+.hdr{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface);backdrop-filter:var(--glass)}
+.hdr-icon{width:34px;height:34px;background:#fff url('icon.png') center/contain no-repeat;border-radius:9px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:var(--transition)}
+.hdr-icon:hover{transform:scale(1.06) rotate(-3deg)}
+.hdr-info{flex:1;min-width:0}
+.hdr-title{font-weight:700;font-size:13px;color:var(--text);white-space:nowrap}
+.hdr-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:6px;margin-left:auto}
+
+/* Status Pill */
+.status-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;border:1px solid transparent;transition:var(--transition)}
+.status-pill.idle{background:var(--surface2);border-color:var(--border);color:var(--muted)}
+.status-pill.running{background:rgba(63,185,80,0.12);border-color:rgba(63,185,80,0.3);color:var(--green)}
+.status-pill.paused{background:var(--yellow-glow);border-color:rgba(210,153,34,0.3);color:var(--yellow)}
+.status-pill.single{background:var(--blue-glow);border-color:rgba(88,166,255,0.3);color:var(--blue)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.status-pill.running .status-dot,.status-pill.single .status-dot{animation:statusPulse 1.2s ease-in-out infinite}
+@keyframes statusPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+.theme-toggle{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:5px 9px;border-radius:7px;cursor:pointer;transition:var(--transition);font-family:inherit}
 .theme-toggle:hover{background:var(--border)}
-.badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:4px 10px;border-radius:20px}
+#speedToggle{color:var(--yellow);border-color:var(--yellow)}
+.badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:3px 9px;border-radius:20px}
 
-/* -- Tabs -- */
+/* ═══ TABS ═══ */
 .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);backdrop-filter:var(--glass)}
-.tab{flex:1;padding:12px 10px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;transition:var(--transition)}
+.tab{flex:1;padding:11px 8px;text-align:center;cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;transition:var(--transition)}
 .tab:hover{color:var(--text);background:rgba(255,255,255,0.02)}
 .tab.active{color:var(--green);border-bottom-color:var(--green);text-shadow:0 0 8px var(--green-glow)}
 
-/* -- Content -- */
-.pane{padding:20px;display:none;animation:fadeIn 0.25s ease-out}
+/* ═══ PANES ═══ */
+.pane{padding:18px 20px;display:none;animation:fadeIn 0.2s ease-out}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .pane.active{display:block}
 
-/* -- Form -- */
-.field{margin-bottom:16px}
+/* ═══ FORM ═══ */
+.field{margin-bottom:14px}
 .field label{display:block;font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
-.field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--text);font-size:13px;outline:none;transition:var(--transition);font-family:inherit}
-.field input:focus{border-color:var(--blue);background:var(--surface);box-shadow:0 0 0 4px var(--blue-glow)}
+.field input,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--text);font-size:13px;outline:none;transition:var(--transition);font-family:inherit}
+.field input:focus,.field select:focus{border-color:var(--blue);background:var(--surface);box-shadow:0 0 0 3px var(--blue-glow)}
 .field input::placeholder{color:var(--muted)}
 
-/* -- Preview chip -- */
-.preview{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin:12px 0;display:none;backdrop-filter:var(--glass);box-shadow:var(--card-shadow)}
-.preview.show{display:block}
-.prev-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.prev-row:last-child{margin-bottom:0}
-.prev-k{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-.prev-v{font-family:'Courier New',monospace;font-size:12px;color:var(--green);display:flex;align-items:center;gap:6px}
-.copy{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:3px 8px;border-radius:6px;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;justify-content:center}
-.copy:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
+/* ═══ LIVE PREVIEW CARD ═══ */
+.preview-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:4px 0 14px;display:none;backdrop-filter:var(--glass);box-shadow:var(--card-shadow);transition:var(--transition)}
+.preview-card.show{display:block;animation:fadeIn .2s ease-out}
+.preview-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px}
+.preview-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.preview-row:last-child{margin-bottom:0}
+.preview-key{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;width:60px;flex-shrink:0}
+.preview-val{font-family:'Courier New',monospace;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preview-val.user{color:var(--blue)}
+.preview-val.pass{color:var(--green)}
+.preview-copy{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:3px 7px;border-radius:6px;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;justify-content:center;gap:4px;flex-shrink:0}
+.preview-copy:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
+/* Password strength bar */
+.strength-wrap{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.strength-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;display:flex;justify-content:space-between}
+.strength-bar-bg{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.strength-bar-fill{height:100%;border-radius:2px;transition:width .3s ease, background .3s ease}
 
-/* -- Upload area -- */
+/* ═══ UPLOAD ═══ */
 .upload-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:11px}
 .upload-header span{font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
 .dl-template{background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;font-weight:700;transition:var(--transition)}
-.dl-template:hover{text-decoration:underline;color:#58a6ff}
-
-.upload-area{display:flex;align-items:center;gap:14px;background:var(--surface2);border:2px dashed var(--border);border-radius:var(--radius);padding:16px 20px;cursor:pointer;transition:var(--transition)}
+.dl-template:hover{text-decoration:underline}
+.upload-area{display:flex;align-items:center;gap:14px;background:var(--surface2);border:2px dashed var(--border);border-radius:var(--radius);padding:14px 18px;cursor:pointer;transition:var(--transition)}
 .upload-area:hover,.upload-area.drag{border-color:var(--blue);background:rgba(88,166,255,.05);transform:scale(1.01)}
 .upload-area input[type=file]{display:none}
-.upload-btn{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(88,166,255,0.3);padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px;transition:var(--transition)}
+.upload-btn{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(88,166,255,0.3);padding:7px 13px;border-radius:8px;font-weight:700;font-size:12px;transition:var(--transition);flex-shrink:0}
 .upload-text{flex:1}
 .upload-title{font-weight:600;color:var(--text);font-size:13px;margin-bottom:2px}
 .upload-sub{font-size:11px;color:var(--muted)}
 
-/* -- Queue -- */
-.queue-wrap{margin-top:16px;max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--card-shadow)}
-.validation-panel,.log-panel{display:none;margin-top:16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;box-shadow:var(--card-shadow)}
+/* ═══ STATS CARDS ═══ */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;transition:var(--transition)}
+.stat-card-val{font-size:20px;font-weight:800;line-height:1;margin-bottom:3px}
+.stat-card-lbl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.stat-card.done{border-color:rgba(63,185,80,0.3);background:rgba(63,185,80,0.07)}
+.stat-card.done .stat-card-val{color:var(--green)}
+.stat-card.failed{border-color:rgba(255,123,114,0.3);background:rgba(255,123,114,0.07)}
+.stat-card.failed .stat-card-val{color:var(--red)}
+.stat-card.running{border-color:rgba(210,153,34,0.3);background:rgba(210,153,34,0.07)}
+.stat-card.running .stat-card-val{color:var(--yellow)}
+.stat-card.pending{border-color:var(--border);background:var(--surface2)}
+.stat-card.pending .stat-card-val{color:var(--muted)}
+
+/* ═══ PROGRESS BAR ═══ */
+.progress-wrap{margin:8px 0 12px}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:11px}
+.progress-label{font-weight:600;color:var(--text)}
+.progress-pct{font-weight:700;color:var(--green);font-size:12px}
+.progress-bar-bg{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)}
+.progress-bar-fill{height:100%;background:var(--grad-green);border-radius:3px;transition:width .5s ease;min-width:0}
+
+/* ═══ QUEUE ═══ */
+.queue-wrap{margin-top:12px;max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--card-shadow)}
+.validation-panel,.log-panel{display:none;margin-top:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;box-shadow:var(--card-shadow)}
 .validation-panel.show,.log-panel.show{display:block}
-.validation-head,.log-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--surface2)}
-.validation-body{padding:12px 16px;display:grid;gap:8px;font-size:11px;color:var(--text)}
+.validation-head,.log-head{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--surface2)}
+.validation-body{padding:10px 14px;display:grid;gap:7px;font-size:11px;color:var(--text)}
 .validation-row{display:flex;justify-content:space-between;gap:10px}
 .validation-row.warn{color:var(--yellow)}
 .validation-row.errline{color:var(--red)}
-.log-list{max-height:140px;overflow-y:auto;background:var(--bg)}
-.log-item{padding:8px 16px;border-bottom:1px solid var(--border);font-size:11px;display:grid;grid-template-columns:70px 1fr;gap:12px;align-items:center}
+.log-list{max-height:130px;overflow-y:auto;background:var(--bg)}
+.log-item{padding:7px 14px;border-bottom:1px solid var(--border);font-size:11px;display:grid;grid-template-columns:62px 1fr;gap:10px;align-items:center}
 .log-item:last-child{border-bottom:none}
 .log-time{color:var(--muted);font-family:monospace}
 .log-text{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.queue-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.queue-hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border);background:var(--surface2)}
 .queue-hdr span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-.queue-item{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);transition:var(--transition)}
+
+/* Enhanced queue items */
+.queue-item{padding:9px 14px;border-bottom:1px solid var(--border);transition:var(--transition)}
 .queue-item:hover{background:rgba(255,255,255,0.02)}
 .queue-item:last-child{border-bottom:none}
-.sheet-grid{display:grid;grid-template-columns:1fr 1.2fr 90px 90px 30px;gap:8px;align-items:center}
+.queue-item-top{display:flex;align-items:center;gap:10px}
+.queue-item-creds{display:none;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:none;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center;font-size:10px}
+.queue-item-creds.visible{display:grid}
+.q-cred-val{font-family:monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q-cred-val.user{color:var(--blue)}
+.q-cred-val.pass{color:var(--green)}
 .q-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .q-dot.pending{background:var(--border)}
 .q-dot.running{background:var(--yellow);animation:pulse 1s infinite}
 .q-dot.done{background:var(--green)}
 .q-dot.failed{background:var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.q-name{flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.q-email{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
-.q-status{font-size:9px;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;text-transform:uppercase;border:1px solid transparent}
+.q-name{flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-email{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.q-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0;text-transform:uppercase;border:1px solid transparent}
 .q-status.pending{color:var(--muted);background:var(--surface2);border-color:var(--border)}
 .q-status.running{color:var(--yellow);background:var(--yellow-glow);border-color:rgba(210,153,34,0.2)}
 .q-status.done{color:var(--green);background:var(--green-glow);border-color:rgba(63,185,80,0.2)}
 .q-status.failed{color:var(--red);background:var(--red-glow);border-color:rgba(255,123,114,0.2)}
+.sheet-grid{display:grid;grid-template-columns:1fr 1.2fr 90px 90px 30px;gap:8px;align-items:center}
 
-/* -- Buttons -- */
-.btn{width:100%;padding:12px;border:none;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;transition:var(--transition);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);font-family:inherit}
+/* ═══ BUTTONS ═══ */
+.btn{width:100%;padding:11px;border:none;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;transition:var(--transition);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);font-family:inherit}
 .btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,0.15)}
 .btn:active:not(:disabled){transform:translateY(0)}
 .btn-green{background:var(--grad-green);color:#fff}
 .btn-green:hover:not(:disabled){box-shadow:0 0 16px var(--green-glow)}
-.btn-green:disabled{opacity:.4;cursor:not-allowed;transform:none !important;box-shadow:none !important}
-.btn-red{background:var(--red-glow);color:var(--red);border:1px solid rgba(255, 123, 114, 0.3)}
-.btn-red:hover:not(:disabled){background:rgba(255, 123, 114, 0.25);box-shadow:0 0 16px var(--red-glow)}
-.btn-blue{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(88, 166, 255, 0.3)}
-.btn-blue:hover:not(:disabled){background:rgba(88, 166, 255, 0.25);box-shadow:0 0 16px var(--blue-glow)}
-
-.controls-row{display:flex;gap:10px;margin-top:12px}
+.btn-green:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.btn-red{background:var(--red-glow);color:var(--red);border:1px solid rgba(255,123,114,0.3)}
+.btn-red:hover:not(:disabled){background:rgba(255,123,114,0.25);box-shadow:0 0 16px var(--red-glow)}
+.btn-blue{background:var(--blue-glow);color:var(--blue);border:1px solid rgba(88,166,255,0.3)}
+.btn-blue:hover:not(:disabled){background:rgba(88,166,255,0.25);box-shadow:0 0 16px var(--blue-glow)}
+.controls-row{display:flex;gap:8px;margin-top:10px}
 .controls-row .btn{margin-top:0;flex:1}
-
 .divider{height:1px;background:var(--border);margin:12px 0}
-.msg{margin-top:10px;padding:10px 14px;border-radius:var(--radius);font-size:12px;text-align:center;display:none}
+.msg{margin-top:10px;padding:9px 13px;border-radius:var(--radius);font-size:12px;text-align:center;display:none}
 .msg.ok{display:block;background:var(--green-glow);border:1px solid rgba(63,185,80,.2);color:var(--green)}
 .msg.err{display:block;background:var(--red-glow);border:1px solid rgba(255,123,114,.2);color:var(--red)}
+.copy{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:3px 8px;border-radius:6px;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;justify-content:center}
+.copy:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
+.q-copy{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:3px 6px;border-radius:5px;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;justify-content:center}
+.q-copy:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
+.q-retry-btn{background:none;border:1px solid rgba(210,153,34,0.4);color:var(--yellow);font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;cursor:pointer;transition:var(--transition)}
+.q-retry-btn:hover{background:var(--yellow-glow)}
 
-/* -- Running Banner -- */
-.running-banner,.banner{display:none;align-items:center;gap:10px;padding:12px;background:var(--yellow-glow);border:1px solid rgba(210,153,34,.3);border-radius:var(--radius);margin-bottom:12px;font-size:12px;color:var(--yellow);box-shadow:var(--card-shadow)}
+/* ═══ BANNERS ═══ */
+.running-banner,.banner{display:none;align-items:center;gap:10px;padding:11px;background:var(--yellow-glow);border:1px solid rgba(210,153,34,.3);border-radius:var(--radius);margin-bottom:10px;font-size:12px;color:var(--yellow);box-shadow:var(--card-shadow)}
 .running-banner.show,.banner.show{display:flex}
 .spinner{width:16px;height:16px;border:2px solid rgba(210,153,34,.3);border-top-color:var(--yellow);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* -- Resume Banner -- */
-.resume-banner{display:none;align-items:center;gap:10px;padding:12px;background:var(--blue-glow);border:1px solid rgba(88, 166, 255,.3);border-radius:var(--radius);margin-bottom:12px;font-size:12px;color:var(--blue)}
+.resume-banner{display:none;align-items:center;gap:10px;padding:11px;background:var(--blue-glow);border:1px solid rgba(88,166,255,.3);border-radius:var(--radius);margin-bottom:10px;font-size:12px;color:var(--blue)}
 .resume-banner.show{display:flex}
 
-/* -- Saved Credentials Panel -- */
-.saved-creds{display:none;background:var(--surface);border-top:1px solid var(--border);padding:16px;font-size:12px;margin-top:auto;backdrop-filter:var(--glass)}
-.saved-creds-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;background:var(--surface2);padding:10px 14px;border-radius:10px;border:1px solid var(--border);transition:var(--transition)}
+/* ═══ SAVED CREDENTIALS ═══ */
+.saved-creds{display:none;background:var(--surface);border-top:1px solid var(--border);padding:14px;font-size:12px;margin-top:auto;backdrop-filter:var(--glass)}
+.saved-creds-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;background:var(--surface2);padding:9px 13px;border-radius:10px;border:1px solid var(--border);transition:var(--transition)}
 .saved-creds-row:hover{border-color:rgba(255,255,255,0.15)}
 .saved-creds-row:last-child{margin-bottom:0}
-.saved-creds-label{color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;min-width:70px}
-.saved-creds-val{font-family:inherit;color:var(--text);font-weight:600;flex:1;margin:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.sc-copy{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:6px;border-radius:8px;cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:center}
+.saved-creds-label{color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;min-width:60px}
+.saved-creds-val{font-family:inherit;color:var(--text);font-weight:600;flex:1;margin:0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.sc-copy{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:5px;border-radius:7px;cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:center}
 .sc-copy:hover{border-color:var(--text);color:var(--text);background:var(--surface2)}
 
-/* -- History Tab -- */
+/* ═══ HISTORY TAB ═══ */
 #pane-history{padding:0}
-.hist-toolbar{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface)}
-.hist-toolbar span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-.hist-list{max-height:420px;overflow-y:auto}
-.hist-item{padding:12px 20px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1.5fr 1.2fr 0.9fr auto;gap:10px;align-items:center;transition:var(--transition)}
+.hist-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface);gap:10px}
+.hist-toolbar span{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.hist-search-wrap{flex:1;max-width:180px}
+.hist-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:11px;outline:none;font-family:inherit;transition:var(--transition)}
+.hist-search:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-glow)}
+.hist-search::placeholder{color:var(--muted)}
+.hist-filter-tabs{display:flex;gap:4px}
+.hist-filter-tab{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;transition:var(--transition);font-family:inherit}
+.hist-filter-tab.active{background:var(--green-glow);border-color:rgba(63,185,80,0.3);color:var(--green)}
+.hist-list{max-height:380px;overflow-y:auto}
+.hist-item{padding:10px 18px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1.5fr 1.2fr 0.9fr auto;gap:8px;align-items:center;transition:var(--transition)}
 .hist-item:hover{background:rgba(255,255,255,0.02)}
 .hist-item:last-child{border-bottom:none}
 .hist-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hist-user{font-family:monospace;font-size:11px;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hist-pass{font-family:monospace;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hist-badge{font-size:9px;padding:3px 8px;border-radius:12px;font-weight:700;display:inline-block;text-align:center;text-transform:uppercase}
+.hist-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-block;text-align:center;text-transform:uppercase}
 .hist-badge.done{background:var(--green-glow);color:var(--green);border:1px solid rgba(63,185,80,0.2)}
 .hist-badge.failed{background:var(--red-glow);color:var(--red);border:1px solid rgba(255,123,114,0.2)}
-.hist-copy{background:none;border:1px solid var(--border);color:var(--muted);padding:4px;border-radius:6px;cursor:pointer;margin-left:6px;transition:var(--transition);display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+.hist-copy{background:none;border:1px solid var(--border);color:var(--muted);padding:4px;border-radius:6px;cursor:pointer;margin-left:4px;transition:var(--transition);display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
 .hist-copy:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
 .hist-empty{padding:40px;text-align:center;color:var(--muted);font-size:13px}
-.export-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:6px 12px;border-radius:8px;cursor:pointer;transition:var(--transition);font-family:inherit;font-weight:600}
+.export-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:5px 11px;border-radius:7px;cursor:pointer;transition:var(--transition);font-family:inherit;font-weight:600}
 .export-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-glow)}
 
-/* -- Clipboard Banner -- */
-.clip-banner{display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--blue-glow);border-bottom:1px solid rgba(88,166,255,.3);font-size:12px;color:var(--blue);backdrop-filter:var(--glass)}
+/* Analytics bar */
+#histAnalytics{display:none;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2)}
+
+/* ═══ CLIPBOARD BANNER ═══ */
+.clip-banner{display:none;align-items:center;gap:12px;padding:11px 15px;background:var(--blue-glow);border-bottom:1px solid rgba(88,166,255,.3);font-size:12px;color:var(--blue);backdrop-filter:var(--glass)}
 .clip-banner.show{display:flex}
 .clip-timer{flex-shrink:0;width:28px;height:28px}
 .clip-timer circle{fill:none;stroke:rgba(88,166,255,.25);stroke-width:2.5}
 .clip-timer circle.prog{stroke:var(--blue);stroke-width:2.5;stroke-dasharray:72;stroke-dashoffset:0;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .9s linear}
 .clip-text{flex:1;font-weight:700}
-.clip-copy{background:none;border:1px solid rgba(88,166,255,.4);color:var(--blue);font-size:11px;padding:5px 12px;border-radius:8px;cursor:pointer;font-weight:700;transition:var(--transition);white-space:nowrap}
+.clip-copy{background:none;border:1px solid rgba(88,166,255,.4);color:var(--blue);font-size:11px;padding:4px 11px;border-radius:7px;cursor:pointer;font-weight:700;transition:var(--transition);white-space:nowrap}
 .clip-copy:hover{background:rgba(88,166,255,.15)}
+
+/* ═══ QUICK ACTIONS BAR ═══ */
+.quick-bar{display:flex;gap:8px;padding:10px 20px;border-top:1px solid var(--border);background:var(--surface);backdrop-filter:var(--glass);margin-top:auto}
+.quick-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:var(--transition);font-family:inherit}
+.quick-btn:hover{border-color:rgba(255,255,255,0.2);color:var(--text);background:rgba(255,255,255,0.05);transform:translateY(-1px)}
+.quick-btn:active{transform:translateY(0)}
+.quick-btn svg{flex-shrink:0}
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="hdr">
   <div class="hdr-icon"></div>
-  <div>
+  <div class="hdr-info">
     <div class="hdr-title">Prometric Auto Register</div>
-    <div class="hdr-sub">IBTA MEA - Auto Fill</div>
+    <div class="hdr-sub">IBTA MEA · Auto Fill</div>
   </div>
-  <div style="margin-left:auto; display:flex; gap:6px">
-    <button class="theme-toggle" id="speedToggle" title="Toggle Speed Mode (Turbo/Safe)" style="margin-left:0; font-weight:700; color:var(--yellow); border-color:var(--yellow)">Turbo</button>
-    <button class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode" style="margin-left:0">Light</button>
+  <div id="statusPill" class="status-pill idle">
+    <span class="status-dot"></span>
+    <span id="statusPillText">Idle</span>
   </div>
-  <div class="badge" id="versionBadge">v3.0</div>
+  <div class="hdr-right">
+    <button class="theme-toggle" id="speedToggle" title="Toggle Speed Mode">Turbo</button>
+    <button class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode">Light</button>
+    <div class="badge" id="versionBadge">v3.0</div>
+  </div>
 </div>
 
-<!-- -- CLIPBOARD BANNER -- -->
+<!-- CLIPBOARD BANNER -->
 <div class="clip-banner" id="clipBanner">
   <div class="clip-timer">
     <svg viewBox="0 0 28 28" width="28" height="28">
@@ -266,6 +310,7 @@ body{
   <button class="clip-copy" id="clipCopyBtn">Copy Again</button>
 </div>
 
+<!-- TABS -->
 <div class="tabs">
   <div class="tab active" data-tab="single">Single</div>
   <div class="tab" data-tab="batch">Excel / CSV</div>
@@ -274,22 +319,20 @@ body{
   <div class="tab" data-tab="settings">Settings</div>
 </div>
 
-<div class="running-banner" id="globalBatchBanner" style="display:none;margin-top:-10px;margin-bottom:15px;background:var(--surface2);border:1px solid var(--border)">
+<!-- GLOBAL BATCH BANNER -->
+<div class="running-banner" id="globalBatchBanner" style="display:none;margin:0;border-radius:0;border-left:none;border-right:none">
   <div class="spinner" id="globalBatchSpinner"></div>
   <div style="flex:1">
     <div style="font-weight:700;font-size:12px;color:var(--green)" id="globalBatchTitle">Batch Running...</div>
     <div style="font-size:10px;color:var(--muted)" id="globalBatchProgress">0 / 0 completed</div>
   </div>
-  <button class="btn" style="width:auto;padding:6px 12px;margin:0 4px;font-size:11px;background:var(--yellow);color:#fff" id="globalPauseBatch">Pause</button>
-  <button class="btn btn-blue" style="width:auto;padding:6px 12px;margin:0 4px;font-size:11px;display:none" id="globalResumeBatch">Resume</button>
-  <button class="btn btn-red" style="width:auto;padding:6px 12px;margin:0;font-size:11px" id="globalStopBatch">Stop</button>
+  <button class="btn" style="width:auto;padding:5px 11px;margin:0 3px;font-size:11px;background:var(--yellow);color:#fff" id="globalPauseBatch">Pause</button>
+  <button class="btn btn-blue" style="width:auto;padding:5px 11px;margin:0 3px;font-size:11px;display:none" id="globalResumeBatch">Resume</button>
+  <button class="btn btn-red" style="width:auto;padding:5px 11px;margin:0;font-size:11px" id="globalStopBatch">Stop</button>
 </div>
 
-
-
-<!-- -- SINGLE PANE -- -->
+<!-- ══════ SINGLE PANE ══════ -->
 <div class="pane active" id="pane-single">
-
   <div class="field">
     <label for="sName">Full Name</label>
     <input type="text" id="sName" placeholder="e.g. ABDULLAH MOHAMMED S AL OTHAYMIN"/>
@@ -299,11 +342,41 @@ body{
     <input type="email" id="sEmail" placeholder="example@email.com"/>
   </div>
 
+  <!-- Live Credential Preview Card -->
+  <div class="preview-card" id="sPreviewCard">
+    <div class="preview-label">Preview</div>
+    <div class="preview-row">
+      <span class="preview-key">USER</span>
+      <span class="preview-val user" id="sPreviewUser">—</span>
+      <button class="preview-copy" id="sCopyUser" title="Copy Username">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Copy
+      </button>
+    </div>
+    <div class="preview-row">
+      <span class="preview-key">PASS</span>
+      <span class="preview-val pass" id="sPreviewPass">—</span>
+      <button class="preview-copy" id="sCopyPass" title="Copy Password">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Copy
+      </button>
+    </div>
+    <div class="strength-wrap">
+      <div class="strength-label">
+        <span>Password Strength</span>
+        <span id="sStrengthLabel">—</span>
+      </div>
+      <div class="strength-bar-bg">
+        <div class="strength-bar-fill" id="sStrengthBar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
   <button class="btn btn-green" id="sStart" disabled>Start Registration</button>
   <div class="msg" id="sMsg"></div>
 
-  <!-- -- SAVED CREDENTIALS PANEL (Single mode only) -- -->
-  <div class="saved-creds" id="savedCredsPanel" style="margin-top:20px; border-radius:12px; border:1px solid var(--border); padding:0; background:transparent">
+  <!-- Saved Credentials Panel -->
+  <div class="saved-creds" id="savedCredsPanel" style="margin-top:16px;border-radius:12px;border:1px solid var(--border);padding:0;background:transparent">
     <div class="saved-creds-row">
       <span class="saved-creds-label">NAME</span>
       <span class="saved-creds-val" id="scName" style="font-family:inherit;font-weight:400">-</span>
@@ -325,9 +398,8 @@ body{
   </div>
 </div>
 
-<!-- -- BATCH PANE -- -->
+<!-- ══════ BATCH PANE ══════ -->
 <div class="pane" id="pane-batch">
-
   <div class="upload-header">
     <span>Data File</span>
     <button class="dl-template" id="downloadTemplate">Download Template (CSV)</button>
@@ -337,8 +409,8 @@ body{
     <input type="file" id="fileInput" accept=".csv,.xlsx,.xls"/>
     <div class="upload-btn">Choose File</div>
     <div class="upload-text">
-      <div class="upload-title">Upload Data File</div>
-      <div class="upload-sub">Excel (.xlsx) or CSV</div>
+      <div class="upload-title" id="uploadTitle">Upload Data File</div>
+      <div class="upload-sub" id="uploadSub">Excel (.xlsx) or CSV</div>
     </div>
   </label>
 
@@ -348,6 +420,25 @@ body{
       <span id="batchValidationStatus">Ready</span>
     </div>
     <div class="validation-body" id="batchValidationBody"></div>
+  </div>
+
+  <!-- Stats Cards + Progress Bar (shown when running) -->
+  <div id="batchStatsWrap" style="display:none">
+    <div class="stats-row" id="batchStatCards">
+      <div class="stat-card done"><div class="stat-card-val" id="statDone">0</div><div class="stat-card-lbl">Done</div></div>
+      <div class="stat-card failed"><div class="stat-card-val" id="statFailed">0</div><div class="stat-card-lbl">Failed</div></div>
+      <div class="stat-card running"><div class="stat-card-val" id="statRunning">0</div><div class="stat-card-lbl">Running</div></div>
+      <div class="stat-card pending"><div class="stat-card-val" id="statPending">0</div><div class="stat-card-lbl">Waiting</div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-header">
+        <span class="progress-label" id="progressLabel">Progress</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div>
+      </div>
+    </div>
   </div>
 
   <div class="queue-wrap" id="queueWrap" style="display:none">
@@ -376,7 +467,7 @@ body{
   <div class="msg" id="bMsg"></div>
 </div>
 
-<!-- -- PANE 3: Google Sheet -- -->
+<!-- ══════ GOOGLE SHEET PANE ══════ -->
 <div class="pane" id="pane-sheet">
   <div class="field">
     <label for="sheetUrl">Google Sheet URL</label>
@@ -409,21 +500,16 @@ body{
     </div>
   </div>
 
-  <div id="sheetPreviewWrap" style="display:none;margin-top:20px;border-top:1px solid var(--border);padding-top:15px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+  <div id="sheetPreviewWrap" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-weight:700;font-size:12px;color:var(--text)">Preview & Filter Results</div>
-      <div id="sheetPreviewCount" style="background:var(--blue);color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;box-shadow:0 2px 4px rgba(0,0,0,0.1)">0 people</div>
+      <div id="sheetPreviewCount" style="background:var(--blue);color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">0 people</div>
     </div>
-    
-    <div class="queue-wrap" style="margin-bottom:12px">
-      <div class="sheet-grid hist-hdr" style="padding:8px 12px;font-size:10px;border-bottom:1px solid var(--border);background:var(--surface2);margin:0">
-        <div>Name</div>
-        <div>Email</div>
-        <div>Username</div>
-        <div>Password</div>
-        <div style="text-align:right"></div>
+    <div class="queue-wrap" style="margin-bottom:10px">
+      <div class="sheet-grid hist-hdr" style="padding:7px 12px;font-size:10px;border-bottom:1px solid var(--border);background:var(--surface2);margin:0">
+        <div>Name</div><div>Email</div><div>Username</div><div>Password</div><div style="text-align:right"></div>
       </div>
-      <div id="sheetPreviewList" style="max-height:180px;overflow-y:auto;background:var(--bg)"></div>
+      <div id="sheetPreviewList" style="max-height:170px;overflow-y:auto;background:var(--bg)"></div>
     </div>
   </div>
 
@@ -431,162 +517,149 @@ body{
   <div class="msg" id="sheetMsg"></div>
 </div>
 
-<!-- -- PANE 4: History -- -->
+<!-- ══════ HISTORY PANE ══════ -->
 <div class="pane" id="pane-history">
   <div class="hist-toolbar">
     <span id="histCount">0 records</span>
+    <div class="hist-search-wrap">
+      <input class="hist-search" id="histSearch" type="text" placeholder="Search name / user..."/>
+    </div>
+    <div class="hist-filter-tabs">
+      <button class="hist-filter-tab active" data-filter="all">All</button>
+      <button class="hist-filter-tab" data-filter="done">Done</button>
+      <button class="hist-filter-tab" data-filter="failed">Failed</button>
+    </div>
     <div style="display:flex;gap:6px">
-      <button class="export-btn" id="exportCSV">Download Export CSV</button>
+      <button class="export-btn" id="exportCSV">Export CSV</button>
       <button class="export-btn" id="clearHist">Clear</button>
     </div>
   </div>
-  <div id="histAnalytics" style="display:none; padding:12px 16px; border-bottom:1px solid var(--border); background:var(--surface2)">
-    <div style="font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px">Today's Summary</div>
-    <div style="display:flex; gap:10px">
-      <div style="flex:1; background:var(--bg); border:1px solid var(--green); border-radius:6px; padding:8px; text-align:center">
-        <div style="font-size:16px; font-weight:700; color:var(--green)" id="statSuccess">0</div>
-        <div style="font-size:10px; color:var(--muted)">Successful</div>
+  <div id="histAnalytics" style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2)">
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Today's Summary</div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1;background:var(--bg);border:1px solid var(--green);border-radius:6px;padding:7px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--green)" id="statSuccess">0</div>
+        <div style="font-size:10px;color:var(--muted)">Successful</div>
       </div>
-      <div style="flex:1; background:var(--bg); border:1px solid var(--red); border-radius:6px; padding:8px; text-align:center">
-        <div style="font-size:16px; font-weight:700; color:var(--red)" id="statFail">0</div>
-        <div style="font-size:10px; color:var(--muted)">Failed</div>
+      <div style="flex:1;background:var(--bg);border:1px solid var(--red);border-radius:6px;padding:7px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--red)" id="statFail">0</div>
+        <div style="font-size:10px;color:var(--muted)">Failed</div>
       </div>
     </div>
   </div>
   <div class="hist-list" id="histList"><div class="hist-empty">No registrations yet</div></div>
 </div>
 
-<!-- -- PANE 5: Settings -- -->
+<!-- ══════ SETTINGS PANE ══════ -->
 <div class="pane" id="pane-settings">
-  <!-- Automation Section -->
-  <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Settings Automation Control</div>
-    <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
+  <div style="margin-bottom:22px">
+    <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Automation Control</div>
+    <div style="background:var(--surface2);padding:14px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:14px">
       <div class="field" style="margin:0">
         <label for="pageDelay">Page Delay (Seconds)</label>
         <input type="number" id="pageDelay" value="2" min="0.5" max="15" step="0.5"/>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Wait time between pages/steps.</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Wait time between pages/steps.</div>
       </div>
       <div class="field" style="margin:0">
         <label for="userDelay">Next User Delay (Seconds)</label>
         <input type="number" id="userDelay" value="5" min="0.5" max="60" step="0.5"/>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Wait time between users in batch.</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Wait time between users in batch.</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--border)">
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:12px">Fully Automated Mode</div>
-          <div style="font-size:10px;color:var(--muted)">Auto-submit without stopping.</div>
-        </div>
+        <div style="flex:1"><div style="font-weight:700;font-size:12px">Fully Automated Mode</div><div style="font-size:10px;color:var(--muted)">Auto-submit without stopping.</div></div>
         <input type="checkbox" id="autoSubmit" style="width:18px;height:18px"/>
       </div>
       <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--border)">
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:12px">Auto-Retry Failed Items</div>
-          <div style="font-size:10px;color:var(--muted)">Retry failed registrations once.</div>
-        </div>
+        <div style="flex:1"><div style="font-weight:700;font-size:12px">Auto-Retry Failed Items</div><div style="font-size:10px;color:var(--muted)">Retry failed registrations once.</div></div>
         <input type="checkbox" id="autoRetry" style="width:18px;height:18px"/>
       </div>
       <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--border)">
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:12px">Stability Mode</div>
-          <div style="font-size:10px;color:var(--muted)">Use longer waits for slow/background pages.</div>
-        </div>
+        <div style="flex:1"><div style="font-weight:700;font-size:12px">Stability Mode</div><div style="font-size:10px;color:var(--muted)">Use longer waits for slow pages.</div></div>
         <input type="checkbox" id="stabilityMode" style="width:18px;height:18px"/>
       </div>
     </div>
   </div>
 
-  <!-- Registration Data Section -->
-  <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Data Default Personal Data</div>
-    <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
-      <div class="field" style="margin:0">
-        <label for="defAddress">Mailing Address</label>
-        <input type="text" id="defAddress" value="Al-Alameya"/>
-      </div>
+  <div style="margin-bottom:22px">
+    <div style="font-weight:700;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Default Personal Data</div>
+    <div style="background:var(--surface2);padding:14px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:14px">
+      <div class="field" style="margin:0"><label for="defAddress">Mailing Address</label><input type="text" id="defAddress" value="Al-Alameya"/></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="field" style="margin:0">
-          <label for="defCity">City</label>
-          <input type="text" id="defCity" value="JEDDAH"/>
-        </div>
-        <div class="field" style="margin:0">
-          <label for="defState">State</label>
-          <input type="text" id="defState" value="JEDDAH"/>
-        </div>
+        <div class="field" style="margin:0"><label for="defCity">City</label><input type="text" id="defCity" value="JEDDAH"/></div>
+        <div class="field" style="margin:0"><label for="defState">State</label><input type="text" id="defState" value="JEDDAH"/></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:12px">
-        <div class="field" style="margin:0">
-          <label for="defPostal">Postal Code</label>
-          <input type="text" id="defPostal" value="00000"/>
-        </div>
-        <div class="field" style="margin:0">
-          <label for="defCountry">Country</label>
-          <input type="text" id="defCountry" value="Saudi Arabia"/>
-        </div>
+        <div class="field" style="margin:0"><label for="defPostal">Postal Code</label><input type="text" id="defPostal" value="00000"/></div>
+        <div class="field" style="margin:0"><label for="defCountry">Country</label><input type="text" id="defCountry" value="Saudi Arabia"/></div>
       </div>
     </div>
   </div>
 
-  <!-- Account & Security Section -->
-  <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Security Account & Security</div>
-    <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
-      <div class="field" style="margin:0">
-        <label for="defAnswer">Security Answer</label>
-        <input type="text" id="defAnswer" value="a"/>
-      </div>
+  <div style="margin-bottom:22px">
+    <div style="font-weight:700;font-size:11px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Account & Security</div>
+    <div style="background:var(--surface2);padding:14px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:14px">
+      <div class="field" style="margin:0"><label for="defAnswer">Security Answer</label><input type="text" id="defAnswer" value="a"/></div>
       <div class="field" style="margin:0">
         <label for="passPattern">Password Pattern</label>
         <input type="text" id="passPattern" value="{F}@{f}#$1970"/>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Tags: {F}, {f}, {L}, {l}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Tags: {F} First UPPER · {f} first lower · {L} Last UPPER · {l} last lower</div>
+        <!-- Live pattern preview -->
+        <div id="patternPreview" style="margin-top:8px;display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:12px;color:var(--green)"></div>
       </div>
     </div>
   </div>
 
-  <!-- Notifications Section -->
-  <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Notifications</div>
-    <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:15px">
+  <div style="margin-bottom:22px">
+    <div style="font-weight:700;font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Notifications</div>
+    <div style="background:var(--surface2);padding:14px;border-radius:var(--radius);border:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:12px">Desktop Notifications</div>
-          <div style="font-size:10px;color:var(--muted)">Show popup on PC when batch finishes.</div>
-        </div>
+        <div style="flex:1"><div style="font-weight:700;font-size:12px">Desktop Notifications</div><div style="font-size:10px;color:var(--muted)">Show popup on PC when batch finishes.</div></div>
         <input type="checkbox" id="desktopNotifications" style="width:18px;height:18px"/>
       </div>
     </div>
   </div>
 
-  <!-- Backup & Restore Section -->
-  <div style="margin-bottom:24px">
-    <div style="font-weight:700;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Backup & Restore</div>
-    <div style="background:var(--surface2);padding:15px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:12px">
-      <div style="font-size:11px;color:var(--muted)">Export or import your extension configurations (delays, default address, security and passwords).</div>
-      <div style="display:flex;gap:10px;margin-top:4px">
+  <div style="margin-bottom:22px">
+    <div style="font-weight:700;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Backup & Restore</div>
+    <div style="background:var(--surface2);padding:14px;border-radius:var(--radius);border:1px solid var(--border);display:grid;gap:10px">
+      <div style="font-size:11px;color:var(--muted)">Export or import your extension configurations.</div>
+      <div style="display:flex;gap:10px;margin-top:2px">
         <button class="btn btn-blue" id="exportSettingsBtn" style="margin-top:0;flex:1;font-size:12px;padding:8px 12px">
-          <svg class="pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
           Export Backup
         </button>
         <button class="btn btn-blue" id="importSettingsBtn" style="margin-top:0;flex:1;font-size:12px;padding:8px 12px">
-          <svg class="pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Import Backup
         </button>
-        <input type="file" id="importSettingsFile" accept=".json" style="display:none" />
+        <input type="file" id="importSettingsFile" accept=".json" style="display:none"/>
       </div>
-      <div id="settingsBackupMsg" class="msg" style="margin-top:4px"></div>
+      <div id="settingsBackupMsg" class="msg" style="margin-top:2px"></div>
     </div>
   </div>
 
-  <div style="margin-top:24px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:20px">
+  <div style="margin-top:20px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:18px">
     <button class="btn btn-green" id="saveSettings" style="flex:2">Save Settings</button>
     <button class="btn btn-blue" id="resetSettings" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text)">Default</button>
-    <button class="btn" id="cancelSettings" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted)">x Cancel</button>
+    <button class="btn" id="cancelSettings" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted)">✕ Cancel</button>
   </div>
 
-  <div style="margin-top:40px;border-top:1px dashed var(--border);padding-top:20px;opacity:0.8">
+  <div style="margin-top:36px;border-top:1px dashed var(--border);padding-top:18px;opacity:0.8">
     <button class="btn btn-blue" id="clearCurrentSessionSettings" style="width:100%;font-size:11px">Clear Current Session Only</button>
     <button class="btn" id="clearAllData" style="width:100%;background:rgba(248,81,73,0.1);color:var(--red);border:1px solid rgba(248,81,73,0.3);font-size:11px">Reset System (Clear History/Queue)</button>
   </div>
+</div>
+
+<!-- ══════ QUICK ACTIONS BAR ══════ -->
+<div class="quick-bar">
+  <button class="quick-btn" id="quickCopyLast" title="Copy last completed credentials">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+    Copy Last Creds
+  </button>
+  <button class="quick-btn" id="quickOpenPrometric" title="Open Prometric registration page">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+    Open Prometric
+  </button>
 </div>
 
 <script src="utils.js"></script>

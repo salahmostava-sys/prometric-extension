@@ -6,7 +6,7 @@ if (versionBadge) versionBadge.textContent = 'v' + version;
 const DEFAULT_SETTINGS = {
   pageDelay: 1,
   userDelay: 2,
-  autoSubmit: true,   // Auto-complete without user clicking — credentials saved to popup
+  autoSubmit: true,
   autoRetry: true,
   stabilityMode: false,
   desktopNotifications: true,
@@ -19,6 +19,143 @@ const DEFAULT_SETTINGS = {
   passPattern: '{F}@{f}#$1970',
   sheetUrl: ''
 };
+
+// ═══ Status Pill ═══
+function updateStatusPill(state) {
+  const pill = document.getElementById('statusPill');
+  const text = document.getElementById('statusPillText');
+  if (!pill || !text) return;
+  const map = {
+    running: { cls: 'running', label: 'Running' },
+    paused:  { cls: 'paused',  label: 'Paused'  },
+    single:  { cls: 'single',  label: 'Active'  },
+    idle:    { cls: 'idle',    label: 'Idle'    }
+  };
+  const m = map[state] || map.idle;
+  pill.className = `status-pill ${m.cls}`;
+  text.textContent = m.label;
+}
+
+// ═══ Live Credential Preview (Single Tab) ═══
+function calcPasswordStrength(pass) {
+  if (!pass || pass.length < 4) return { score: 0, label: 'Weak', color: '#ff7b72' };
+  let score = 0;
+  if (pass.length >= 8)  score++;
+  if (pass.length >= 12) score++;
+  if (/[A-Z]/.test(pass)) score++;
+  if (/[a-z]/.test(pass)) score++;
+  if (/[0-9]/.test(pass)) score++;
+  if (/[^A-Za-z0-9]/.test(pass)) score++;
+  if (score <= 2) return { score: Math.round(score / 6 * 100), label: 'Weak',   color: '#ff7b72' };
+  if (score <= 4) return { score: Math.round(score / 6 * 100), label: 'Medium', color: '#d29922' };
+  return           { score: Math.round(score / 6 * 100), label: 'Strong', color: '#3fb950' };
+}
+
+function renderCredentialPreview(name) {
+  const card    = document.getElementById('sPreviewCard');
+  const userEl  = document.getElementById('sPreviewUser');
+  const passEl  = document.getElementById('sPreviewPass');
+  const barEl   = document.getElementById('sStrengthBar');
+  const lblEl   = document.getElementById('sStrengthLabel');
+  if (!card) return;
+
+  const patternInput = document.getElementById('passPattern');
+  const pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
+  const creds = generateCredentials(name, pattern);
+
+  if (!creds) { card.classList.remove('show'); return; }
+
+  card.classList.add('show');
+  if (userEl) userEl.textContent = creds.username;
+  if (passEl) passEl.textContent = creds.password;
+
+  const { score, label, color } = calcPasswordStrength(creds.password);
+  if (barEl) { barEl.style.width = score + '%'; barEl.style.background = color; }
+  if (lblEl) { lblEl.textContent = label; lblEl.style.color = color; }
+}
+
+// ═══ Progress Bar + Stats Cards ═══
+function updateProgressAndStats(queue, queueIndex, isRunning) {
+  const wrap      = document.getElementById('batchStatsWrap');
+  const fillEl    = document.getElementById('progressBarFill');
+  const pctEl     = document.getElementById('progressPct');
+  const labelEl   = document.getElementById('progressLabel');
+  const doneEl    = document.getElementById('statDone');
+  const failedEl  = document.getElementById('statFailed');
+  const runningEl = document.getElementById('statRunning');
+  const pendingEl = document.getElementById('statPending');
+  if (!wrap || !queue || !queue.length) { if (wrap) wrap.style.display = 'none'; return; }
+
+  const done    = queue.filter(i => i.status === 'done').length;
+  const failed  = queue.filter(i => i.status === 'failed').length;
+  const running = isRunning ? 1 : 0;
+  const pending = queue.filter(i => i.status === 'pending').length;
+  const finished = done + failed;
+  const pct = Math.round((finished / queue.length) * 100);
+
+  wrap.style.display = 'block';
+  if (fillEl)    fillEl.style.width = pct + '%';
+  if (pctEl)     pctEl.textContent  = pct + '%';
+  if (labelEl)   labelEl.textContent = `${finished} / ${queue.length} completed`;
+  if (doneEl)    doneEl.textContent   = done;
+  if (failedEl)  failedEl.textContent = failed;
+  if (runningEl) runningEl.textContent = running;
+  if (pendingEl) pendingEl.textContent = pending;
+}
+
+// ═══ Enhanced Queue Render ═══
+function renderEnhancedQueueItem(item, i) {
+  const hasCreds   = item.status === 'done' && (item.finalUsername || item.username);
+  const hasFailed  = item.status === 'failed';
+  const statusMap  = { pending: 'Waiting', running: 'Running', done: 'Done', failed: 'Failed' };
+
+  const div = document.createElement('div');
+  div.className = 'queue-item';
+  div.id = `qi-${i}`;
+
+  // Top row
+  const top = document.createElement('div');
+  top.className = 'queue-item-top';
+  top.innerHTML = `
+    <div class="q-dot ${item.status}" id="qd-${i}"></div>
+    <div style="flex:1;min-width:0">
+      <div class="q-name">${escapeHtml(item.name || '')}</div>
+      <div class="q-email">${escapeHtml(hasFailed ? (item.failureReason || item.email || '') : (item.email || ''))}</div>
+    </div>
+    <div class="q-status ${item.status}" id="qs-${i}">${statusMap[item.status] || item.status}</div>
+  `;
+  div.appendChild(top);
+
+  // Credentials row (shown when done)
+  if (hasCreds) {
+    const credsRow = document.createElement('div');
+    credsRow.className = 'queue-item-creds visible';
+    const user = item.finalUsername || item.username || '';
+    const pass = item.password || '';
+    credsRow.innerHTML = `
+      <span class="q-cred-val user" title="${escapeHtml(user)}">${escapeHtml(user)}</span>
+      <span class="q-cred-val pass" title="${escapeHtml(pass)}">${escapeHtml(pass)}</span>
+      <button class="q-copy q-cred-copy" data-user="${escapeHtml(user)}" data-pass="${escapeHtml(pass)}" title="Copy credentials">
+        <svg class="pointer-events-none" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      </button>
+    `;
+    div.appendChild(credsRow);
+  }
+
+  // Per-item retry (shown when failed)
+  if (hasFailed) {
+    const retryWrap = document.createElement('div');
+    retryWrap.style.cssText = 'margin-top:5px;text-align:right';
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'q-retry-btn';
+    retryBtn.dataset.index = i;
+    retryBtn.textContent = '↺ Retry';
+    retryWrap.appendChild(retryBtn);
+    div.appendChild(retryWrap);
+  }
+
+  return div;
+}
 
 // -- Theme Toggle ---
 async function applyTheme(isLight) {
@@ -426,6 +563,7 @@ function updateSinglePreview() {
   const c = generateCredentials(sName.value, pattern);
   const emailOk = sEmail.value.trim().length > 0;
   sStart.disabled = !(c && emailOk);
+  renderCredentialPreview(sName.value.trim());
 }
 sName.addEventListener('input', updateSinglePreview);
 sEmail.addEventListener('input', updateSinglePreview);
@@ -566,32 +704,7 @@ function renderQueue() {
   qCount.textContent = `${batchItems.length} people`;
   queueList.textContent = '';
   for (let i = 0; i < batchItems.length; i++) {
-    const item = batchItems[i];
-    const div = document.createElement('div');
-    div.className = 'queue-item';
-    div.id = `qi-${i}`;
-    const dot = document.createElement('div');
-    dot.className = `q-dot ${item.status}`;
-    dot.id = `qd-${i}`;
-    div.appendChild(dot);
-    const textContainer = document.createElement('div');
-    textContainer.style.flex = '1';
-    textContainer.style.minWidth = '0';
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'q-name';
-    nameDiv.textContent = item.name;
-    textContainer.appendChild(nameDiv);
-    const emailDiv = document.createElement('div');
-    emailDiv.className = 'q-email';
-    emailDiv.textContent = item.failureReason || item.email;
-    textContainer.appendChild(emailDiv);
-    div.appendChild(textContainer);
-    const statusDiv = document.createElement('div');
-    statusDiv.className = `q-status ${item.status}`;
-    statusDiv.id = `qs-${i}`;
-    statusDiv.textContent = statusLabel(item.status);
-    div.appendChild(statusDiv);
-    queueList.appendChild(div);
+    queueList.appendChild(renderEnhancedQueueItem(batchItems[i], i));
   }
 }
 
@@ -856,9 +969,15 @@ async function pollStatus() {
   const { queue, queueIndex, isRunning, singleRunning, runLogs = [] } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning', 'singleRunning', 'runLogs']);
   renderLogs(runLogs);
 
+  // Update header status pill
+  if (isRunning)      updateStatusPill('running');
+  else if (singleRunning) updateStatusPill('single');
+  else                updateStatusPill('idle');
+
   updateSingleModeUI(singleRunning);
 
   if (!queue || queue.length === 0) {
+    updateProgressAndStats(null);
     return handleEmptyQueue(singleRunning);
   }
 
@@ -872,7 +991,9 @@ async function pollStatus() {
   }
   if (clearSessionBtn) clearSessionBtn.style.display = queue.length > 0 ? 'block' : 'none';
 
+  // Update stats and progress bar
   if (queue.length > 0 && !singleRunning) {
+    updateProgressAndStats(queue, queueIndex, isRunning);
     updateQueueItemsUI(queue, queueIndex, isRunning);
 
     if (isRunning) {
@@ -905,53 +1026,80 @@ chrome.storage.onChanged.addListener((changes) => {
 setInterval(pollStatus, 5000);
 pollStatus();
 
-// -- HISTORY TAB ---
+// -- HIST// History filter state
+let historyFilter = 'all';
+let historySearch = '';
+
 async function loadHistory() {
   const { history = [] } = await chrome.storage.local.get(['history']);
-  const list    = document.getElementById('histList');
-  const countEl = document.getElementById('histCount');
+  const list       = document.getElementById('histList');
+  const countEl    = document.getElementById('histCount');
   const analyticsWrap = document.getElementById('histAnalytics');
   if (!list) return;
 
-  countEl.textContent = `${history.length} record${history.length !== 1 ? 's' : ''}`;
-
-  if (history.length === 0) {
-    if (analyticsWrap) analyticsWrap.style.display = 'none';
-    list.innerHTML = '<div class="hist-empty">No registrations yet</div>';
-    return;
-  }
-
-  // Calculate Today's Stats
+  // Calculate Today's Stats (always on full history)
   const today = new Date().toDateString();
-  let todaySuccess = 0;
-  let todayFail = 0;
-  
+  let todaySuccess = 0, todayFail = 0;
   history.forEach(h => {
     if (h.date && new Date(h.date).toDateString() === today) {
-      if (h.status === 'done') todaySuccess++;
+      if (h.status === 'done')   todaySuccess++;
       else if (h.status === 'failed') todayFail++;
     }
   });
-
   if (analyticsWrap) {
-    analyticsWrap.style.display = 'block';
+    analyticsWrap.style.display = history.length ? 'block' : 'none';
     document.getElementById('statSuccess').textContent = todaySuccess;
-    document.getElementById('statFail').textContent = todayFail;
+    document.getElementById('statFail').textContent    = todayFail;
   }
 
-  list.innerHTML = history.map((h, i) => `
+  // Apply filter + search
+  let filtered = history;
+  if (historyFilter !== 'all') filtered = filtered.filter(h => h.status === historyFilter);
+  if (historySearch) {
+    const q = historySearch.toLowerCase();
+    filtered = filtered.filter(h =>
+      (h.name || '').toLowerCase().includes(q) ||
+      (h.finalUsername || '').toLowerCase().includes(q) ||
+      (h.email || '').toLowerCase().includes(q)
+    );
+  }
+
+  countEl.textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="hist-empty">No results found</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map((h, i) => `
     <div class="hist-item">
       <div class="hist-name" title="${escapeHtml(h.reason || h.name || '')}">${escapeHtml(h.name || '-')}</div>
       <div class="hist-user" title="${escapeHtml(h.finalUsername || '')}">${escapeHtml(h.finalUsername || '-')}</div>
       <div class="hist-pass" title="${escapeHtml(h.password || '')}">${escapeHtml(h.password || '-')}</div>
       <div style="text-align:right;white-space:nowrap">
         <span class="hist-badge ${escapeHtml(h.status)}" title="${escapeHtml(h.reason || (h.date ? new Date(h.date).toLocaleString('en-GB') : ''))}">${h.status === 'done' ? 'OK' : 'Fail'}</span>
-        ${h.status === 'done' ? `<button class="hist-copy" data-index="${i}" title="Copy Credentials">
+        ${h.status === 'done' ? `<button class="hist-copy" data-index="${history.indexOf(h)}" title="Copy Credentials">
           <svg class="pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
         </button>` : ''}
       </div>
     </div>`).join('');
 }
+
+// History search
+document.getElementById('histSearch')?.addEventListener('input', e => {
+  historySearch = e.target.value.trim();
+  loadHistory();
+});
+
+// History filter tabs
+document.querySelectorAll('.hist-filter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.hist-filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    historyFilter = tab.dataset.filter;
+    loadHistory();
+  });
+});
 
 document.getElementById('clearHist')?.addEventListener('click', async () => {
   if (!confirm('Clear all history?')) return;
@@ -988,9 +1136,38 @@ document.addEventListener('click', async (e) => {
     const { history = [] } = await chrome.storage.local.get(['history']);
     const h = history[i];
     if (h) fallbackCopyPopup(`${h.finalUsername}\t${h.password}`);
-    const btn = e.target;
+    const btn = e.target.closest('.hist-copy');
+    if (btn) {
+      const oldHtml = btn.innerHTML;
+      btn.innerHTML = `<svg class="pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+      setTimeout(() => btn.innerHTML = oldHtml, 2000);
+    }
+  }
+  
+  // Handle queue item cred copy
+  if (e.target.closest('.q-cred-copy')) {
+    const btn = e.target.closest('.q-cred-copy');
+    const u = btn.dataset.user;
+    const p = btn.dataset.pass;
+    fallbackCopyPopup(`${u}\t${p}`);
     const oldHtml = btn.innerHTML;
-    btn.innerHTML = `<svg class="pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    btn.innerHTML = `<svg class="pointer-events-none" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    setTimeout(() => btn.innerHTML = oldHtml, 2000);
+  }
+
+  // Handle single mode preview copy
+  if (e.target.closest('#sCopyUser')) {
+    const btn = e.target.closest('#sCopyUser');
+    fallbackCopyPopup(document.getElementById('sPreviewUser')?.textContent || '');
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
+    setTimeout(() => btn.innerHTML = oldHtml, 2000);
+  }
+  if (e.target.closest('#sCopyPass')) {
+    const btn = e.target.closest('#sCopyPass');
+    fallbackCopyPopup(document.getElementById('sPreviewPass')?.textContent || '');
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
     setTimeout(() => btn.innerHTML = oldHtml, 2000);
   }
   
@@ -1348,10 +1525,48 @@ async function checkClipboard() {
   }
 }
 
-// Poll every second
 setInterval(checkClipboard, 1000);
 checkClipboard();
 loadSettings();
+
+// -- Pattern Live Preview in Settings ---
+document.getElementById('passPattern')?.addEventListener('input', (e) => {
+  const p = e.target.value;
+  const pEl = document.getElementById('patternPreview');
+  if (!pEl) return;
+  const c = generateCredentials('ABDULLAH MOHAMMED', p);
+  if (c) {
+    pEl.style.display = 'block';
+    pEl.textContent = `Example: ${c.password}`;
+  } else {
+    pEl.style.display = 'none';
+  }
+});
+
+// -- Quick Actions Bar ---
+document.getElementById('quickCopyLast')?.addEventListener('click', async (e) => {
+  const { history = [] } = await chrome.storage.local.get(['history']);
+  const lastDone = history.find(h => h.status === 'done');
+  if (lastDone && lastDone.finalUsername) {
+    fallbackCopyPopup(`${lastDone.finalUsername}\t${lastDone.password}`);
+    const btn = e.target.closest('button');
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'rgba(63,185,80,0.4)';
+    setTimeout(() => {
+      btn.innerHTML = oldHtml;
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  } else {
+    alert('No recent successful registrations found.');
+  }
+});
+
+document.getElementById('quickOpenPrometric')?.addEventListener('click', () => {
+  chrome.tabs.create({ url: 'https://www.prometric.com/test-takers/search' });
+});
 
 // -- Export for Testing ---
 if (typeof module !== 'undefined' && module.exports) {

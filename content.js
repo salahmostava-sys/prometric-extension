@@ -25,51 +25,145 @@ let GLOBAL_SINGLE = false;
 let STABILITY_MODE = false;
 
 // -- Status indicator ---
-function updateStatus(msg, color = '#2ea043') {
+function updateStatus(msg, color = '#3fb950', glowColor = 'rgba(63,185,80,0.25)') {
   let statusContainer = document.getElementById('__prom__');
   let statusTextElement = document.getElementById('__prom_txt__');
+  let statusDot = document.getElementById('__prom_dot__');
 
   if (statusContainer) {
-    statusContainer.style.background = color;
+    statusContainer.style.border = `1px solid ${color}40`;
+    statusContainer.style.boxShadow = `0 8px 32px 0 rgba(0,0,0,0.4), 0 0 15px ${glowColor}`;
+    if (statusDot) statusDot.style.background = color;
   } else {
+    // Add keyframes for animations if not present
+    if (!document.getElementById('__prom_style__')) {
+      const style = document.createElement('style');
+      style.id = '__prom_style__';
+      style.textContent = `
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;700&display=swap');
+        @keyframes __prom_fadeIn { from { opacity: 0; transform: translateY(-10px) translateX(-50%); } to { opacity: 1; transform: translateY(0) translateX(-50%); } }
+        @keyframes __prom_pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+      `;
+      document.head.appendChild(style);
+    }
+
     statusContainer = document.createElement('div');
     statusContainer.id = '__prom__';
-    statusContainer.style.cssText = 'position:fixed;top:10px;right:10px;z-index:2147483647;background:#2ea043;color:#fff;padding:8px 14px;border-radius:8px;font:bold 13px/1.4 sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35);max-width:320px;display:flex;align-items:center;gap:12px';
+    // Premium glassmorphism center-top positioning
+    statusContainer.style.cssText = `
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2147483647;
+      background: rgba(13, 17, 23, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #f0f6fc;
+      padding: 10px 18px;
+      border-radius: 16px;
+      border: 1px solid ${color}40;
+      font-family: 'Outfit', -apple-system, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 8px 32px 0 rgba(0,0,0,0.4), 0 0 15px ${glowColor};
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: __prom_fadeIn 0.3s ease-out;
+      min-width: 280px;
+    `;
     
+    // Status dot
+    statusDot = document.createElement('div');
+    statusDot.id = '__prom_dot__';
+    statusDot.style.cssText = `
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: ${color};
+      animation: __prom_pulse 1.5s ease-in-out infinite;
+      box-shadow: 0 0 8px ${color};
+      flex-shrink: 0;
+    `;
+    statusContainer.appendChild(statusDot);
+
     statusTextElement = document.createElement('div');
     statusTextElement.id = '__prom_txt__';
-    statusTextElement.style.flex = '1';
+    statusTextElement.style.cssText = 'flex: 1; text-align: center; letter-spacing: 0.3px;';
     statusContainer.appendChild(statusTextElement);
+
+    const btnContainer = document.createElement('div');
+    btnContainer.style.cssText = 'display: flex; gap: 6px; flex-shrink: 0; margin-left: auto;';
+    statusContainer.appendChild(btnContainer);
 
     // Add inline Pause for Batch mode
     if (globalThis.__isBatch) {
       const pauseBtn = document.createElement('button');
       pauseBtn.textContent = 'Pause';
-      pauseBtn.style.cssText = 'background:rgba(0,0,0,0.2);border:none;color:#fff;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:11px;font-weight:bold';
+      pauseBtn.style.cssText = `
+        background: rgba(210,153,34,0.15);
+        border: 1px solid rgba(210,153,34,0.3);
+        color: #d29922;
+        border-radius: 8px;
+        cursor: pointer;
+        padding: 5px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        font-family: 'Outfit', sans-serif;
+        transition: all 0.2s;
+      `;
+      pauseBtn.onmouseover = () => pauseBtn.style.background = 'rgba(210,153,34,0.25)';
+      pauseBtn.onmouseout = () => pauseBtn.style.background = 'rgba(210,153,34,0.15)';
       pauseBtn.onclick = () => {
         if (pauseBtn.textContent.includes('Pause')) {
-          send('pauseBatch'); pauseBtn.textContent = 'Resume'; pauseBtn.style.background = 'rgba(0,0,0,0.4)';
+          send('pauseBatch'); 
+          pauseBtn.textContent = 'Resume'; 
+          pauseBtn.style.background = 'rgba(88,166,255,0.15)';
+          pauseBtn.style.color = '#58a6ff';
+          pauseBtn.style.borderColor = 'rgba(88,166,255,0.3)';
+          pauseBtn.onmouseover = () => pauseBtn.style.background = 'rgba(88,166,255,0.25)';
+          pauseBtn.onmouseout = () => pauseBtn.style.background = 'rgba(88,166,255,0.15)';
         } else {
-          send('resumeBatch'); pauseBtn.textContent = 'Pause'; pauseBtn.style.background = 'rgba(0,0,0,0.2)';
+          send('resumeBatch'); 
+          pauseBtn.textContent = 'Pause'; 
+          pauseBtn.style.background = 'rgba(210,153,34,0.15)';
+          pauseBtn.style.color = '#d29922';
+          pauseBtn.style.borderColor = 'rgba(210,153,34,0.3)';
+          pauseBtn.onmouseover = () => pauseBtn.style.background = 'rgba(210,153,34,0.25)';
+          pauseBtn.onmouseout = () => pauseBtn.style.background = 'rgba(210,153,34,0.15)';
         }
       };
-      statusContainer.appendChild(pauseBtn);
+      btnContainer.appendChild(pauseBtn);
     }
     
     // Stop button always available if active
     const stopBtn = document.createElement('button');
     stopBtn.textContent = 'Stop';
-    stopBtn.style.cssText = 'background:rgba(255,0,0,0.5);border:none;color:#fff;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:11px;font-weight:bold';
+    stopBtn.style.cssText = `
+      background: rgba(255,123,114,0.15);
+      border: 1px solid rgba(255,123,114,0.3);
+      color: #ff7b72;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      transition: all 0.2s;
+    `;
+    stopBtn.onmouseover = () => stopBtn.style.background = 'rgba(255,123,114,0.25)';
+    stopBtn.onmouseout = () => stopBtn.style.background = 'rgba(255,123,114,0.15)';
     stopBtn.onclick = () => { 
       ABORT_CURRENT_STEP = true;
       send('stopBatch'); 
       statusContainer.remove(); 
     };
-    statusContainer.appendChild(stopBtn);
+    btnContainer.appendChild(stopBtn);
 
     document.body?.appendChild(statusContainer);
   }
-  statusTextElement.textContent = 'Turbo ' + msg;
+  statusTextElement.textContent = msg;
 }
 
 function send(action, payload) {
