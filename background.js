@@ -54,6 +54,12 @@ const DEFAULT_AUTO_RETRY = true;
 const DEFAULT_DESKTOP_NOTIFICATIONS = true;
 const DEFAULT_USER_DELAY = 2;
 const DEFAULT_STABILITY_MODE = false;
+
+// ─── Limits ──────────────────────────────────────────────────────────────────
+const MAX_HISTORY_ENTRIES = 500;  // Max saved registration history records
+const MAX_LOG_ENTRIES     = 200;  // Max saved run log entries
+const SW_WAKE_RETRY_MS    = 300;  // Wait before retrying after service-worker sleep
+
 let openNextInProgress = false;
 let openNextPending = false;
 
@@ -143,6 +149,7 @@ async function getRegistrationTabId(url) {
   return null;
 }
 
+
 async function closeRegistrationWindow() {
   const { currentTabId } = await chrome.storage.local.get(['currentTabId']);
   if (currentTabId) {
@@ -172,13 +179,13 @@ async function getState() {
 async function saveToHistory(entry) {
   const { history = [] } = await chrome.storage.local.get(['history']);
   history.unshift({ ...entry, date: new Date().toISOString() });
-  await chrome.storage.local.set({ history: history.slice(0, 500) });
+  await chrome.storage.local.set({ history: history.slice(0, MAX_HISTORY_ENTRIES) });
 }
 
 async function addRunLog(message, type = 'info') {
   const { runLogs = [] } = await chrome.storage.local.get(['runLogs']);
   runLogs.unshift({ message, type, date: new Date().toISOString() });
-  await chrome.storage.local.set({ runLogs: runLogs.slice(0, 200) });
+  await chrome.storage.local.set({ runLogs: runLogs.slice(0, MAX_LOG_ENTRIES) });
 }
 
 // Clears the in-flight processing lock shared between handleStepDone and handleStepFailed.

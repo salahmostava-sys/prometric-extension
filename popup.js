@@ -318,16 +318,27 @@ function renderValidation(panel, body, statusEl, stats) {
   }
 }
 
+/** Wait before retrying a message to a sleeping service worker (MV3). */
+const SW_WAKE_RETRY_MS = 300;
+
 // -- sendMsg: retry once if service worker was sleeping (MV3) ---
+// Returns { success: false, error } if both attempts fail, so callers can react.
 async function sendMsg(payload) {
   try {
     return await chrome.runtime.sendMessage(payload);
   } catch (e) {
     if (e?.message?.includes('Receiving end does not exist')) {
       // Service worker was asleep — wait briefly and retry once
-      await new Promise(r => setTimeout(r, 300));
-      try { return await chrome.runtime.sendMessage(payload); } catch (e) { console.warn(e); }
+      await new Promise(r => setTimeout(r, SW_WAKE_RETRY_MS));
+      try {
+        return await chrome.runtime.sendMessage(payload);
+      } catch (retryErr) {
+        console.warn('[sendMsg] Both attempts failed:', retryErr);
+        return { success: false, error: retryErr?.message || 'Unknown error' };
+      }
     }
+    console.warn('[sendMsg] Unexpected error:', e);
+    return { success: false, error: e?.message || 'Unknown error' };
   }
 }
 

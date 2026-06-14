@@ -4,14 +4,23 @@
 const DEFAULT_PAGE_DELAY = 1;
 const DEFAULT_ANSWER = 'a';
 
+/** Wait before retrying a message to a sleeping service worker (MV3). */
+const SW_WAKE_RETRY_MS = 300;
+
 // Send currentItem to MAIN world
 async function sendDataToPage() {
-  const { currentItem, isRunning, singleRunning, pageDelay, autoSubmit, defAnswer, stabilityMode, queue, queueIndex } = await chrome.storage.local.get(['currentItem', 'isRunning', 'singleRunning', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex']);
+  const {
+    currentItem, isRunning, singleRunning, pageDelay,
+    autoSubmit, defAnswer, stabilityMode, queue, queueIndex
+  } = await chrome.storage.local.get([
+    'currentItem', 'isRunning', 'singleRunning', 'pageDelay',
+    'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex'
+  ]);
   const isLast = isRunning && queue && queueIndex >= queue.length - 1;
   globalThis.dispatchEvent(new CustomEvent('__prom_init', {
-    detail: { 
-      currentItem: currentItem || null, 
-      isRunning, 
+    detail: {
+      currentItem: currentItem || null,
+      isRunning,
       singleRunning,
       isLast,
       pageDelay: pageDelay ?? DEFAULT_PAGE_DELAY,
@@ -22,15 +31,23 @@ async function sendDataToPage() {
   }));
 }
 
-// Retry once if service worker was sleeping (MV3)
+// Retry once if service worker was sleeping (MV3).
+// Returns { success: false, error } on final failure so callers can react.
 async function sendToBackground(payload) {
   try {
     return await chrome.runtime.sendMessage(payload);
   } catch (e) {
     if (e?.message?.includes('Receiving end does not exist')) {
-      await new Promise(r => setTimeout(r, 300));
-      try { return await chrome.runtime.sendMessage(payload); } catch (err) { console.warn(err); }
+      await new Promise(r => setTimeout(r, SW_WAKE_RETRY_MS));
+      try {
+        return await chrome.runtime.sendMessage(payload);
+      } catch (retryErr) {
+        console.warn('[bridge] Both attempts failed:', retryErr);
+        return { success: false, error: retryErr?.message || 'Unknown error' };
+      }
     }
+    console.warn('[bridge] Unexpected error:', e);
+    return { success: false, error: e?.message || 'Unknown error' };
   }
 }
 
@@ -70,7 +87,7 @@ globalThis.addEventListener('__prom_msg', async (e) => {
   }
 
   if (action === 'pauseBatch') {
-    // FIX #1: Only pause batch (isRunning), never touch singleRunning.
+    // FIX: Only pause batch (isRunning), never touch singleRunning.
     // Sending 'stopQueue' to background also resets singleRunning, which is wrong.
     await chrome.storage.local.set({ isRunning: false });
   }
@@ -86,7 +103,7 @@ globalThis.addEventListener('__prom_msg', async (e) => {
   // Save copied credentials with expiry for cross-tab access
   if (action === 'saveCopied') {
     await chrome.storage.local.set({ copiedCreds: payload });
-    // Auto-clear after 30 seconds
+    // Auto-clear after expiry
     setTimeout(async () => {
       const { copiedCreds } = await chrome.storage.local.get(['copiedCreds']);
       if (copiedCreds && Date.now() >= copiedCreds.expiresAt) {
@@ -108,14 +125,20 @@ globalThis.addEventListener('__prom_ready', () => {
 
 // Also re-send if storage changes (for future items in batch)
 chrome.storage.onChanged.addListener((changes) => {
-  if (changes.currentItem || changes.isRunning || changes.singleRunning || changes.pageDelay || changes.autoSubmit || changes.defAnswer || changes.stabilityMode) {
-    // FIX #8: Include queue and queueIndex so isLast stays fresh
-    chrome.storage.local.get(['isRunning', 'singleRunning', 'currentItem', 'pageDelay', 'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex']).then(state => {
+  if (
+    changes.currentItem || changes.isRunning || changes.singleRunning ||
+    changes.pageDelay || changes.autoSubmit || changes.defAnswer || changes.stabilityMode
+  ) {
+    // Include queue and queueIndex so isLast stays fresh
+    chrome.storage.local.get([
+      'isRunning', 'singleRunning', 'currentItem', 'pageDelay',
+      'autoSubmit', 'defAnswer', 'stabilityMode', 'queue', 'queueIndex'
+    ]).then(state => {
       const isLast = state.isRunning && state.queue && state.queueIndex >= state.queue.length - 1;
       globalThis.dispatchEvent(new CustomEvent('__prom_init', {
-        detail: { 
-          currentItem: state.currentItem || null, 
-          isRunning: state.isRunning, 
+        detail: {
+          currentItem: state.currentItem || null,
+          isRunning: state.isRunning,
           singleRunning: state.singleRunning,
           isLast,
           pageDelay: state.pageDelay ?? DEFAULT_PAGE_DELAY,

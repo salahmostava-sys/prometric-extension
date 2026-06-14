@@ -1,0 +1,27 @@
+## Dependencies
+node_modules/
+
+## Build output
+dist/
+*.zip
+
+## Logs
+*.log
+npm-debug.log*
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Editor
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+## Test coverage
+coverage/
+
+## Env files
+.env
+.env.local

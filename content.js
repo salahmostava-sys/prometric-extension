@@ -1,28 +1,47 @@
 // content.js - MAIN world
-const LOGIN_URL = 'https://tcnet1.prometric.com/Login.aspx?ibt=785937226&ClientNameSingleSite=ibtamea';
-const REGISTER_URL = 'https://tcnet1.prometric.com/Registration.aspx';
-let ABORT_CURRENT_STEP = false;
 
+// ─── URLs ────────────────────────────────────────────────────────────────────
+const LOGIN_URL    = 'https://tcnet1.prometric.com/Login.aspx?ibt=785937226&ClientNameSingleSite=ibtamea';
+const REGISTER_URL = 'https://tcnet1.prometric.com/Registration.aspx';
+
+// ─── Timing constants (ms) ────────────────────────────────────────────────────
+const WAIT_AFTER_CLICK_MS       = 2500;  // How long to wait after clicking Continue
+const POLL_INTERVAL_MS          = 150;   // Step/field polling cadence
+const USERNAME_VALIDATION_MS    = 3000;  // Max wait for username availability
+const ERROR_CLEAR_WAIT_MS       = 2500;  // Wait for old error message to disappear
+const POLICY_TIMEOUT_NORMAL_MS  = 30_000; // Max wait for Continue on policy step
+const POLICY_TIMEOUT_STABILITY_MS = 60_000; // Same, but in stability mode
+const SIGN_OUT_SETTLE_MS        = 500;   // Wait after sign-out before next action
+const DASHBOARD_COUNTDOWN_MS    = 2000;  // Auto-proceed countdown on dashboard
+const STEP1_OPTION_RETRIES      = 25;    // Retry count for IBTA MEA dropdown
+const USERNAME_MAX_ATTEMPTS     = 150;   // Safety cap for username suffix loop
+const PAGE_SNIPPET_LENGTH       = 700;   // Characters captured in error reports
+const SLEEP_MINIMUM_MS          = 10;    // Floor for scaled sleep
+
+// ─── Mutable runtime state ────────────────────────────────────────────────────
+let ABORT_CURRENT_STEP = false;
+let PAGE_DELAY    = 2000;
+let AUTO_SUBMIT   = false;
+let DEFAULT_ANSWER = 'a';
+let GLOBAL_RUNNING = false;
+let GLOBAL_SINGLE  = false;
+let STABILITY_MODE = false;
+
+// ─── Core helpers ─────────────────────────────────────────────────────────────
 function checkRunning() {
   if (ABORT_CURRENT_STEP) throw new Error('STOPPED');
 }
 
 const sleep = async ms => {
   const scaledMs = Math.round(ms * (PAGE_DELAY / 2000));
-  await new Promise(r => setTimeout(r, Math.max(10, scaledMs)));
+  await new Promise(r => setTimeout(r, Math.max(SLEEP_MINIMUM_MS, scaledMs)));
   checkRunning();
 };
+
 const wait = async ms => {
   await new Promise(r => setTimeout(r, ms));
   checkRunning();
 };
-
-let PAGE_DELAY = 2000;
-let AUTO_SUBMIT = false;
-let DEFAULT_ANSWER = 'a';
-let GLOBAL_RUNNING = false;
-let GLOBAL_SINGLE = false;
-let STABILITY_MODE = false;
 
 // -- Status indicator ---
 function updateStatus(msg, color = '#3fb950', glowColor = 'rgba(63,185,80,0.25)') {
@@ -174,7 +193,7 @@ function pageSnippet() {
   return String(document.body?.innerText || document.body?.textContent || '')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 700);
+    .slice(0, PAGE_SNIPPET_LENGTH);
 }
 
 function failStep(reason, failureKind = 'page', retryable = true) {
@@ -200,11 +219,12 @@ function copyText(text, label) {
   } else {
     fallbackCopy(text);
   }
-  // 2. Save to chrome storage with 30-second expiry so popup can show it
+  // 2. Save to chrome storage with expiry so popup can show it
+  const COPIED_EXPIRY_MS = 30_000;
   globalThis.dispatchEvent(new CustomEvent('__prom_msg', {
     detail: {
       action: 'saveCopied',
-      payload: { text, label: label || '', expiresAt: Date.now() + 30000 }
+      payload: { text, label: label || '', expiresAt: Date.now() + COPIED_EXPIRY_MS }
     }
   }));
 }
@@ -230,7 +250,7 @@ async function waitFor(sels, timeout = 10000) {
       const e = document.querySelector(s);
       if (e) return e;
     }
-    await sleep(150);
+    await sleep(POLL_INTERVAL_MS);
   }
   return null;
 }
@@ -284,7 +304,7 @@ async function fillStep1() {
   
   // Wait up to 5 seconds for "IBTA MEA" option to load dynamically
   let selected = false;
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < STEP1_OPTION_RETRIES; i++) {
     if (fillSelect(sel, 'IBTA MEA')) {
       selected = true;
       break;
@@ -380,12 +400,14 @@ async function tryFillUsername(tryName, userEl) {
   }
 
   blurEl(getField());
-  return await waitForUsernameValidation(3000);
+  return await waitForUsernameValidation(USERNAME_VALIDATION_MS);
 }
 
 async function fillUsernameWithRetry(creds, userEl) {
   let suffix = '';
-  while (true) {
+  let attempts = 0;
+  while (attempts < USERNAME_MAX_ATTEMPTS) {
+    attempts++;
     const tryName = creds.username + suffix;
     updateStatus(`Trying username: ${tryName}`);
 
@@ -405,6 +427,8 @@ async function fillUsernameWithRetry(creds, userEl) {
     }
     suffix = next;
   }
+  failStep('Username attempts exceeded', 'validation', false);
+  return false;
 }
 
 async function fillPasswords(password) {
@@ -570,7 +594,7 @@ function findReadyContinue() {
 async function fillStep4(creds) {
   updateStatus('Step 4: Confirm Policy...');
 
-  const deadline = Date.now() + (STABILITY_MODE ? 60000 : 30000);
+  const deadline = Date.now() + (STABILITY_MODE ? POLICY_TIMEOUT_STABILITY_MS : POLICY_TIMEOUT_NORMAL_MS);
   let attempts = 0;
 
   while (Date.now() < deadline) {
@@ -582,7 +606,7 @@ async function fillStep4(creds) {
     if (btn) {
       updateStatus(`Step 4: Continue found, submitting...`);
       forceClick(btn);
-      await wait(2500);
+      await wait(WAIT_AFTER_CLICK_MS);
       if (detectStep() !== 'policy') return; 
       if (attempts % 4 === 0) {
         updateStatus('Step 4: Still on policy, retrying...', '#d29922');
@@ -657,7 +681,8 @@ function startDashboardCountdown(actionBtn) {
 
   const circle = document.getElementById('__prom_countdown_circle');
   const textSpan = document.getElementById('__prom_countdown_text');
-  const duration = 2000;
+  const duration = DASHBOARD_COUNTDOWN_MS;
+  const durationSecs = duration / 1000;
   const t0 = Date.now();
 
   const interval = setInterval(() => {
@@ -668,7 +693,7 @@ function startDashboardCountdown(actionBtn) {
     const elapsed = Date.now() - t0;
     const pct = Math.max(0, 1 - elapsed / duration);
     if (circle) circle.style.strokeDashoffset = 50 * (1 - pct);
-    const remainingSecs = (pct * 2).toFixed(1);
+    const remainingSecs = (pct * durationSecs).toFixed(1);
     if (textSpan) textSpan.textContent = `Auto-continuing in ${remainingSecs}s...`;
 
     if (elapsed >= duration) {
@@ -708,7 +733,7 @@ async function handleDashboard(creds) {
     card.remove();
     if (isBatch) {
       performSignOut();
-      await sleep(500);
+      await sleep(SIGN_OUT_SETTLE_MS);
     }
 
     send('stepDone', {

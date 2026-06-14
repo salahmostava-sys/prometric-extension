@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Prometric Auto Register",
-  "version": "3.0",
+  "version": "3.1",
   "description": "Auto-fill Prometric registration - Single & Batch mode",
   "permissions": ["tabs", "scripting", "storage", "downloads", "contextMenus", "unlimitedStorage", "notifications"],
   "host_permissions": ["https://tcnet1.prometric.com/*", "https://docs.google.com/spreadsheets/*"],

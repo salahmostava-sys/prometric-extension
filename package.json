@@ -1,17 +1,22 @@
 {
   "name": "prometric-extension",
-  "version": "1.0.0",
-  "description": "> **الإصدار:** v3.0 · **المنصة:** Chrome / Chromium · **Manifest:** V3",
+  "version": "3.1.0",
+  "description": "Chrome extension for auto-filling Prometric registration – Single & Batch mode",
   "main": "background.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .js --ignore-path .eslintignore",
+    "lint:fix": "eslint . --ext .js --ignore-path .eslintignore --fix",
+    "package": "powershell Compress-Archive -Path manifest.json,background.js,bridge.js,content.js,dom-utils.js,utils.js,parsers.js,popup.js,popup.html,popup.css,icon.png,icon16.png,icon48.png,icon128.png -DestinationPath prometric-extension-v3.1.zip -Force"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/salahmostava-sys/prometric-extension.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["chrome-extension", "prometric", "automation"],
+  "author": "Salah Mostafa",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
@@ -19,7 +24,21 @@
   },
   "homepage": "https://github.com/salahmostava-sys/prometric-extension#readme",
   "devDependencies": {
+    "eslint": "^8.57.0",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/*.test.js"],
+    "testPathIgnorePatterns": ["/node_modules/"],
+    "collectCoverageFrom": [
+      "utils.js",
+      "parsers.js",
+      "background.js",
+      "popup.js"
+    ],
+    "coverageDirectory": "coverage"
   }
 }
+
