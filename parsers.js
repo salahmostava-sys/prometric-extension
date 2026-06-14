@@ -175,3 +175,17 @@ async function parseXLSX(buffer) {
     throw new Error('Failed to parse XLSX file: ' + e.message);
   }
 }
+
+// ─── Test Exports (Node.js / Jest only) ──────────────────────────────────────
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    parseDelimitedRows,
+    parseCSV,
+    decodeXml,
+    colIndex,
+    parseSharedStrings,
+    parseSheetData,
+    parseXLSX
+  };
+}
+

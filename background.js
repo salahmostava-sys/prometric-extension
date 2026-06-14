@@ -559,3 +559,18 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     await updateBadge();
   }
 });
+
+// ─── Test Exports (Node.js / Jest only) ──────────────────────────────────────
+// These are not referenced in the browser; the `if` guard ensures zero impact
+// on the extension runtime.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    generateCredentials,
+    isValidEmail,
+    isRetryableFailure,
+    dedupeItems,
+    itemDedupKey,
+    makeQueueId
+  };
+}
+
