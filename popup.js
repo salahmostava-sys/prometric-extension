@@ -1,3 +1,7 @@
+// popup.js - Handles the extension popup UI and Google Sheet parsing
+const { escapeHtml, isValidEmail, generateCredentials } = require('./utils.js');
+const { parseDelimitedRows, parseCSV, decodeXml, parseXLSX } = require('./parsers.js');
+
 // -- Init ---
 const { version } = chrome.runtime.getManifest();
 const versionBadge = document.getElementById('versionBadge');
@@ -204,9 +208,9 @@ async function applySpeedMode(isTurbo) {
 document.getElementById('speedToggle')?.addEventListener('click', async () => {
   const { speedMode } = await chrome.storage.local.get(['speedMode']);
   const newTurbo = speedMode === 'safe'; // if it was safe, make it turbo (default is turbo)
-  
+
   applySpeedMode(newTurbo);
-  await chrome.storage.local.set({ 
+  await chrome.storage.local.set({
     speedMode: newTurbo ? 'turbo' : 'safe',
     pageDelay: newTurbo ? 0.2 : 2.5,
     userDelay: newTurbo ? 0.5 : 6
@@ -370,7 +374,7 @@ async function clearCurrentSession() {
 // pattern is already known (e.g. in background.js).
 function generateCredsFromCurrentPattern(name) {
   const patternInput = document.getElementById('passPattern');
-  let pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
+  const pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
   return generateCredentials(name, pattern);
 }
 
@@ -389,7 +393,7 @@ const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'de
 
 async function loadSettings() {
   const settings = await chrome.storage.local.get(SETTINGS_KEYS);
-  
+
   const setVal = (id, val) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -425,7 +429,7 @@ document.getElementById('saveSettings')?.addEventListener('click', async () => {
   });
   await chrome.storage.local.set(data);
   updateSinglePreview();
-  
+
   const oldText = btn.textContent;
   btn.textContent = 'OK Saved!';
   btn.style.background = 'var(--green2)';
@@ -457,11 +461,11 @@ document.getElementById('exportSettingsBtn')?.addEventListener('click', async ()
     SETTINGS_KEYS.forEach(key => {
       fullSettings[key] = settings[key] !== undefined ? settings[key] : DEFAULT_SETTINGS[key];
     });
-    
+
     const dateStr = new Date().toISOString().slice(0, 10);
     const filename = `prometric_settings_backup_${dateStr}.json`;
     const jsonContent = JSON.stringify(fullSettings, null, 2);
-    
+
     const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -469,7 +473,7 @@ document.getElementById('exportSettingsBtn')?.addEventListener('click', async ()
     link.download = filename;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 100);
-    
+
     showMessage(backupMsgEl, 'ok', 'Settings exported successfully!');
     setTimeout(() => showMessage(backupMsgEl, '', ''), 3000);
   } catch (err) {
@@ -485,10 +489,10 @@ document.getElementById('importSettingsBtn')?.addEventListener('click', () => {
 document.getElementById('importSettingsFile')?.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  
+
   const backupMsgEl = document.getElementById('settingsBackupMsg');
   showMessage(backupMsgEl, '', '');
-  
+
   const reader = new FileReader();
   reader.onload = async (evt) => {
     try {
@@ -496,20 +500,20 @@ document.getElementById('importSettingsFile')?.addEventListener('change', (e) =>
       if (!parsed || typeof parsed !== 'object') {
         throw new Error('Invalid JSON format.');
       }
-      
+
       const importedKeys = Object.keys(parsed);
       const validKeys = importedKeys.filter(k => SETTINGS_KEYS.includes(k));
-      
+
       if (validKeys.length === 0) {
         throw new Error('No valid settings keys found in JSON.');
       }
-      
+
       const dataToSave = {};
       SETTINGS_KEYS.forEach(key => {
         if (parsed[key] !== undefined) {
           const defaultType = typeof DEFAULT_SETTINGS[key];
           let val = parsed[key];
-          
+
           if (defaultType === 'number') {
             val = Number(val);
             if (Number.isNaN(val)) return;
@@ -521,17 +525,17 @@ document.getElementById('importSettingsFile')?.addEventListener('change', (e) =>
           dataToSave[key] = val;
         }
       });
-      
+
       if (Object.keys(dataToSave).length === 0) {
         throw new Error('Settings keys contain invalid values.');
       }
-      
+
       await chrome.storage.local.set(dataToSave);
       await loadSettings();
       if (typeof updateSinglePreview === 'function') {
         updateSinglePreview();
       }
-      
+
       showMessage(backupMsgEl, 'ok', 'Settings imported successfully!');
       setTimeout(() => showMessage(backupMsgEl, '', ''), 3000);
     } catch (err) {
@@ -541,12 +545,12 @@ document.getElementById('importSettingsFile')?.addEventListener('change', (e) =>
       e.target.value = '';
     }
   };
-  
+
   reader.onerror = () => {
     showMessage(backupMsgEl, 'err', 'Failed to read file.');
     e.target.value = '';
   };
-  
+
   reader.readAsText(file);
 });
 
@@ -570,7 +574,7 @@ const savedCredsPanel = document.getElementById('savedCredsPanel');
 
 function updateSinglePreview() {
   const patternInput = document.getElementById('passPattern');
-  let pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
+  const pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
   const c = generateCredentials(sName.value, pattern);
   const emailOk = sEmail.value.trim().length > 0;
   sStart.disabled = !(c && emailOk);
@@ -581,7 +585,7 @@ sEmail.addEventListener('input', updateSinglePreview);
 
 sStart.addEventListener('click', async () => {
   const patternInput = document.getElementById('passPattern');
-  let pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
+  const pattern = patternInput ? patternInput.value : '{F}@{f}#$1970';
   const c = generateCredentials(sName.value, pattern);
   if (!c) return;
   if (!(await confirmReplaceRunning())) return;
@@ -589,24 +593,24 @@ sStart.addEventListener('click', async () => {
   // registration fully completes. background.js saves the real finalUsername
   // via stepDone, which is the only moment we want the panel to show.
   const { defAddress, defCity, defState, defPostal, defCountry } = await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
-  
+
   await sendMsg({
     action: 'startSingle',
-    item: { 
-      name: sName.value.trim(), 
-      email: sEmail.value.trim(), 
-      mailingAddress: defAddress || 'Al-Alameya', 
-      city: defCity || 'JEDDAH', 
-      state: defState || 'JEDDAH', 
-      postalCode: defPostal || '00000', 
-      country: defCountry || 'Saudi Arabia' 
+    item: {
+      name: sName.value.trim(),
+      email: sEmail.value.trim(),
+      mailingAddress: defAddress || 'Al-Alameya',
+      city: defCity || 'JEDDAH',
+      state: defState || 'JEDDAH',
+      postalCode: defPostal || '00000',
+      country: defCountry || 'Saudi Arabia'
     }
   });
-  
+
   sMsg.className = 'msg ok';
   sMsg.textContent = 'OK Opened! Filling in progress...';
   sMsg.style.display = 'block';
-  
+
   sStart.style.display = 'none';
 });
 
@@ -655,7 +659,7 @@ async function parseFileToRows(file) {
   const fname = file.name.toLowerCase();
   if (fname.endsWith('.csv')) {
     return parseCSV(await file.text());
-  } 
+  }
   if (fname.endsWith('.xlsx')) {
     return parseXLSX(await file.arrayBuffer());
   }
@@ -707,7 +711,7 @@ async function handleFile(file) {
   if (stats.hasBlockingIssues) {
     showMessage(bMsg, 'err', 'Fix missing or invalid emails before starting the batch.');
   }
-  
+
   setBatchControlsState('idle');
 }
 
@@ -742,7 +746,7 @@ document.getElementById('clearQueue').addEventListener('click', () => {
   bStart.disabled = true;
   fileInput.value = '';
   if (batchValidation) batchValidation.classList.remove('show');
-  
+
   setBatchControlsState('idle');
   bMsg.style.display = 'none';
 });
@@ -793,9 +797,9 @@ bStart.addEventListener('click', async () => {
   }));
   await sendMsg({ action: 'startQueue', items });
   batchBanner.classList.add('show');
-  
+
   setBatchControlsState('running');
-  
+
   showMessage(bMsg, 'ok', `Started ${batchItems.length} registrations.`);
   if (stats.exactDuplicates) {
     showMessage(bMsg, 'ok', `Started ${batchItems.length - stats.exactDuplicates} registrations. Removed ${stats.exactDuplicates} exact duplicate row(s).`);
@@ -938,11 +942,11 @@ function updateBatchModeRunningUI(queueLength, queueIndex) {
 function updateBatchModePausedUI(queue, queueIndex, isRunning) {
   const pendingItems = queue.slice(queueIndex).filter(it => it.status === 'pending');
   const hasPending   = pendingItems.length > 0 && queueIndex < queue.length;
-  
+
   if (bStart) bStart.style.display = 'none';
   if (pauseBatchBtn) pauseBatchBtn.style.display = 'none';
   if (batchSpinner) batchSpinner.style.display = 'none';
-  
+
   if (hasPending) {
     updateStatusBanner({
       show: true, bg: 'rgba(56,139,253,.08)', border: 'rgba(56,139,253,.3)',
@@ -993,7 +997,7 @@ async function pollStatus() {
   }
 
   const queueChanged = queue.length === batchItems.length && hasQueueChanged(queue, batchItems);
-  
+
   if (isRunning || singleRunning || batchItems.length === 0 || queueChanged) {
     batchItems = queue;
     renderQueue();
@@ -1154,7 +1158,7 @@ document.addEventListener('click', async (e) => {
       setTimeout(() => btn.innerHTML = oldHtml, 2000);
     }
   }
-  
+
   // Handle queue item cred copy
   if (e.target.closest('.q-cred-copy')) {
     const btn = e.target.closest('.q-cred-copy');
@@ -1181,7 +1185,7 @@ document.addEventListener('click', async (e) => {
     btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
     setTimeout(() => btn.innerHTML = oldHtml, 2000);
   }
-  
+
   // Handle saved creds copy
   if (e.target.classList.contains('sc-copy')) {
     const id = e.target.dataset.copy;
@@ -1249,11 +1253,7 @@ document.getElementById('downloadTemplate')?.addEventListener('click', () => {
 
 // -- Google Sheet Integration ---
 let sheetData = [];
-let excludedSheetRows = new Set();
-
-function parseCSVLine(line) {
-  return parseDelimitedRows(line)[0] || [];
-}
+const excludedSheetRows = new Set();
 
 function showSheetError(msg) {
   const el = document.getElementById('sheetMsg');
@@ -1266,25 +1266,25 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
   const btn = document.getElementById('sheetFetch');
   const url = document.getElementById('sheetUrl').value.trim();
   await chrome.storage.local.set({ sheetUrl: url });
-  
+
   const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
   if (!m) return showSheetError('Invalid Google Sheet URL. Make sure you copy the full link.');
   const id = m[1];
-  
+
   let gid = '0';
   const gm = url.match(/[#&]gid=([0-9]+)/);
   if (gm) gid = gm[1];
 
   const exportUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
-  
+
   btn.textContent = 'Generating';
   btn.disabled = true;
   showSheetError('');
-  
+
   try {
     const res = await fetch(exportUrl);
     if (!res.ok) throw new Error('Cannot read sheet. Ensure share settings are "Anyone with the link can view".');
-    
+
     const text = await res.text();
     const rows = parseDelimitedRows(text);
     if (rows.length < 2) throw new Error('Sheet is empty or has only one row.');
@@ -1313,7 +1313,7 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
     const nIdx = hl.findIndex(h => h.includes('\u0627\u0633\u0645') || h.includes('name') || h.includes('\u0647\u0648\u064a\u0629'));
     const eIdx = hl.findIndex(h => h.includes('email') || h.includes('\u0628\u0631\u064a\u062f'));
     const dIdx = hl.findIndex(h => h.includes('day') || h.includes('\u064a\u0648\u0645'));
-    
+
     if (nIdx >= 0) nameSel.value = nIdx;
     if (eIdx >= 0) emailSel.value = eIdx;
     else if (headers.length > 1) emailSel.value = 1;
@@ -1335,7 +1335,7 @@ function renderSheetPreview() {
   const wrap  = document.getElementById('sheetPreviewWrap');
   const count = document.getElementById('sheetPreviewCount');
   const list  = document.getElementById('sheetPreviewList');
-  
+
   const nIdx = parseInt(document.getElementById('sheetNameCol').value);
   const eIdx = parseInt(document.getElementById('sheetEmailCol').value);
   const daySel = document.getElementById('sheetDayCol');
@@ -1351,7 +1351,7 @@ function renderSheetPreview() {
 
   let items = sheetData.map((cols, origIndex) => ({
     origIndex,
-    name: cols[nIdx] || '', 
+    name: cols[nIdx] || '',
     email: cols[eIdx] || '',
     day: dIdx >= 0 ? (cols[dIdx] || '').trim() : ''
   })).filter(item => item.name.length >= 2 && !excludedSheetRows.has(item.origIndex));
@@ -1370,7 +1370,7 @@ function renderSheetPreview() {
   const stats = validateBatchItems(items);
   document.getElementById('sheetStart').disabled = items.length === 0 || stats.hasBlockingIssues;
   count.textContent = `${items.length} Names Found`;
-  
+
   if (stats.hasBlockingIssues) {
     showSheetError(`Sheet check: ${stats.missingEmail} missing email, ${stats.invalidEmail} invalid email.`);
   } else {
@@ -1413,14 +1413,14 @@ async function processSheetStart() {
   const eIdx = parseInt(document.getElementById('sheetEmailCol').value);
   const daySel = document.getElementById('sheetDayCol');
   const dIdx = daySel ? parseInt(daySel.value) : -1;
-  
+
   if (isNaN(nIdx) || isNaN(eIdx)) return showSheetError('Please select valid columns.');
 
   const selectedDays = new Set([...document.querySelectorAll('.day-badge.selected')].map(b => b.dataset.day.toLowerCase()));
 
   let items = sheetData.map((cols, origIndex) => ({
     origIndex,
-    name: cols[nIdx] || '', 
+    name: cols[nIdx] || '',
     email: cols[eIdx] || '',
     day: dIdx >= 0 ? (cols[dIdx] || '').trim() : ''
   })).filter(item => item.name.length >= 2 && !excludedSheetRows.has(item.origIndex));
@@ -1450,9 +1450,9 @@ async function processSheetStart() {
 
   await sendMsg({ action: 'startQueue', items });
   if (batchBanner) batchBanner.classList.add('show');
-  
+
   setBatchControlsState('running');
-  
+
   const sheetMsgEl = document.getElementById('sheetMsg');
   if (sheetMsgEl) {
     showMessage(sheetMsgEl, 'ok', `Started ${items.length} registrations.`);
@@ -1469,7 +1469,7 @@ function buildDayFilter(dIdx) {
   const filterWrap  = document.getElementById('sheetDayFilter');
   const badgesWrap  = document.getElementById('sheetDayBadges');
   if (!filterWrap || !badgesWrap) return;
-  
+
   if (dIdx < 0) { filterWrap.style.display = 'none'; renderSheetPreview(); return; }
 
   const days = [...new Set(sheetData.map(r => (r[dIdx] || '').trim()).filter(Boolean))];
@@ -1582,9 +1582,14 @@ document.getElementById('quickOpenPrometric')?.addEventListener('click', () => {
 // -- Export for Testing ---
 if (typeof module !== 'undefined' && module.exports) {
   if (typeof isValidEmail === 'undefined') {
-    const fs = require('fs');
-    eval(fs.readFileSync(__dirname + '/utils.js', 'utf8'));
-    eval(fs.readFileSync(__dirname + '/parsers.js', 'utf8'));
+    // Inject required utilities for Node test environment (so popup.test.js can use them via global or direct require)
+    const utils = require('./utils.js');
+    global.isValidEmail = utils.isValidEmail;
+    global.generateCredentials = utils.generateCredentials;
+    
+    const parsers = require('./parsers.js');
+    global.parseDelimitedRows = parsers.parseDelimitedRows;
+    global.parseCSV = parsers.parseCSV;
   }
   module.exports = {
     generateCredsFromCurrentPattern,

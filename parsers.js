@@ -22,10 +22,10 @@ function parseDelimitedRows(text) {
     inQ: false,
     skipNext: false,
     pushCell: () => { row.push(state.cur.trim()); state.cur = ''; },
-    pushRow: () => { 
-      state.pushCell(); 
-      if (row.some(Boolean)) rows.push(row); 
-      row = []; 
+    pushRow: () => {
+      state.pushCell();
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
     }
   };
   const src = String(text || '').replace(/^\uFEFF/, '');

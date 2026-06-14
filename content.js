@@ -1,4 +1,6 @@
 // content.js - MAIN world
+const { setVal, blurEl, fillSelect, querySelectorAny, clickContinue, triggerEvents } = require('./dom-utils.js');
+const { generateCredentials, escapeHtml, isValidEmail } = require('./utils.js');
 
 // ─── URLs ────────────────────────────────────────────────────────────────────
 const LOGIN_URL    = 'https://tcnet1.prometric.com/Login.aspx?ibt=785937226&ClientNameSingleSite=ibtamea';
@@ -8,7 +10,6 @@ const REGISTER_URL = 'https://tcnet1.prometric.com/Registration.aspx';
 const WAIT_AFTER_CLICK_MS       = 2500;  // How long to wait after clicking Continue
 const POLL_INTERVAL_MS          = 150;   // Step/field polling cadence
 const USERNAME_VALIDATION_MS    = 3000;  // Max wait for username availability
-const ERROR_CLEAR_WAIT_MS       = 2500;  // Wait for old error message to disappear
 const POLICY_TIMEOUT_NORMAL_MS  = 30_000; // Max wait for Continue on policy step
 const POLICY_TIMEOUT_STABILITY_MS = 60_000; // Same, but in stability mode
 const SIGN_OUT_SETTLE_MS        = 500;   // Wait after sign-out before next action
@@ -92,7 +93,7 @@ function updateStatus(msg, color = '#3fb950', glowColor = 'rgba(63,185,80,0.25)'
       animation: __prom_fadeIn 0.3s ease-out;
       min-width: 280px;
     `;
-    
+
     // Status dot
     statusDot = document.createElement('div');
     statusDot.id = '__prom_dot__';
@@ -136,16 +137,16 @@ function updateStatus(msg, color = '#3fb950', glowColor = 'rgba(63,185,80,0.25)'
       pauseBtn.onmouseout = () => pauseBtn.style.background = 'rgba(210,153,34,0.15)';
       pauseBtn.onclick = () => {
         if (pauseBtn.textContent.includes('Pause')) {
-          send('pauseBatch'); 
-          pauseBtn.textContent = 'Resume'; 
+          send('pauseBatch');
+          pauseBtn.textContent = 'Resume';
           pauseBtn.style.background = 'rgba(88,166,255,0.15)';
           pauseBtn.style.color = '#58a6ff';
           pauseBtn.style.borderColor = 'rgba(88,166,255,0.3)';
           pauseBtn.onmouseover = () => pauseBtn.style.background = 'rgba(88,166,255,0.25)';
           pauseBtn.onmouseout = () => pauseBtn.style.background = 'rgba(88,166,255,0.15)';
         } else {
-          send('resumeBatch'); 
-          pauseBtn.textContent = 'Pause'; 
+          send('resumeBatch');
+          pauseBtn.textContent = 'Pause';
           pauseBtn.style.background = 'rgba(210,153,34,0.15)';
           pauseBtn.style.color = '#d29922';
           pauseBtn.style.borderColor = 'rgba(210,153,34,0.3)';
@@ -155,7 +156,7 @@ function updateStatus(msg, color = '#3fb950', glowColor = 'rgba(63,185,80,0.25)'
       };
       btnContainer.appendChild(pauseBtn);
     }
-    
+
     // Stop button always available if active
     const stopBtn = document.createElement('button');
     stopBtn.textContent = 'Stop';
@@ -173,10 +174,10 @@ function updateStatus(msg, color = '#3fb950', glowColor = 'rgba(63,185,80,0.25)'
     `;
     stopBtn.onmouseover = () => stopBtn.style.background = 'rgba(255,123,114,0.25)';
     stopBtn.onmouseout = () => stopBtn.style.background = 'rgba(255,123,114,0.15)';
-    stopBtn.onclick = () => { 
+    stopBtn.onclick = () => {
       ABORT_CURRENT_STEP = true;
-      send('stopBatch'); 
-      statusContainer.remove(); 
+      send('stopBatch');
+      statusContainer.remove();
     };
     btnContainer.appendChild(stopBtn);
 
@@ -301,7 +302,7 @@ async function fillStep1() {
   updateStatus('Step 1: Selecting IBTA MEA...');
   const sel = await waitFor(['select']);
   if (!sel) { failStep('Prometric select not found', 'missing-field', true); return; }
-  
+
   // Wait up to 5 seconds for "IBTA MEA" option to load dynamically
   let selected = false;
   for (let i = 0; i < STEP1_OPTION_RETRIES; i++) {
@@ -389,7 +390,7 @@ async function tryFillUsername(tryName, userEl) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const checkEl = getField();
     if (checkEl.value === tryName) break;
-    
+
     checkEl.focus();
     checkEl.select();
     if (nativeSetter) nativeSetter.call(checkEl, tryName);
@@ -421,9 +422,9 @@ async function fillUsernameWithRetry(creds, userEl) {
     }
     updateStatus(`Warning "${tryName}" taken, trying next...`, '#d29922');
     const next = nextSuffix(suffix);
-    if (!next) { 
-      failStep('Username exhausted', 'validation', false); 
-      return false; 
+    if (!next) {
+      failStep('Username exhausted', 'validation', false);
+      return false;
     }
     suffix = next;
   }
@@ -514,7 +515,7 @@ async function fillStep3(creds) {
   if (!fnEl) { failStep('First Name field not found', 'missing-field', true); return; }
 
   const lnEl = querySelectorAny('input[placeholder="Last Name"]', 'input[id*="LastName" i]');
-  
+
   if (creds.needsBypass || (creds.firstName && creds.firstName.length > 20) || (creds.lastName && creds.lastName.length > 20)) {
     updateStatus('Smart Mode: Bypassing site character limit...');
     if (fnEl) fnEl.removeAttribute('maxlength');
@@ -607,7 +608,7 @@ async function fillStep4(creds) {
       updateStatus(`Step 4: Continue found, submitting...`);
       forceClick(btn);
       await wait(WAIT_AFTER_CLICK_MS);
-      if (detectStep() !== 'policy') return; 
+      if (detectStep() !== 'policy') return;
       if (attempts % 4 === 0) {
         updateStatus('Step 4: Still on policy, retrying...', '#d29922');
       }
@@ -615,7 +616,7 @@ async function fillStep4(creds) {
 
     await wait(400);
   }
-  
+
   failStep('Continue did not become ready on Step 4', 'timeout', true);
 }
 
@@ -776,10 +777,10 @@ let observer = null;
 
 async function handleStep(step) {
   const pageText = document.body.textContent || '';
-  const hasError = pageText.includes('information provided is not valid') || 
+  const hasError = pageText.includes('information provided is not valid') ||
                    pageText.includes('is required') ||
                    !!document.querySelector('.error, .errorMessage, [id*="Error" i], [class*="Error" i]');
-  
+
   if (hasError && filledStep === step) {
     filledStep = null; // Allow retry
   }
@@ -790,13 +791,13 @@ async function handleStep(step) {
     updateStatus('Paused/Stopped', '#6e7681');
     return;
   }
-  
+
   filling = true;
   filledStep = step;
   await sleep(PAGE_DELAY);
-  
+
   if (!GLOBAL_RUNNING && !GLOBAL_SINGLE) { filling = false; return; }
-  
+
   const stepHandlers = {
     dashboard: () => handleDashboard(currentItem),
     policy: () => fillStep4(currentItem),
@@ -882,8 +883,8 @@ async function run() {
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-globalThis.addEventListener('__prom_init', e => { 
-  if (e.detail?.currentItem) currentItem = e.detail.currentItem; 
+globalThis.addEventListener('__prom_init', e => {
+  if (e.detail?.currentItem) currentItem = e.detail.currentItem;
   if (e.detail?.pageDelay !== undefined) PAGE_DELAY = e.detail.pageDelay * 1000;
   if (e.detail?.autoSubmit !== undefined) AUTO_SUBMIT = e.detail.autoSubmit;
   if (e.detail?.stabilityMode !== undefined) STABILITY_MODE = e.detail.stabilityMode;

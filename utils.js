@@ -1,4 +1,5 @@
 // utils.js - Shared utilities for Prometric Extension
+/* exported escapeHtml, isValidEmail, generateCredentials */
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -22,13 +23,13 @@ function isValidEmail(email) {
 function generateCredentials(name, passPattern = '{F}@{f}#$1970') {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
   if (parts.length < 1) return null;
-  
+
   // Clean parts to keep only alphabetical letters for the username
   const cleanedParts = parts.map(p => p.replace(/[^A-Za-z]/g, '')).filter(Boolean);
   const uPart1 = cleanedParts[0] || 'USER';
   const uPart2 = cleanedParts[1] || uPart1;
   const username = (uPart1 + uPart2).toUpperCase();
-  
+
   const F = parts[0][0].toUpperCase();
   const f = F.toLowerCase();
   const L = parts[parts.length-1][0].toUpperCase();
@@ -39,7 +40,7 @@ function generateCredentials(name, passPattern = '{F}@{f}#$1970') {
     .replace(/{f}/g, f)
     .replace(/{L}/g, L)
     .replace(/{l}/g, l);
-  
+
   let firstName = parts[0];
   let idx = 1;
   // Fill first name greedily, leaving exactly one last word for last name
@@ -47,11 +48,20 @@ function generateCredentials(name, passPattern = '{F}@{f}#$1970') {
     firstName += ' ' + parts[idx];
     idx++;
   }
-  
-  let lastName = parts.slice(idx).join(' ');
-  
+
+  const lastName = parts.slice(idx).join(' ');
+
   // Zero truncation! Both names remain 100% complete.
   const needsBypass = (firstName.length > 20 || lastName.length > 20);
 
   return { username, password, firstName, lastName, needsBypass };
+}
+
+// ─── Test Exports (Node.js / Jest only) ──────────────────────────────────────
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    escapeHtml,
+    isValidEmail,
+    generateCredentials
+  };
 }

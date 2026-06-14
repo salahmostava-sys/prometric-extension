@@ -9,13 +9,18 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .js --ignore-path .eslintignore",
     "lint:fix": "eslint . --ext .js --ignore-path .eslintignore --fix",
-    "package": "powershell Compress-Archive -Path manifest.json,background.js,bridge.js,content.js,dom-utils.js,utils.js,parsers.js,popup.js,popup.html,popup.css,icon.png,icon16.png,icon48.png,icon128.png -DestinationPath prometric-extension-v3.1.zip -Force"
+    "build": "node build.js",
+    "package": "powershell Compress-Archive -Path dist/* -DestinationPath prometric-extension-v3.1.zip -Force"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/salahmostava-sys/prometric-extension.git"
   },
-  "keywords": ["chrome-extension", "prometric", "automation"],
+  "keywords": [
+    "chrome-extension",
+    "prometric",
+    "automation"
+  ],
   "author": "Salah Mostafa",
   "license": "ISC",
   "type": "commonjs",
@@ -24,14 +29,19 @@
   },
   "homepage": "https://github.com/salahmostava-sys/prometric-extension#readme",
   "devDependencies": {
+    "esbuild": "^0.28.1",
     "eslint": "^8.57.0",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1"
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/*.test.js"],
-    "testPathIgnorePatterns": ["/node_modules/"],
+    "testMatch": [
+      "**/*.test.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/"
+    ],
     "collectCoverageFrom": [
       "utils.js",
       "parsers.js",
@@ -41,4 +51,3 @@
     "coverageDirectory": "coverage"
   }
 }
-

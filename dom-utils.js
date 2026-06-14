@@ -1,4 +1,5 @@
 // dom-utils.js - Shared DOM manipulation utilities
+/* exported setVal, blurEl, fillSelect, querySelectorAny, clickContinue */
 
 function triggerEvents(el, eventTypes) {
   for (const type of eventTypes) {
@@ -13,7 +14,7 @@ function triggerEvents(el, eventTypes) {
 function setVal(el, value) {
   if (!el) return;
   try {
-    const setter = (Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value') || 
+    const setter = (Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value') ||
                    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value'))?.set;
     if (setter) setter.call(el, String(value));
     else el.value = String(value);
@@ -52,7 +53,7 @@ function forceClick(btn) {
   ['mousedown', 'mouseup', 'click'].forEach(type => {
     try {
       btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: globalThis }));
-    } catch(err) { 
+    } catch(err) {
       // Ignore simulated event dispatch errors as native click() already fired
     }
   });
@@ -60,11 +61,11 @@ function forceClick(btn) {
 
 function clickContinue() {
   const selectors = [
-    'input[type="submit"]', 'button', 'input[type="button"]', 'a', 'input[type="image"]', 
+    'input[type="submit"]', 'button', 'input[type="button"]', 'a', 'input[type="image"]',
     '[role="button"]', '.btn', '.button'
   ];
   const candidates = [...document.querySelectorAll(selectors.join(','))];
-  
+
   // Also check divs/spans that might be styled as buttons or contain the text
   document.querySelectorAll('div, span, b, strong').forEach(el => {
     if (el.childElementCount === 0 && (el.textContent || '').trim().toLowerCase().includes('continue')) {

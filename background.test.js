@@ -111,8 +111,8 @@ describe('isRetryableFailure', () => {
   test('username exhausted is not retryable', () => {
     expect(isRetryableFailure(undefined, 'username exhausted', '')).toBe(false);
   });
-  test('missing-field with no retry flag → not retryable', () => {
-    expect(isRetryableFailure(undefined, 'something', 'missing-field')).toBe(false);
+  test('missing-field with no retry flag → is retryable', () => {
+    expect(isRetryableFailure(undefined, 'something', 'missing-field')).toBe(true);
   });
   test('duplicate is not retryable', () => {
     expect(isRetryableFailure(undefined, '', 'duplicate')).toBe(false);
