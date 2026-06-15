@@ -284,8 +284,10 @@ function nextSuffix(s) {
 
 function detectStep() {
   const text = document.body.textContent || '';
-  if (text.includes('Sign Out') && text.includes('Update Information')) return 'dashboard';
-
+  // The presence of a "Sign Out" button/link is a strong indicator of being logged in
+  const hasSignOut = [...document.querySelectorAll('a,span,div,button')].some(e => (e.textContent||'').trim() === 'Sign Out');
+  
+  if (hasSignOut || (text.includes('Sign Out') && (text.includes('Update Information') || text.includes('Welcome') || text.includes('Profile')))) return 'dashboard';
   // Policy page: has "I AGREE" checkbox or "I Consent" radio
   // Check for keywords in body text first as a quick and highly efficient bypass.
   if (text.includes('I AGREE') && document.querySelector('input[type="checkbox"]')) return 'policy';

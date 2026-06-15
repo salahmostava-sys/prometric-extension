@@ -92,3 +92,15 @@ function clickContinue() {
   }
   return false;
 }
+
+// ─── Test Exports (Node.js / Jest only) ──────────────────────────────────────
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    triggerEvents,
+    setVal,
+    blurEl,
+    fillSelect,
+    querySelectorAny,
+    clickContinue
+  };
+}
