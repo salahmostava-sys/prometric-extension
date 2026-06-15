@@ -1,5 +1,5 @@
 // content.js - MAIN world
-const { setVal, blurEl, fillSelect, querySelectorAny, clickContinue, triggerEvents } = require('./dom-utils.js');
+const { setVal, blurEl, fillSelect, forceClick, querySelectorAny, clickContinue, triggerEvents } = require('./dom-utils.js');
 const { generateCredentials, escapeHtml, isValidEmail } = require('./utils.js');
 
 // ─── URLs ────────────────────────────────────────────────────────────────────

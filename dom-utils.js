@@ -100,6 +100,7 @@ if (typeof module !== 'undefined' && module.exports) {
     setVal,
     blurEl,
     fillSelect,
+    forceClick,
     querySelectorAny,
     clickContinue
   };
