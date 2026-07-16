@@ -1,6 +1,5 @@
 // content.js - MAIN world
 const { setVal, blurEl, fillSelect, forceClick, querySelectorAny, clickContinue, triggerEvents } = require('./dom-utils.js');
-const { generateCredentials, escapeHtml, isValidEmail } = require('./utils.js');
 
 // ─── URLs ────────────────────────────────────────────────────────────────────
 const LOGIN_URL    = 'https://tcnet1.prometric.com/Login.aspx?ibt=785937226&ClientNameSingleSite=ibtamea';
@@ -286,7 +285,7 @@ function detectStep() {
   const text = document.body.textContent || '';
   // The presence of a "Sign Out" button/link is a strong indicator of being logged in
   const hasSignOut = [...document.querySelectorAll('a,span,div,button')].some(e => (e.textContent||'').trim() === 'Sign Out');
-  
+
   if (hasSignOut || (text.includes('Sign Out') && (text.includes('Update Information') || text.includes('Welcome') || text.includes('Profile')))) return 'dashboard';
   // Policy page: has "I AGREE" checkbox or "I Consent" radio
   // Check for keywords in body text first as a quick and highly efficient bypass.

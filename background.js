@@ -146,7 +146,7 @@ async function clearCurrentProcessingId() {
 
 // -- Progress Badge ---
 async function updateBadge() {
-  const { queue, queueIndex, isRunning } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning']);
+  const { queue, isRunning } = await chrome.storage.local.get(['queue', 'isRunning']);
   if (isRunning && queue && queue.length > 0) {
     const done    = queue.filter(i => i.status === 'done' || i.status === 'failed').length;
     const pct     = Math.round((done / queue.length) * 100);

@@ -1,6 +1,6 @@
 // popup.js - Handles the extension popup UI and Google Sheet parsing
 const { escapeHtml, isValidEmail, generateCredentials } = require('./utils.js');
-const { parseDelimitedRows, parseCSV, decodeXml, parseXLSX } = require('./parsers.js');
+const { parseDelimitedRows, parseCSV, parseXLSX } = require('./parsers.js');
 
 // -- Init ---
 const { version } = chrome.runtime.getManifest();
@@ -741,7 +741,6 @@ pasteLoadBtn?.addEventListener('click', async () => {
   closePasteModal();
   showMessage(bMsg, 'ok', `✓ Loaded ${newItems.length} name${newItems.length !== 1 ? 's' : ''} from paste.`);
 });
-
 
 
 async function parseFileToRows(file) {
@@ -1915,7 +1914,7 @@ if (typeof module !== 'undefined' && module.exports) {
     const utils = require('./utils.js');
     global.isValidEmail = utils.isValidEmail;
     global.generateCredentials = utils.generateCredentials;
-    
+
     const parsers = require('./parsers.js');
     global.parseDelimitedRows = parsers.parseDelimitedRows;
     global.parseCSV = parsers.parseCSV;
