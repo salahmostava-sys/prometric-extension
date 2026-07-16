@@ -366,9 +366,9 @@ async function tryFillUsername(tryName, userEl) {
 
   const waitForErrorClearStart = Date.now();
   while (Date.now() - waitForErrorClearStart < 2500) {
-    const stillOld = [...document.querySelectorAll('span,div,p,label,td')].some(el => {
-      if (!el.offsetParent || el.childElementCount > 0) return false;
-      const t = (el.textContent || '').toLowerCase().trim();
+    const stillOld = [...document.querySelectorAll('span,div,p,label,td')].some(errEl => {
+      if (!errEl.offsetParent || errEl.childElementCount > 0) return false;
+      const t = (errEl.textContent || '').toLowerCase().trim();
       return t.includes('username already found') || t.includes('already found, please');
     });
     if (!stillOld) break;
