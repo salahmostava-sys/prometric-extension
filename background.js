@@ -262,7 +262,7 @@ async function openNextTab() {
 let isMsgProcessing = false;
 const backgroundMsgQueue = [];
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender) => {
   backgroundMsgQueue.push({ msg, sender });
   processBackgroundQueue();
   return false;
@@ -469,7 +469,7 @@ async function handleClearSession() {
   await updateBadge();
 }
 
-async function handleMessage(msg, sender) {
+async function handleMessage(msg) {
   const state = await getState();
   const handlers = {
     stepDone: () => handleStepDone(msg, state),
@@ -495,7 +495,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: "stop_clear", title: "Stop & Clear Queue", contexts: ["action"] });
 });
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId === "pause_queue") {
     // Pause-only: same semantics as pauseQueue handler — only freezes isRunning.
     // Do NOT touch singleRunning here; that would incorrectly kill single-mode sessions.

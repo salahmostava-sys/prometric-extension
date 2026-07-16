@@ -1707,7 +1707,7 @@ function renderSheetPreview() {
 
   // Limit preview to 100 items to avoid lagging the popup
   const previewItems = items.slice(0, 100);
-  list.innerHTML = previewItems.map((item, i) => {
+  list.innerHTML = previewItems.map((item) => {
     const c = generateCredsFromCurrentPattern(item.name);
     return `
     <div class="sheet-grid" style="padding:6px 12px;border-bottom:1px solid var(--border)">
@@ -1724,7 +1724,7 @@ function renderSheetPreview() {
   }).join('') + (items.length > 100 ? `<div style="text-align:center;padding:8px;color:var(--muted);font-size:11px">...and ${items.length - 100} more</div>` : '');
 
   list.querySelectorAll('.delete-row-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx);
       excludedSheetRows.add(idx);
       renderSheetPreview();

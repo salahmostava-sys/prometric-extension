@@ -593,7 +593,7 @@ function findReadyContinue() {
   });
 }
 
-async function fillStep4(creds) {
+async function fillStep4() {
   updateStatus('Step 4: Confirm Policy...');
 
   const deadline = Date.now() + (STABILITY_MODE ? POLICY_TIMEOUT_STABILITY_MS : POLICY_TIMEOUT_NORMAL_MS);
@@ -801,7 +801,7 @@ async function handleStep(step) {
 
   const stepHandlers = {
     dashboard: () => handleDashboard(currentItem),
-    policy: () => fillStep4(currentItem),
+    policy: () => fillStep4(),
     profile: () => fillStep3(currentItem),
     signin: () => fillStep2(currentItem),
     prometric: () => fillStep1()
