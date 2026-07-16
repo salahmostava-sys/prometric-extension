@@ -148,12 +148,17 @@ async function clearCurrentProcessingId() {
 async function updateBadge() {
   const { queue, queueIndex, isRunning } = await chrome.storage.local.get(['queue', 'queueIndex', 'isRunning']);
   if (isRunning && queue && queue.length > 0) {
-    chrome.action.setBadgeText({ text: `${queueIndex + 1}/${queue.length}` });
-    chrome.action.setBadgeBackgroundColor({ color: '#2ea043' });
+    const done    = queue.filter(i => i.status === 'done' || i.status === 'failed').length;
+    const pct     = Math.round((done / queue.length) * 100);
+    // Color: yellow at 0%, transitions to green at 100%
+    const color   = pct >= 75 ? '#2ea043' : pct >= 40 ? '#d29922' : '#58a6ff';
+    chrome.action.setBadgeText({ text: `${pct}%` });
+    chrome.action.setBadgeBackgroundColor({ color });
   } else {
     chrome.action.setBadgeText({ text: '' });
   }
 }
+
 
 // Iterative loop instead of recursion to prevent call-stack overflow when
 // processEndOfQueue re-triggers openNextTab after a retry sweep.

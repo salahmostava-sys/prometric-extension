@@ -655,6 +655,95 @@ uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag
 uploadArea.addEventListener('drop',      e => { e.preventDefault(); uploadArea.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change',     () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
 
+// ── Paste Names Modal ─────────────────────────────────────────────────────────
+const pasteModal       = document.getElementById('pasteModal');
+const pasteNamesArea   = document.getElementById('pasteNamesArea');
+const pasteEmailDomain = document.getElementById('pasteEmailDomain');
+const pasteNamesCount  = document.getElementById('pasteNamesCount');
+const pastePreviewBox  = document.getElementById('pastePreviewBox');
+const pastePreviewItems= document.getElementById('pastePreviewItems');
+const pasteLoadBtn     = document.getElementById('pasteLoadBtn');
+
+// Restore last used domain
+pasteEmailDomain.value = localStorage.getItem('pasteEmailDomain') || '';
+
+function openPasteModal() {
+  pasteModal.style.display = 'flex';
+  pasteNamesArea.value = '';
+  pasteNamesCount.textContent = '';
+  pastePreviewBox.style.display = 'none';
+  pasteLoadBtn.disabled = true;
+  setTimeout(() => pasteNamesArea.focus(), 50);
+}
+function closePasteModal() { pasteModal.style.display = 'none'; }
+
+document.getElementById('pasteNamesBtn')?.addEventListener('click', openPasteModal);
+document.getElementById('pasteModalClose')?.addEventListener('click', closePasteModal);
+document.getElementById('pasteCancelBtn')?.addEventListener('click', closePasteModal);
+pasteModal?.addEventListener('click', e => { if (e.target === pasteModal) closePasteModal(); });
+
+// Generate email from name + domain: "Ahmed Ali Hassan" → "Ahmed.Ali.Hassan@domain"
+function nameToEmail(fullName, domain) {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join('.') + '@' + domain.trim().toLowerCase();
+}
+
+// Parse textarea and update preview + count in real time
+function updatePastePreview() {
+  const domain = pasteEmailDomain.value.trim();
+  const lines  = pasteNamesArea.value.split('\n').map(l => l.trim()).filter(Boolean);
+  const valid  = lines.filter(l => l.length > 1);
+
+  pasteNamesCount.textContent = valid.length ? `(${valid.length})` : '';
+  pasteLoadBtn.disabled = valid.length === 0;
+
+  if (!valid.length) { pastePreviewBox.style.display = 'none'; return; }
+
+  pastePreviewBox.style.display = 'block';
+  const preview = valid.slice(0, 3);
+  pastePreviewItems.innerHTML = preview.map(name => {
+    const email = domain ? nameToEmail(name, domain) : '<span style="color:var(--yellow)">⚠ no domain set</span>';
+    return `<div class="paste-preview-row">
+      <span class="paste-preview-name">${escapeHtml(name)}</span>
+      <span class="paste-preview-email">${typeof email === 'string' && domain ? escapeHtml(email) : email}</span>
+    </div>`;
+  }).join('');
+  if (valid.length > 3) {
+    pastePreviewItems.innerHTML += `<div style="font-size:10px;color:var(--muted);margin-top:4px">+${valid.length - 3} more...</div>`;
+  }
+}
+
+pasteNamesArea?.addEventListener('input',   updatePastePreview);
+pasteEmailDomain?.addEventListener('input', () => {
+  localStorage.setItem('pasteEmailDomain', pasteEmailDomain.value.trim());
+  updatePastePreview();
+});
+
+pasteLoadBtn?.addEventListener('click', async () => {
+  const domain = pasteEmailDomain.value.trim();
+  const lines  = pasteNamesArea.value.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+  if (!lines.length) return;
+
+  const rows = lines.map(name => [name, domain ? nameToEmail(name, domain) : '']);
+  const settings = await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
+  const newItems = processLoadedRows(rows, settings);
+
+  batchItems = newItems;
+  const stats = validateBatchItems(batchItems);
+  renderValidation(batchValidation, batchValidationBody, batchValidationStatus, stats);
+  renderQueue();
+  queueWrap.style.display = 'block';
+  bStart.disabled = batchItems.length === 0 || stats.hasBlockingIssues;
+  if (stats.hasBlockingIssues) {
+    showMessage(bMsg, 'err', 'Fix missing or invalid emails before starting the batch.');
+  }
+  setBatchControlsState('idle');
+  closePasteModal();
+  showMessage(bMsg, 'ok', `✓ Loaded ${newItems.length} name${newItems.length !== 1 ? 's' : ''} from paste.`);
+});
+
+
+
 async function parseFileToRows(file) {
   const fname = file.name.toLowerCase();
   if (fname.endsWith('.csv')) {
@@ -778,6 +867,36 @@ exportQueueBtn?.addEventListener('click', async () => {
   downloadRowsAsCSV(rows, `prometric_queue_${new Date().toISOString().slice(0,10)}.csv`);
 });
 
+// ── Duplicate Guard: warn if any batch items were already registered ──────────
+async function checkHistoryDuplicates(items) {
+  const { history = [] } = await chrome.storage.local.get(['history']);
+  if (!history.length) return true; // nothing to check
+
+  const successfulKeys = new Set(
+    history
+      .filter(h => h.status === 'done')
+      .map(h => {
+        const name  = String(h.name  || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const email = String(h.email || '').trim().toLowerCase();
+        return `${name}|${email}`;
+      })
+  );
+
+  const dupes = items.filter(item => {
+    const name  = String(item.name  || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const email = String(item.email || '').trim().toLowerCase();
+    return successfulKeys.has(`${name}|${email}`);
+  });
+
+  if (!dupes.length) return true;
+
+  const names = dupes.slice(0, 5).map(d => d.name).join(', ');
+  const extra = dupes.length > 5 ? ` and ${dupes.length - 5} more` : '';
+  return confirm(
+    `⚠️ Duplicate Warning\n\n${dupes.length} item(s) in this batch were already registered successfully in your history:\n\n${names}${extra}\n\nContinue anyway?`
+  );
+}
+
 bStart.addEventListener('click', async () => {
   if (!(await confirmReplaceRunning())) return;
   const stats = validateBatchItems(batchItems);
@@ -786,6 +905,9 @@ bStart.addEventListener('click', async () => {
     showMessage(bMsg, 'err', 'Batch has missing or invalid emails. Fix the file first.');
     return;
   }
+  // ── Duplicate guard ───────────────────────────────────────────────────────
+  if (!(await checkHistoryDuplicates(batchItems))) return;
+
   const { defAddress, defCity, defState, defPostal, defCountry } = await chrome.storage.local.get(['defAddress', 'defCity', 'defState', 'defPostal', 'defCountry']);
   const items = batchItems.map(i => ({
     ...i,
@@ -805,6 +927,7 @@ bStart.addEventListener('click', async () => {
     showMessage(bMsg, 'ok', `Started ${batchItems.length - stats.exactDuplicates} registrations. Removed ${stats.exactDuplicates} exact duplicate row(s).`);
   }
 });
+
 
 pauseBatchBtn?.addEventListener('click', async () => {
   // pauseQueue: only sets isRunning=false, queue is preserved for resume.
@@ -925,11 +1048,33 @@ function updateQueueItemsUI(queue, queueIndex, isRunning) {
   });
 }
 
-function updateBatchModeRunningUI(queueLength, queueIndex) {
+function updateBatchModeRunningUI(queueLength, queueIndex, queue) {
+  const done    = (queue || []).filter(i => i.status === 'done').length;
+  const failed  = (queue || []).filter(i => i.status === 'failed').length;
+  const finished = done + failed;
+  const pending  = queueLength - finished;
+
+  // ── ETA ──────────────────────────────────────────────────────────────────
+  let etaStr = '';
+  const batchStartTime = window.__batchStartTime;
+  if (batchStartTime && finished > 0) {
+    const elapsedMs     = Date.now() - batchStartTime;
+    const avgMsPerUser  = elapsedMs / finished;
+    const remainingMs   = avgMsPerUser * pending;
+    const remainingMins = Math.ceil(remainingMs / 60000);
+    if (remainingMins <= 1)         etaStr = ' · ~1 min remaining';
+    else if (remainingMins < 60)    etaStr = ` · ~${remainingMins} min remaining`;
+    else {
+      const h = Math.floor(remainingMins / 60);
+      const m = remainingMins % 60;
+      etaStr = ` · ~${h}h ${m}m remaining`;
+    }
+  }
+
   updateStatusBanner({
     show: true, bg: 'rgba(210,153,34,.1)', border: 'rgba(210,153,34,.3)',
     title: 'Batch Registration Running...', titleColor: 'var(--green)',
-    progText: `Processing ${Math.min(queueIndex + 1, queueLength)} of ${queueLength}...`, progColor: 'var(--yellow)'
+    progText: `${Math.min(queueIndex + 1, queueLength)} / ${queueLength}${etaStr}`, progColor: 'var(--yellow)'
   });
   if (bStart) bStart.style.display = 'none';
   if (resumeBatchBtn) resumeBatchBtn.style.display = 'none';
@@ -938,6 +1083,7 @@ function updateBatchModeRunningUI(queueLength, queueIndex) {
   if (batchSpinner) batchSpinner.style.display = 'block';
   if (retryFailedBtn) retryFailedBtn.style.display = 'none';
 }
+
 
 function updateBatchModePausedUI(queue, queueIndex, isRunning) {
   const pendingItems = queue.slice(queueIndex).filter(it => it.status === 'pending');
@@ -1012,8 +1158,13 @@ async function pollStatus() {
     updateQueueItemsUI(queue, queueIndex, isRunning);
 
     if (isRunning) {
-      updateBatchModeRunningUI(queue.length, queueIndex);
+      // Track batch start time for ETA (reset when a fresh batch starts at index 0)
+      if (!window.__batchStartTime || queueIndex === 0) {
+        if (!window.__batchStartTime) window.__batchStartTime = Date.now();
+      }
+      updateBatchModeRunningUI(queue.length, queueIndex, queue);
     } else {
+      window.__batchStartTime = null;
       updateBatchModePausedUI(queue, queueIndex, isRunning);
     }
   }
@@ -1045,32 +1196,85 @@ pollStatus();
 let historyFilter = 'all';
 let historySearch = '';
 
+// Format a date as a readable day label: "Saturday, 20 Jun 2026"
+function formatDayLabel(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Returns a sortable day key: "2026-06-20"
+function dayKey(dateStr) {
+  return new Date(dateStr).toISOString().slice(0, 10);
+}
+
+function exportDayCSV(dayRecords, dateLabel) {
+  const rows = [
+    ['Name', 'Email', 'Username', 'Password', 'Status', 'Reason', 'URL', 'Step', 'Date'],
+    ...dayRecords.map(h => [
+      h.name || '',
+      h.email || '',
+      h.finalUsername || h.username || '',
+      h.password || '',
+      h.status || '',
+      h.reason || '',
+      h.url || '',
+      h.step || '',
+      h.date ? new Date(h.date).toLocaleString() : ''
+    ])
+  ];
+  const csvContent = rows.map(row =>
+    row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `history_${dateLabel}.csv`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
 async function loadHistory() {
   const { history = [] } = await chrome.storage.local.get(['history']);
-  const list       = document.getElementById('histList');
-  const countEl    = document.getElementById('histCount');
+  const list          = document.getElementById('histList');
+  const countEl       = document.getElementById('histCount');
   const analyticsWrap = document.getElementById('histAnalytics');
   if (!list) return;
 
-  // Calculate Today's Stats (always on full history)
+  // ── Today's summary + All-Time stats (always on full history) ────────────
   const today = new Date().toDateString();
   let todaySuccess = 0, todayFail = 0;
+  let allSuccess = 0, allFail = 0;
+  const allDayKeys = new Set();
   history.forEach(h => {
+    if (h.status === 'done')        allSuccess++;
+    else if (h.status === 'failed') allFail++;
+    if (h.date) allDayKeys.add(dayKey(h.date));
     if (h.date && new Date(h.date).toDateString() === today) {
-      if (h.status === 'done')   todaySuccess++;
+      if (h.status === 'done')        todaySuccess++;
       else if (h.status === 'failed') todayFail++;
     }
   });
   if (analyticsWrap) {
     analyticsWrap.style.display = history.length ? 'block' : 'none';
-    document.getElementById('statSuccess').textContent = todaySuccess;
-    document.getElementById('statFail').textContent    = todayFail;
+    const todayTotal = todaySuccess + todayFail;
+    const todayRate  = todayTotal ? Math.round((todaySuccess / todayTotal) * 100) : 0;
+    const allTotal   = allSuccess + allFail;
+    const allRate    = allTotal   ? Math.round((allSuccess   / allTotal)   * 100) : 0;
+    document.getElementById('statSuccess').textContent    = todaySuccess;
+    document.getElementById('statFail').textContent       = todayFail;
+    document.getElementById('statTodayRate').textContent  = `${todayRate}%`;
+    document.getElementById('statAllSuccess').textContent = allSuccess;
+    document.getElementById('statAllFail').textContent    = allFail;
+    document.getElementById('statAllDays').textContent    = allDayKeys.size;
+    document.getElementById('statAllRate').textContent    = `${allRate}%`;
   }
 
-  // Apply filter + search
+  // ── Apply filter + search ─────────────────────────────────────────────────
+  const isSearching = !!historySearch;
   let filtered = history;
   if (historyFilter !== 'all') filtered = filtered.filter(h => h.status === historyFilter);
-  if (historySearch) {
+  if (isSearching) {
     const q = historySearch.toLowerCase();
     filtered = filtered.filter(h =>
       (h.name || '').toLowerCase().includes(q) ||
@@ -1079,26 +1283,151 @@ async function loadHistory() {
     );
   }
 
-  countEl.textContent = `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
-
   if (filtered.length === 0) {
+    countEl.textContent = '0 records';
     list.innerHTML = '<div class="hist-empty">No results found</div>';
     return;
   }
 
-  list.innerHTML = filtered.map((h, i) => `
-    <div class="hist-item">
-      <div class="hist-name" title="${escapeHtml(h.reason || h.name || '')}">${escapeHtml(h.name || '-')}</div>
-      <div class="hist-user" title="${escapeHtml(h.finalUsername || '')}">${escapeHtml(h.finalUsername || '-')}</div>
-      <div class="hist-pass" title="${escapeHtml(h.password || '')}">${escapeHtml(h.password || '-')}</div>
-      <div style="text-align:right;white-space:nowrap">
-        <span class="hist-badge ${escapeHtml(h.status)}" title="${escapeHtml(h.reason || (h.date ? new Date(h.date).toLocaleString('en-GB') : ''))}">${h.status === 'done' ? 'OK' : 'Fail'}</span>
-        ${h.status === 'done' ? `<button class="hist-copy" data-index="${history.indexOf(h)}" title="Copy Credentials">
-          <svg class="pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>` : ''}
-      </div>
-    </div>`).join('');
+  // ── Group by calendar day ─────────────────────────────────────────────────
+  const groups = new Map();
+  const todayKey_ = dayKey(new Date().toISOString());
+
+  filtered.forEach(h => {
+    const dk    = h.date ? dayKey(h.date) : 'unknown';
+    const label = h.date ? formatDayLabel(h.date) : 'Unknown Date';
+    if (!groups.has(dk)) groups.set(dk, { dk, label, records: [], historyIndices: [] });
+    const g = groups.get(dk);
+    g.records.push(h);
+    g.historyIndices.push(history.indexOf(h));
+  });
+
+  const sortedGroups = [...groups.values()].sort((a, b) => b.dk.localeCompare(a.dk));
+
+  // ── Smart count: "24 records across 3 days" ───────────────────────────────
+  const dayCount = sortedGroups.length;
+  countEl.textContent = dayCount > 1
+    ? `${filtered.length} records across ${dayCount} days`
+    : `${filtered.length} record${filtered.length !== 1 ? 's' : ''}`;
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  list.innerHTML = '';
+
+  sortedGroups.forEach(({ dk, label, records, historyIndices }) => {
+    const isToday  = dk === todayKey_;
+    // Auto-expand when searching so user sees results immediately
+    const isOpen   = isToday || isSearching;
+    const doneCount   = records.filter(r => r.status === 'done').length;
+    const failedCount = records.filter(r => r.status === 'failed').length;
+
+    const section = document.createElement('div');
+    section.className = 'hist-day-section';
+
+    // ── Day header ────────────────────────────────────────────────────────
+    const header = document.createElement('div');
+    header.className = `hist-day-header${isOpen ? ' open' : ''}`;
+    header.dataset.dk = dk;
+    header.innerHTML = `
+      <span class="hist-day-chevron">▶</span>
+      <span class="hist-day-label">
+        ${escapeHtml(label)}
+        ${isToday ? '<span class="hist-day-today">Today</span>' : ''}
+      </span>
+      <span class="hist-day-stats">
+        ${doneCount   ? `<span class="hist-day-stat ok">✓ ${doneCount}</span>`   : ''}
+        ${failedCount ? `<span class="hist-day-stat fail">✗ ${failedCount}</span>` : ''}
+      </span>
+      ${doneCount ? `<button class="hist-day-copy-all" data-dk="${escapeHtml(dk)}" title="Copy all credentials for this day">Copy All</button>` : ''}
+      <button class="hist-day-export" data-dk="${escapeHtml(dk)}" title="Export this day as CSV">CSV</button>
+      <button class="hist-day-clear" data-dk="${escapeHtml(dk)}" data-label="${escapeHtml(label)}" title="Delete this day from history">🗑</button>
+    `;
+
+    // ── Day body ──────────────────────────────────────────────────────────
+    const body = document.createElement('div');
+    body.className = `hist-day-body${isOpen ? '' : ' collapsed'}`;
+
+    body.innerHTML = records.map((h, i) => {
+      const realIdx = historyIndices[i];
+      return `
+        <div class="hist-item">
+          <div class="hist-name" title="${escapeHtml(h.reason || h.name || '')}">${escapeHtml(h.name || '-')}</div>
+          <div class="hist-user" title="${escapeHtml(h.finalUsername || '')}">${escapeHtml(h.finalUsername || '-')}</div>
+          <div class="hist-pass" title="${escapeHtml(h.password || '')}">${escapeHtml(h.password || '-')}</div>
+          <div style="text-align:right;white-space:nowrap">
+            <span class="hist-badge ${escapeHtml(h.status)}" title="${escapeHtml(h.reason || (h.date ? new Date(h.date).toLocaleString('en-GB') : ''))}">${h.status === 'done' ? 'OK' : 'Fail'}</span>
+            ${h.status === 'done' ? `<button class="hist-copy" data-index="${realIdx}" title="Copy Credentials">
+              <svg class="pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    section.appendChild(header);
+    section.appendChild(body);
+    list.appendChild(section);
+  });
+
+  // ── Toggle collapse ───────────────────────────────────────────────────────
+  list.querySelectorAll('.hist-day-header').forEach(hdr => {
+    hdr.addEventListener('click', e => {
+      if (e.target.closest('.hist-day-export') ||
+          e.target.closest('.hist-day-copy-all') ||
+          e.target.closest('.hist-day-clear')) return;
+      const body = hdr.nextElementSibling;
+      const isOpen_ = hdr.classList.contains('open');
+      hdr.classList.toggle('open', !isOpen_);
+      body.classList.toggle('collapsed', isOpen_);
+    });
+  });
+
+  // ── Per-day CSV export ────────────────────────────────────────────────────
+  list.querySelectorAll('.hist-day-export').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const group = groups.get(btn.dataset.dk);
+      if (group) exportDayCSV(group.records, btn.dataset.dk);
+    });
+  });
+
+  // ── Copy All creds for a day ──────────────────────────────────────────────
+  list.querySelectorAll('.hist-day-copy-all').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const group = groups.get(btn.dataset.dk);
+      if (!group) return;
+      const lines = group.records
+        .filter(r => r.status === 'done' && (r.finalUsername || r.username))
+        .map(r => `${r.finalUsername || r.username}\t${r.password || ''}`)
+        .join('\n');
+      if (!lines) return;
+      fallbackCopyPopup(lines);
+      const old = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      btn.style.color = 'var(--green)';
+      btn.style.borderColor = 'var(--green)';
+      setTimeout(() => {
+        btn.textContent = old;
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }, 2000);
+    });
+  });
+
+  // ── Clear Day ─────────────────────────────────────────────────────────────
+  list.querySelectorAll('.hist-day-clear').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const label_ = btn.dataset.label;
+      if (!confirm(`Delete all history records for "${label_}"?`)) return;
+      const dkToClear = btn.dataset.dk;
+      const { history: latest = [] } = await chrome.storage.local.get(['history']);
+      const updated = latest.filter(h => !h.date || dayKey(h.date) !== dkToClear);
+      await chrome.storage.local.set({ history: updated });
+      loadHistory();
+    });
+  });
 }
+
 
 // History search
 document.getElementById('histSearch')?.addEventListener('input', e => {
