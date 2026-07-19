@@ -1,6 +1,6 @@
 {
   "name": "prometric-extension",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "description": "Chrome extension for auto-filling Prometric registration – Single & Batch mode",
   "main": "background.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "lint": "eslint . --ext .js --ignore-path .eslintignore",
     "lint:fix": "eslint . --ext .js --ignore-path .eslintignore --fix",
     "build": "node build.js",
-    "package": "powershell Compress-Archive -Path dist/* -DestinationPath prometric-extension-v3.1.zip -Force"
+    "package": "powershell Compress-Archive -Path dist/* -DestinationPath prometric-extension-v4.0.zip -Force"
   },
   "repository": {
     "type": "git",

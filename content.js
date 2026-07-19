@@ -121,9 +121,6 @@ function updateStatus(msg, color = '#3fb950', glowColor = 'rgba(63,185,80,0.25)'
       const pauseBtn = document.createElement('button');
       pauseBtn.textContent = 'Pause';
       pauseBtn.style.cssText = `
-        background: rgba(210,153,34,0.15);
-        border: 1px solid rgba(210,153,34,0.3);
-        color: #d29922;
         border-radius: 8px;
         cursor: pointer;
         padding: 5px 12px;
@@ -132,25 +129,23 @@ function updateStatus(msg, color = '#3fb950', glowColor = 'rgba(63,185,80,0.25)'
         font-family: 'Outfit', sans-serif;
         transition: all 0.2s;
       `;
-      pauseBtn.onmouseover = () => pauseBtn.style.background = 'rgba(210,153,34,0.25)';
-      pauseBtn.onmouseout = () => pauseBtn.style.background = 'rgba(210,153,34,0.15)';
+      const setPauseBtnStyle = (text, bg, color) => {
+        pauseBtn.textContent = text;
+        pauseBtn.style.background = bg;
+        pauseBtn.style.color = color;
+        pauseBtn.style.borderColor = bg.replace('0.15', '0.3');
+        pauseBtn.onmouseover = () => pauseBtn.style.background = bg.replace('0.15', '0.25');
+        pauseBtn.onmouseout = () => pauseBtn.style.background = bg;
+      };
+      setPauseBtnStyle('Pause', 'rgba(210,153,34,0.15)', '#d29922');
+
       pauseBtn.onclick = () => {
         if (pauseBtn.textContent.includes('Pause')) {
           send('pauseBatch');
-          pauseBtn.textContent = 'Resume';
-          pauseBtn.style.background = 'rgba(88,166,255,0.15)';
-          pauseBtn.style.color = '#58a6ff';
-          pauseBtn.style.borderColor = 'rgba(88,166,255,0.3)';
-          pauseBtn.onmouseover = () => pauseBtn.style.background = 'rgba(88,166,255,0.25)';
-          pauseBtn.onmouseout = () => pauseBtn.style.background = 'rgba(88,166,255,0.15)';
+          setPauseBtnStyle('Resume', 'rgba(88,166,255,0.15)', '#58a6ff');
         } else {
           send('resumeBatch');
-          pauseBtn.textContent = 'Pause';
-          pauseBtn.style.background = 'rgba(210,153,34,0.15)';
-          pauseBtn.style.color = '#d29922';
-          pauseBtn.style.borderColor = 'rgba(210,153,34,0.3)';
-          pauseBtn.onmouseover = () => pauseBtn.style.background = 'rgba(210,153,34,0.25)';
-          pauseBtn.onmouseout = () => pauseBtn.style.background = 'rgba(210,153,34,0.15)';
+          setPauseBtnStyle('Pause', 'rgba(210,153,34,0.15)', '#d29922');
         }
       };
       btnContainer.appendChild(pauseBtn);

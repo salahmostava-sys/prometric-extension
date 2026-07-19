@@ -1,4 +1,4 @@
-const { isValidEmail, generateCredentials } = require('./utils.js');
+const { generateCredentials } = require('./utils.js');
 
 // -- State Management --------------------------------------------------------
 const START_URL = 'https://tcnet1.prometric.com/InvalidHostHeader.aspx';
@@ -522,7 +522,6 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     generateCredentials,
-    isValidEmail,
     isRetryableFailure,
     dedupeItems,
     itemDedupKey,
