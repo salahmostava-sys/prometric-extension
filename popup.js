@@ -1652,7 +1652,11 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
     document.getElementById('sheetCols').style.display = 'block';
     document.getElementById('sheetStart').disabled = false;
   } catch (e) {
-    showSheetError(e.message);
+    if (e.name === 'TypeError' && e.message === 'Failed to fetch') {
+      showSheetError('Cannot access the sheet. Make sure share settings are "Anyone with the link can view".');
+    } else {
+      showSheetError(e.message);
+    }
   } finally {
     btn.textContent = 'Load Columns';
     btn.disabled = false;
