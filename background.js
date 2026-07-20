@@ -262,7 +262,12 @@ async function openNextTab() {
 let isMsgProcessing = false;
 const backgroundMsgQueue = [];
 
-chrome.runtime.onMessage.addListener((msg, sender) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // fetchSheet needs a direct sendResponse — keep it out of the serial queue.
+  if (msg.action === 'fetchSheet') {
+    handleFetchSheet(msg).then(sendResponse).catch(e => sendResponse({ ok: false, error: e.message }));
+    return true; // keep the message channel open for the async response
+  }
   backgroundMsgQueue.push({ msg, sender });
   processBackgroundQueue();
   return false;
@@ -485,6 +490,21 @@ async function handleMessage(msg) {
 
   if (handlers[msg.action]) {
     await handlers[msg.action]();
+  }
+}
+
+// -- Google Sheet CSV Fetcher (runs in SW — no browser cookies attached) ------
+// The service worker does not share the browser's cookie jar, so Google will
+// never redirect to ServiceLogin. This resolves the CORS error that occurs
+// when the same fetch is made from popup.html on a browser that is logged in.
+async function handleFetchSheet(msg) {
+  try {
+    const res = await fetch(msg.url, { credentials: 'omit' });
+    if (!res.ok) return { ok: false, error: 'Cannot read sheet. Ensure share settings are "Anyone with the link can view".' };
+    const text = await res.text();
+    return { ok: true, text };
+  } catch (e) {
+    return { ok: false, error: 'Cannot access the sheet. Make sure share settings are "Anyone with the link can view".' };
   }
 }
 

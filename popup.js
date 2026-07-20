@@ -1610,10 +1610,16 @@ document.getElementById('sheetFetch')?.addEventListener('click', async () => {
   showSheetError('');
 
   try {
-    const res = await fetch(exportUrl);
-    if (!res.ok) throw new Error('Cannot read sheet. Ensure share settings are "Anyone with the link can view".');
-
-    const text = await res.text();
+    // Delegate to the background service worker — the SW has no browser cookies
+    // so Google won't redirect to ServiceLogin (which causes a CORS block here).
+    const result = await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ action: 'fetchSheet', url: exportUrl }, (res) => {
+        if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+        resolve(res);
+      });
+    });
+    if (!result || !result.ok) throw new Error(result?.error || 'Cannot read sheet.');
+    const text = result.text;
     const rows = parseDelimitedRows(text);
     if (rows.length < 2) throw new Error('Sheet is empty or has only one row.');
 

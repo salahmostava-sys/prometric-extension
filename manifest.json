@@ -4,7 +4,7 @@
   "version": "4.0",
   "description": "Auto-fill Prometric registration - Single & Batch mode",
   "permissions": ["tabs", "storage", "downloads", "contextMenus", "unlimitedStorage", "notifications"],
-  "host_permissions": ["https://tcnet1.prometric.com/*", "https://docs.google.com/spreadsheets/*"],
+  "host_permissions": ["https://tcnet1.prometric.com/*", "https://docs.google.com/spreadsheets/*", "https://*.googleusercontent.com/*"],
   "background": { "service_worker": "background.js" },
   "action": {
     "default_popup": "popup.html",
