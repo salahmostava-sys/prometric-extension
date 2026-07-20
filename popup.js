@@ -1,6 +1,4 @@
 // popup.js - Handles the extension popup UI and Google Sheet parsing
-const { escapeHtml, isValidEmail, generateCredentials } = require('./utils.js');
-const { parseDelimitedRows, parseCSV, parseXLSX } = require('./parsers.js');
 
 // -- Init ---
 const { version } = chrome.runtime.getManifest();

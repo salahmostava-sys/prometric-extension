@@ -1,4 +1,4 @@
-const { generateCredentials } = require('./utils.js');
+importScripts('utils.js');
 
 // -- State Management --------------------------------------------------------
 const START_URL = 'https://tcnet1.prometric.com/InvalidHostHeader.aspx';

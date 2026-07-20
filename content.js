@@ -1,5 +1,4 @@
 // content.js - MAIN world
-const { setVal, blurEl, fillSelect, forceClick, querySelectorAny, clickContinue, triggerEvents } = require('./dom-utils.js');
 
 // ─── URLs ────────────────────────────────────────────────────────────────────
 const LOGIN_URL    = 'https://tcnet1.prometric.com/Login.aspx?ibt=785937226&ClientNameSingleSite=ibtamea';
