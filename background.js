@@ -1,4 +1,11 @@
-importScripts('utils.js');
+if (typeof importScripts !== 'undefined') {
+  importScripts('utils.js');
+} else if (typeof require !== 'undefined') {
+  const utils = require('./utils.js');
+  global.generateCredentials = utils.generateCredentials;
+  global.isValidEmail = utils.isValidEmail;
+  global.escapeHtml = utils.escapeHtml;
+}
 
 // -- State Management --------------------------------------------------------
 const START_URL = 'https://tcnet1.prometric.com/InvalidHostHeader.aspx';
@@ -288,14 +295,16 @@ async function processBackgroundQueue() {
 
 async function handleStepDone(msg, state) {
   const { queue, queueIndex, currentProcessingId } = state;
+  const currentItem = queue && queueIndex < queue.length ? queue[queueIndex] : null;
   const entry = {
     name:          msg.name          || '',
     finalUsername: msg.finalUsername || '',
     password:      msg.password      || '',
-    email:         msg.email         || '',
+    email:         msg.email         || (currentItem ? currentItem.email : ''),
     status:        'done',
     url:           msg.url           || '',
-    step:          msg.step          || ''
+    step:          msg.step          || '',
+    origIndex:     currentItem?.origIndex ?? queueIndex
   };
 
   let accepted = false;
@@ -342,16 +351,18 @@ async function handleStepDone(msg, state) {
 
 async function handleStepFailed(msg, state) {
   const { queue, queueIndex, currentProcessingId } = state;
+  const currentItem = queue && queueIndex < queue.length ? queue[queueIndex] : null;
   const entry = {
     name:   msg.name   || '',
-    email:  (queue && queueIndex < queue.length ? queue[queueIndex].email : '') || '',
+    email:  (currentItem ? currentItem.email : '') || '',
     status: 'failed',
     reason: msg.reason || 'Unknown error',
     failureKind: msg.failureKind || '',
     retryable: msg.retryable,
     url: msg.url || '',
     step: msg.step || '',
-    pageSnippet: msg.pageSnippet || ''
+    pageSnippet: msg.pageSnippet || '',
+    origIndex: currentItem?.origIndex ?? queueIndex
   };
   let accepted = false;
   if (isCurrentQueueMessage(queue, queueIndex, msg, currentProcessingId)) {
@@ -542,6 +553,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     generateCredentials,
+    isValidEmail,
     isRetryableFailure,
     dedupeItems,
     itemDedupKey,
