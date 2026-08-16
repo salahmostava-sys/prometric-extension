@@ -23,5 +23,21 @@
       "run_at": "document_idle",
       "world": "MAIN"
     }
-  ]
+  ],
+  "commands": {
+    "toggle-pause-resume": {
+      "suggested_key": {
+        "default": "Alt+Shift+P",
+        "mac": "MacCtrl+Shift+P"
+      },
+      "description": "Pause or Resume Batch Registration"
+    },
+    "copy-last-creds": {
+      "suggested_key": {
+        "default": "Alt+Shift+C",
+        "mac": "MacCtrl+Shift+C"
+      },
+      "description": "Copy Last Generated Credentials"
+    }
+  }
 }

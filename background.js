@@ -547,6 +547,60 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   }
 });
 
+// -- Keyboard Shortcuts (Commands) ---
+if (chrome.commands?.onCommand) {
+  chrome.commands.onCommand.addListener(async (command) => {
+    if (command === 'toggle-pause-resume') {
+      const { isRunning, queue, queueIndex } = await getState();
+      if (isRunning) {
+        await chrome.storage.local.set({ isRunning: false });
+        await addRunLog('Registration paused via shortcut (Alt+Shift+P)', 'pause');
+        await updateBadge();
+        chrome.notifications?.create({
+          type: 'basic',
+          iconUrl: 'icon128.png',
+          title: 'Batch Paused',
+          message: 'Batch registration has been paused.',
+          priority: 1
+        });
+      } else if (queue && queueIndex < queue.length) {
+        await chrome.storage.local.set({ isRunning: true });
+        await addRunLog('Registration resumed via shortcut (Alt+Shift+P)', 'resume');
+        await openNextTab();
+        chrome.notifications?.create({
+          type: 'basic',
+          iconUrl: 'icon128.png',
+          title: 'Batch Resumed',
+          message: 'Batch registration has been resumed.',
+          priority: 1
+        });
+      }
+    } else if (command === 'copy-last-creds') {
+      const { history = [] } = await chrome.storage.local.get(['history']);
+      const lastDone = history.find(h => h.status === 'done' && (h.finalUsername || h.username));
+      if (lastDone) {
+        const u = lastDone.finalUsername || lastDone.username;
+        const p = lastDone.password || '';
+        await chrome.storage.local.set({
+          copiedCreds: {
+            username: u,
+            password: p,
+            timestamp: Date.now(),
+            expiresAt: Date.now() + 30000
+          }
+        });
+        chrome.notifications?.create({
+          type: 'basic',
+          iconUrl: 'icon128.png',
+          title: 'Credentials Ready (Alt+Shift+C)',
+          message: `User: ${u}\nPass: ${p}`,
+          priority: 2
+        });
+      }
+    }
+  });
+}
+
 // ─── Test Exports (Node.js / Jest only) ──────────────────────────────────────
 // These are not referenced in the browser; the `if` guard ensures zero impact
 // on the extension runtime.

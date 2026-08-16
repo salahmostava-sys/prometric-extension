@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   autoRetry: true,
   stabilityMode: false,
   desktopNotifications: true,
+  soundAlerts: true,
   defAddress: 'Al-Alameya',
   defCity: 'JEDDAH',
   defState: 'JEDDAH',
@@ -21,6 +22,55 @@ const DEFAULT_SETTINGS = {
   passPattern: '{F}@{f}#$1970',
   sheetUrl: ''
 };
+
+// ═══ Audio Chimes (Web Audio API) ═══
+function playChime(type = 'success') {
+  chrome.storage.local.get(['soundAlerts']).then(({ soundAlerts }) => {
+    if (soundAlerts === false) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      if (type === 'success') {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now); // D5
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(880.00, now + 0.12); // A5
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc1.start(now);
+        osc1.stop(now + 0.15);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.5);
+      } else if (type === 'copy') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(783.99, now); // G5
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      }
+    } catch (_) {
+      // Audio context might be restricted before user gesture
+    }
+  });
+}
 
 // ═══ Status Pill ═══
 function updateStatusPill(state) {
@@ -232,6 +282,7 @@ function fallbackCopyPopup(text) {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).catch(() => {});
   }
+  playChime('copy');
 }
 
 // -- Utilities ---
@@ -387,7 +438,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 // -- Settings ---
-const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'defCity', 'defState', 'defPostal', 'defCountry', 'defAnswer', 'passPattern', 'sheetUrl', 'desktopNotifications', 'autoRetry', 'stabilityMode'];
+const SETTINGS_KEYS = ['pageDelay', 'userDelay', 'autoSubmit', 'defAddress', 'defCity', 'defState', 'defPostal', 'defCountry', 'defAnswer', 'passPattern', 'sheetUrl', 'desktopNotifications', 'soundAlerts', 'autoRetry', 'stabilityMode'];
 
 async function loadSettings() {
   const settings = await chrome.storage.local.get(SETTINGS_KEYS);
@@ -406,6 +457,7 @@ async function loadSettings() {
   setVal('autoRetry', settings.autoRetry);
   setVal('stabilityMode', settings.stabilityMode);
   setVal('desktopNotifications', settings.desktopNotifications);
+  setVal('soundAlerts', settings.soundAlerts);
   setVal('defAddress', settings.defAddress);
   setVal('defCity', settings.defCity);
   setVal('defState', settings.defState);
@@ -415,6 +467,22 @@ async function loadSettings() {
   setVal('passPattern', settings.passPattern);
   setVal('sheetUrl', settings.sheetUrl);
 }
+
+// ── Pattern Variable Chips ───────────────────────────────────────────────────
+document.querySelectorAll('.chip-btn').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const tag = chip.dataset.tag;
+    const passInput = document.getElementById('passPattern');
+    if (!passInput || !tag) return;
+    const start = passInput.selectionStart ?? passInput.value.length;
+    const end   = passInput.selectionEnd   ?? passInput.value.length;
+    const val   = passInput.value;
+    passInput.value = val.slice(0, start) + tag + val.slice(end);
+    passInput.focus();
+    passInput.setSelectionRange(start + tag.length, start + tag.length);
+    passInput.dispatchEvent(new Event('input'));
+  });
+});
 
 // -- Settings Actions ---
 document.getElementById('saveSettings')?.addEventListener('click', async () => {
@@ -449,20 +517,29 @@ document.getElementById('resetSettings')?.addEventListener('click', async () => 
   alert('Settings reset to defaults.');
 });
 
-// -- Settings Backup & Restore ---
+// -- Full Backup & Restore (Settings + History) ---
 document.getElementById('exportSettingsBtn')?.addEventListener('click', async () => {
   const backupMsgEl = document.getElementById('settingsBackupMsg');
   showMessage(backupMsgEl, '', '');
   try {
     const settings = await chrome.storage.local.get(SETTINGS_KEYS);
+    const { history = [] } = await chrome.storage.local.get(['history']);
     const fullSettings = {};
     SETTINGS_KEYS.forEach(key => {
       fullSettings[key] = settings[key] !== undefined ? settings[key] : DEFAULT_SETTINGS[key];
     });
 
+    const backupPayload = {
+      version: '4.0',
+      app: 'Prometric Auto Register',
+      exportedAt: new Date().toISOString(),
+      settings: fullSettings,
+      history
+    };
+
     const dateStr = new Date().toISOString().slice(0, 10);
-    const filename = `prometric_settings_backup_${dateStr}.json`;
-    const jsonContent = JSON.stringify(fullSettings, null, 2);
+    const filename = `prometric_backup_${dateStr}.json`;
+    const jsonContent = JSON.stringify(backupPayload, null, 2);
 
     const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -472,11 +549,11 @@ document.getElementById('exportSettingsBtn')?.addEventListener('click', async ()
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 100);
 
-    showMessage(backupMsgEl, 'ok', 'Settings exported successfully!');
+    showMessage(backupMsgEl, 'ok', `Backup exported successfully (${history.length} history records)!`);
     setTimeout(() => showMessage(backupMsgEl, '', ''), 3000);
   } catch (err) {
     console.error(err);
-    showMessage(backupMsgEl, 'err', 'Failed to export settings.');
+    showMessage(backupMsgEl, 'err', 'Failed to export backup.');
   }
 });
 
@@ -499,18 +576,22 @@ document.getElementById('importSettingsFile')?.addEventListener('change', (e) =>
         throw new Error('Invalid JSON format.');
       }
 
-      const importedKeys = Object.keys(parsed);
+      // Handle both full backup ({ settings, history }) and legacy flat settings object
+      const settingsSource = parsed.settings || parsed;
+      const historySource  = Array.isArray(parsed.history) ? parsed.history : null;
+
+      const importedKeys = Object.keys(settingsSource);
       const validKeys = importedKeys.filter(k => SETTINGS_KEYS.includes(k));
 
-      if (validKeys.length === 0) {
-        throw new Error('No valid settings keys found in JSON.');
+      if (validKeys.length === 0 && !historySource) {
+        throw new Error('No valid settings or history data found in file.');
       }
 
       const dataToSave = {};
       SETTINGS_KEYS.forEach(key => {
-        if (parsed[key] !== undefined) {
+        if (settingsSource[key] !== undefined) {
           const defaultType = typeof DEFAULT_SETTINGS[key];
-          let val = parsed[key];
+          let val = settingsSource[key];
 
           if (defaultType === 'number') {
             val = Number(val);
@@ -524,18 +605,23 @@ document.getElementById('importSettingsFile')?.addEventListener('change', (e) =>
         }
       });
 
-      if (Object.keys(dataToSave).length === 0) {
-        throw new Error('Settings keys contain invalid values.');
+      if (Object.keys(dataToSave).length > 0) {
+        await chrome.storage.local.set(dataToSave);
       }
 
-      await chrome.storage.local.set(dataToSave);
+      if (historySource) {
+        await chrome.storage.local.set({ history: historySource });
+      }
+
       await loadSettings();
+      await loadHistory();
       if (typeof updateSinglePreview === 'function') {
         updateSinglePreview();
       }
 
-      showMessage(backupMsgEl, 'ok', 'Settings imported successfully!');
-      setTimeout(() => showMessage(backupMsgEl, '', ''), 3000);
+      const histCountStr = historySource ? ` + ${historySource.length} history records` : '';
+      showMessage(backupMsgEl, 'ok', `Backup restored successfully (Settings${histCountStr})!`);
+      setTimeout(() => showMessage(backupMsgEl, '', ''), 3500);
     } catch (err) {
       console.error(err);
       showMessage(backupMsgEl, 'err', 'Import failed: ' + err.message);
@@ -550,6 +636,29 @@ document.getElementById('importSettingsFile')?.addEventListener('change', (e) =>
   };
 
   reader.readAsText(file);
+});
+
+// ── Clean History Older Than 30 Days ─────────────────────────────────────────
+document.getElementById('cleanOldHistBtn')?.addEventListener('click', async () => {
+  const { history = [] } = await chrome.storage.local.get(['history']);
+  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  const kept = history.filter(h => h.date && new Date(h.date).getTime() >= thirtyDaysAgo);
+  const removed = history.length - kept.length;
+
+  if (removed === 0) {
+    alert('No records older than 30 days found.');
+    return;
+  }
+
+  if (!confirm(`Found ${removed} record(s) older than 30 days. Delete them from history?`)) return;
+
+  await chrome.storage.local.set({ history: kept });
+  await loadHistory();
+  const backupMsgEl = document.getElementById('settingsBackupMsg');
+  if (backupMsgEl) {
+    showMessage(backupMsgEl, 'ok', `Cleaned ${removed} old history record(s).`);
+    setTimeout(() => showMessage(backupMsgEl, '', ''), 3000);
+  }
 });
 
 document.getElementById('clearAllData')?.addEventListener('click', async () => {
@@ -1231,6 +1340,22 @@ function exportDayCSV(dayRecords, dateLabel) {
   setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
+function exportDayXLSX(dayRecords, dateLabel) {
+  const headers = ['Name', 'Email', 'Username', 'Password', 'Status', 'Reason', 'URL', 'Step', 'Date'];
+  const rows = dayRecords.map(h => [
+    h.name || '',
+    h.email || '',
+    h.finalUsername || h.username || '',
+    h.password || '',
+    h.status || '',
+    h.reason || '',
+    h.url || '',
+    h.step || '',
+    h.date ? new Date(h.date).toLocaleString() : ''
+  ]);
+  downloadRowsAsXLSX(headers, rows, `history_${dateLabel}.xlsx`, { sheetName: dateLabel });
+}
+
 async function loadHistory() {
   const { history = [] } = await chrome.storage.local.get(['history']);
   const list          = document.getElementById('histList');
@@ -1351,6 +1476,7 @@ async function loadHistory() {
       </span>
       ${doneCount ? `<button class="hist-day-copy-all" data-dk="${escapeHtml(dk)}" title="Copy all credentials for this day">Copy All</button>` : ''}
       <button class="hist-day-export" data-dk="${escapeHtml(dk)}" title="Export this day as CSV">CSV</button>
+      <button class="hist-day-export-xlsx" data-dk="${escapeHtml(dk)}" title="Export this day as Excel (.xlsx)">XLSX</button>
       <button class="hist-day-clear" data-dk="${escapeHtml(dk)}" data-label="${escapeHtml(label)}" title="Delete this day from history">🗑</button>
     `;
 
@@ -1383,6 +1509,7 @@ async function loadHistory() {
   list.querySelectorAll('.hist-day-header').forEach(hdr => {
     hdr.addEventListener('click', e => {
       if (e.target.closest('.hist-day-export') ||
+          e.target.closest('.hist-day-export-xlsx') ||
           e.target.closest('.hist-day-copy-all') ||
           e.target.closest('.hist-day-clear')) return;
       const body = hdr.nextElementSibling;
@@ -1398,6 +1525,15 @@ async function loadHistory() {
       e.stopPropagation();
       const group = groups.get(btn.dataset.dk);
       if (group) exportDayCSV(group.records, btn.dataset.dk);
+    });
+  });
+
+  // ── Per-day XLSX export ───────────────────────────────────────────────────
+  list.querySelectorAll('.hist-day-export-xlsx').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const group = groups.get(btn.dataset.dk);
+      if (group) exportDayXLSX(group.records, btn.dataset.dk);
     });
   });
 
@@ -1470,6 +1606,12 @@ document.querySelectorAll('.tab').forEach(tab => {
 loadHistory();
 
 // -- Saved Credentials Panel ---
+let isPassRevealed = false;
+document.getElementById('scTogglePass')?.addEventListener('click', () => {
+  isPassRevealed = !isPassRevealed;
+  loadSavedCreds();
+});
+
 async function loadSavedCreds() {
   const { savedCreds } = await chrome.storage.local.get(['savedCreds']);
 
@@ -1477,7 +1619,10 @@ async function loadSavedCreds() {
   if (savedCreds && savedCreds.username) {
     if (scNamePanel) scNamePanel.textContent = savedCreds.name     || '';
     if (scUserPanel) scUserPanel.textContent = savedCreds.username || '';
-    if (scPassPanel) scPassPanel.textContent = savedCreds.password || '';
+    if (scPassPanel) {
+      scPassPanel.dataset.real = savedCreds.password || '';
+      scPassPanel.textContent = isPassRevealed ? (savedCreds.password || '') : '••••••••';
+    }
     if (savedCredsPanel) savedCredsPanel.style.display = 'block';
   } else {
     if (savedCredsPanel) savedCredsPanel.style.display = 'none';
@@ -1528,10 +1673,11 @@ document.addEventListener('click', async (e) => {
   }
 
   // Handle saved creds copy
-  if (e.target.classList.contains('sc-copy')) {
+  if (e.target.classList.contains('sc-copy') && !e.target.closest('#scTogglePass')) {
     const id = e.target.dataset.copy;
-    const text = document.getElementById(id)?.textContent || '';
-    fallbackCopyPopup(text);
+    const el = document.getElementById(id);
+    const text = el?.dataset?.real || el?.textContent || '';
+    if (text) fallbackCopyPopup(text);
     const btn = e.target;
     const oldHtml = btn.innerHTML;
     btn.innerHTML = `<svg class="pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
@@ -1543,7 +1689,7 @@ loadSavedCreds();
 // Fallback only — primary updates come from storage.onChanged above
 setInterval(loadSavedCreds, 10000);
 
-// -- History Export ---
+// -- History CSV Export ---
 document.getElementById('exportCSV')?.addEventListener('click', async () => {
   const btn = document.getElementById('exportCSV');
   const { history = [] } = await chrome.storage.local.get(['history']);
@@ -1554,7 +1700,6 @@ document.getElementById('exportCSV')?.addEventListener('click', async () => {
   btn.disabled = true;
 
   try {
-    // History is unshifted (newest first), so reverse it to keep original registration order
     const exportData = [...history].reverse();
     const rows = [
       ['Name', 'Email', 'Username', 'Password', 'Status', 'Reason', 'Failure Kind', 'URL', 'Step', 'Date'],
@@ -1576,6 +1721,42 @@ document.getElementById('exportCSV')?.addEventListener('click', async () => {
   } catch (e) {
     console.error('Export failed:', e);
     alert('Export failed. Check console for details.');
+  } finally {
+    btn.textContent = oldText;
+    btn.disabled = false;
+  }
+});
+
+// -- History XLSX Export ---
+document.getElementById('exportXLSX')?.addEventListener('click', async () => {
+  const btn = document.getElementById('exportXLSX');
+  const { history = [] } = await chrome.storage.local.get(['history']);
+  if (!history.length) return;
+
+  const oldText = btn.textContent;
+  btn.textContent = 'Generating...';
+  btn.disabled = true;
+
+  try {
+    const exportData = [...history].reverse();
+    const headers = ['Name', 'Email', 'Username', 'Password', 'Status', 'Reason', 'Failure Kind', 'URL', 'Step', 'Date'];
+    const rows = exportData.map(h => [
+      h.name || '',
+      h.email || '',
+      h.finalUsername || h.username || '',
+      h.password || '',
+      h.status || '',
+      h.reason || '',
+      h.failureKind || '',
+      h.url || '',
+      h.step || '',
+      h.date ? new Date(h.date).toLocaleString() : ''
+    ]);
+
+    downloadRowsAsXLSX(headers, rows, `prometric_history_${new Date().toISOString().slice(0,10)}.xlsx`);
+  } catch (e) {
+    console.error('Export XLSX failed:', e);
+    alert('Excel export failed. Check console for details.');
   } finally {
     btn.textContent = oldText;
     btn.disabled = false;
