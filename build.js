@@ -36,10 +36,7 @@ async function build() {
       'icon.png',
       'icon16.png',
       'icon48.png',
-      'icon128.png',
-      'utils.js',
-      'parsers.js',
-      'dom-utils.js'
+      'icon128.png'
     ];
 
     for (const file of staticFiles) {

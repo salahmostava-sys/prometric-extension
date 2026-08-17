@@ -1299,21 +1299,6 @@ async function loadHistory() {
     g.historyIndices.push(history.indexOf(h));
   });
 
-  // Keep records within each day in the original order of the sheet / registration (oldest to newest)
-  groups.forEach(g => {
-    const paired = g.records.map((r, i) => ({ record: r, histIdx: g.historyIndices[i] }));
-    paired.sort((a, b) => {
-      const timeA = a.record.date ? new Date(a.record.date).getTime() : 0;
-      const timeB = b.record.date ? new Date(b.record.date).getTime() : 0;
-      if (timeA !== timeB) return timeA - timeB;
-      const idxA = a.record.origIndex ?? 0;
-      const idxB = b.record.origIndex ?? 0;
-      return idxA - idxB;
-    });
-    g.records = paired.map(p => p.record);
-    g.historyIndices = paired.map(p => p.histIdx);
-  });
-
   const sortedGroups = [...groups.values()].sort((a, b) => b.dk.localeCompare(a.dk));
 
   // ── Smart count: "24 records across 3 days" ───────────────────────────────
