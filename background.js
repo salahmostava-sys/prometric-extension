@@ -1,4 +1,11 @@
-importScripts('utils.js');
+if (typeof importScripts === 'function') {
+  importScripts('utils.js');
+} else if (typeof require === 'function') {
+  const utils = require('./utils.js');
+  globalThis.generateCredentials = utils.generateCredentials;
+  globalThis.isValidEmail = utils.isValidEmail;
+  globalThis.escapeHtml = utils.escapeHtml;
+}
 
 // -- State Management --------------------------------------------------------
 const START_URL = 'https://tcnet1.prometric.com/InvalidHostHeader.aspx';
@@ -542,6 +549,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     generateCredentials,
+    isValidEmail,
     isRetryableFailure,
     dedupeItems,
     itemDedupKey,

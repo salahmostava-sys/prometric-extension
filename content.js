@@ -525,9 +525,35 @@ async function fillStep3(creds) {
   setVal(querySelectorAny('input[placeholder="City"]', 'input[id*="City" i]'), creds.city || 'JEDDAH');
   setVal(querySelectorAny('input[placeholder="State/Province"]', 'input[id*="State" i]'), creds.state || 'JEDDAH');
   setVal(querySelectorAny('input[placeholder="Postal Code"]', 'input[id*="Postal" i]', 'input[id*="Zip" i]'), creds.postalCode || '00000');
-  fillSelect(querySelectorAny('select[id*="Country" i]', 'select[name*="Country" i]'), creds.country || 'Saudi Arabia');
+
+  // Country selection with async retry & verification
+  const targetCountry = creds.country || 'Saudi Arabia';
+  let countrySelected = false;
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const countryDropdown = findCountrySelect();
+    if (countryDropdown && countryDropdown.options && countryDropdown.options.length > 1) {
+      if (selectCountry(countryDropdown, targetCountry)) {
+        countrySelected = true;
+        break;
+      }
+    }
+    await sleep(150);
+  }
+
+  if (!countrySelected) {
+    const fallbackDropdown = findCountrySelect();
+    if (fallbackDropdown) selectCountry(fallbackDropdown, targetCountry);
+  }
+
   await sleep(100);
   setVal(querySelectorAny('input[type="email"]', 'input[placeholder="Email Address"]', 'input[id*="Email" i]', 'input[name*="Email" i]'), creds.email);
+
+  // Final verification before submit: ensure country is selected if dropdown exists
+  const finalCountryDropdown = findCountrySelect();
+  if (finalCountryDropdown && finalCountryDropdown.selectedIndex <= 0 && finalCountryDropdown.options.length > 1) {
+    selectCountry(finalCountryDropdown, targetCountry);
+    await sleep(100);
+  }
 
   // Blur all to trigger validators
   [...document.querySelectorAll('input,select')].forEach(el => { if (el.offsetParent) blurEl(el); });
